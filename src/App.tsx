@@ -55,26 +55,33 @@ export default function App() {
         return;
       }
 
-      const windowHeight = window.innerHeight;
+      // On mobile browsers (Safari/Chrome), dynamic address and navigation toolbars expand and collapse during scroll.
+      // window.visualViewport.height provides the true, instantaneous visible height on screen in real time,
+      // preventing coordinate drift where the pill drifted past the stopping position during touch gestures
+      // or jumped when fast-scrolling back up due to toolbar state changes.
+      const viewportHeight =
+        typeof window !== 'undefined' && window.visualViewport
+          ? window.visualViewport.height
+          : window.innerHeight;
+
       const maxFooterHeight = footerRef.current.offsetHeight;
       const targetLift = maxFooterHeight + 12;
 
-      // Calculate the exact distance from the bottom of the page content to the bottom of the viewport.
-      // This prevents the "two-stage" stopping bug (where capping prematurely before the end of the page
-      // caused the pill to stop at an intermediate point while the user was still scrolling).
+      // Calculate the exact distance from the bottom of the page content to the bottom of the visual viewport.
       const mainEl = footerRef.current.closest('main');
       const mainRect = mainEl?.getBoundingClientRect();
 
       const scrollEl = document.scrollingElement || document.documentElement;
-      const maxScroll = Math.max(0, scrollEl.scrollHeight - windowHeight);
+      const maxScroll = Math.max(0, scrollEl.scrollHeight - viewportHeight);
       const currentScroll = window.scrollY || window.pageYOffset || scrollEl.scrollTop || 0;
 
       const remainingScroll = mainRect
-        ? Math.max(0, mainRect.bottom - windowHeight)
+        ? Math.max(0, mainRect.bottom - viewportHeight)
         : Math.max(0, maxScroll - currentScroll);
 
       // Smooth 1-to-1 upward lift that progresses seamlessly until reaching the end of the page,
-      // resting at the exact final stopping position when and only when the user reaches the bottom.
+      // resting at the exact final stopping position (targetLift) when reaching the bottom.
+      // Strictly clamped so it can never exceed targetLift even during overscroll / rubber-banding.
       const lift = Math.max(0, Math.min(targetLift, targetLift - remainingScroll));
 
       // Apply 1-to-1 GPU hardware-accelerated translation upward
@@ -89,11 +96,27 @@ export default function App() {
       });
     };
 
+    const handleImmediateUpdate = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      updatePosition();
+    };
+
     window.addEventListener('scroll', handleScrollOrResize, { passive: true });
     document.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true });
+    window.addEventListener('touchstart', handleScrollOrResize, { passive: true });
     window.addEventListener('touchmove', handleScrollOrResize, { passive: true });
-    window.addEventListener('touchend', handleScrollOrResize, { passive: true });
+    window.addEventListener('touchend', handleImmediateUpdate, { passive: true });
     window.addEventListener('resize', handleScrollOrResize, { passive: true });
+
+    // Synchronize directly with mobile visual viewport events (address bar collapse/expand)
+    const visualViewport = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (visualViewport) {
+      visualViewport.addEventListener('resize', handleScrollOrResize, { passive: true });
+      visualViewport.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    }
 
     // Observe footer intersection thresholds for instant trigger when scrolling into view
     const observer = new IntersectionObserver(
@@ -129,9 +152,14 @@ export default function App() {
       }
       window.removeEventListener('scroll', handleScrollOrResize);
       document.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+      window.removeEventListener('touchstart', handleScrollOrResize);
       window.removeEventListener('touchmove', handleScrollOrResize);
-      window.removeEventListener('touchend', handleScrollOrResize);
+      window.removeEventListener('touchend', handleImmediateUpdate);
       window.removeEventListener('resize', handleScrollOrResize);
+      if (visualViewport) {
+        visualViewport.removeEventListener('resize', handleScrollOrResize);
+        visualViewport.removeEventListener('scroll', handleScrollOrResize);
+      }
       observer.disconnect();
       if (resizeObserver) {
         resizeObserver.disconnect();
