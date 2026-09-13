@@ -52,10 +52,14 @@ export default function App() {
       const windowHeight = window.innerHeight;
 
       // Calculate exact visible height of footer in viewport
-      const visibleFooter = Math.max(0, windowHeight - footerRect.top);
-      // Fine-tuned clearance lift (6px on mobile for slightly lower stopping position, 10px on tablet)
+      // Cap to the footer's natural height so mobile rubber-band overscroll cannot pull the pill past its stopping point
+      const maxFooterHeight = footerRef.current.offsetHeight;
+      const rawVisibleFooter = Math.max(0, windowHeight - footerRect.top);
       const isMobile = window.innerWidth < 640;
-      const extraClearance = visibleFooter > 0 ? (isMobile ? 6 : 10) : 0;
+      const visibleFooter = isMobile ? Math.min(rawVisibleFooter, maxFooterHeight) : rawVisibleFooter;
+
+      // Fine-tuned clearance lift (12px on mobile to comfortably clear the bottom border of the timetable, 10px on tablet)
+      const extraClearance = visibleFooter > 0 ? (isMobile ? 12 : 10) : 0;
 
       // Apply 1-to-1 GPU hardware-accelerated translation upward
       pillRef.current.style.transform = `translate3d(0, ${-(visibleFooter + extraClearance)}px, 0)`;
