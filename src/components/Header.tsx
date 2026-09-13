@@ -172,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Bar: Brand, Badges & Actions */}
       <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 shadow-sm w-full max-w-full">
         {/* Left: Brand & Badges */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex items-center justify-between xl:justify-start gap-2 sm:gap-3 w-full xl:w-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-xs">
               <Calendar className="w-4 h-4" />
@@ -226,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right: Actions Row (Left: Undo/Redo, Right: Add Course + Tools) */}
-        <div className="flex items-center justify-between gap-1.5 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
+        <div className="flex items-center justify-between gap-1.5 w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-100 dark:border-slate-800/80">
           {/* Left inside action bar: Undo / Redo */}
           <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-800/60">
             <button

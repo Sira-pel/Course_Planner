@@ -195,8 +195,8 @@ export default function App() {
   ]);
 
   return (
-    <div className="min-h-screen md:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-hidden md:overflow-hidden w-full max-w-full">
-      <main className="flex-1 max-w-[1720px] w-full mx-auto p-2.5 sm:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-hidden">
+    <div className="min-h-screen xl:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-hidden xl:overflow-hidden w-full max-w-full">
+      <main className="flex-1 max-w-[1720px] w-full mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-hidden">
         {/* Header with brand, plan tabs, ghost overlay switcher, credits, conflict pill */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
@@ -207,9 +207,9 @@ export default function App() {
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
-        <div className="flex-1 flex flex-col md:flex-row gap-3 min-h-0 items-stretch">
+        <div className="flex-1 flex flex-col xl:flex-row gap-3 min-h-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-[600px] md:min-h-0">
+          <div className="flex-1 min-w-0 flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
@@ -219,7 +219,7 @@ export default function App() {
             />
           </div>
 
-          {/* Course Pool Sidebar on the right (bottom on mobile) */}
+          {/* Course Pool Sidebar on the right (bottom on mobile, drawer on tablet) */}
           <CoursePoolSidebar
             isCollapsed={isPoolCollapsed}
             onToggleCollapse={() => setIsPoolCollapsed((prev) => !prev)}
@@ -231,12 +231,12 @@ export default function App() {
         {/* Mobile/Tablet Floating Action Pill (Floats with screen, smoothly docks above footer) */}
         <div
           ref={pillRef}
-          className="md:hidden fixed right-4 sm:right-10 z-40 flex items-center gap-2 drop-shadow-lg"
+          className="xl:hidden fixed right-4 sm:right-8 z-40 flex items-center gap-2 drop-shadow-lg"
           style={{ bottom: '16px' }}
         >
           <button
             type="button"
-            onClick={() => setIsPoolCollapsed(false)}
+            onClick={() => setIsPoolCollapsed((prev) => !prev)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300/80 dark:border-slate-700 shadow-md active:scale-95 transition-transform"
             title="Open Course Pool"
           >

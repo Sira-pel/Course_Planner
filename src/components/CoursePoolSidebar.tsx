@@ -439,13 +439,13 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   return (
     <>
       {/* ---------------------------------------------------- */}
-      {/* 1. DESKTOP VIEW (md: and above)                      */}
+      {/* 1. DESKTOP VIEW (xl: 1280px and above side-by-side)  */}
       {/* ---------------------------------------------------- */}
       {isCollapsed ? (
         <aside
           id="course-pool-collapsed"
           onClick={onToggleCollapse}
-          className="hidden md:flex w-12 hover:w-13 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md flex-col items-center justify-start py-3.5 px-1.5 cursor-pointer select-none transition-all duration-200 hover:border-indigo-300 dark:hover:border-indigo-700 shrink-0 group"
+          className="hidden xl:flex w-12 hover:w-13 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md flex-col items-center justify-start py-3.5 px-1.5 cursor-pointer select-none transition-all duration-200 hover:border-indigo-300 dark:hover:border-indigo-700 shrink-0 group"
           title="Click to expand Course Pool"
         >
           {/* Expand Arrow & Icon Button */}
@@ -491,14 +491,35 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       ) : (
         <aside
           id="course-pool-sidebar"
-          className="hidden md:flex w-80 lg:w-88 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-md flex-col shrink-0 overflow-hidden transition-all duration-200"
+          className="hidden xl:flex w-80 lg:w-88 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-md flex-col shrink-0 overflow-hidden transition-all duration-200"
         >
           {renderPoolContent(false)}
         </aside>
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* 2. MOBILE VIEW: Slide-Up Bottom Sheet Popup Modal   */}
+      {/* 2. TABLET VIEW (md to xl: 768px - 1279px Slide Drawer) */}
+      {/* ---------------------------------------------------- */}
+      {!isCollapsed && (
+        <div className="hidden md:flex xl:hidden fixed inset-0 z-50">
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
+            onClick={onToggleCollapse}
+          />
+
+          {/* Slide-Over Drawer */}
+          <div
+            className="relative z-10 ml-auto w-96 max-w-[90vw] h-full bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in slide-in-from-right duration-250 ease-out"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderPoolContent(false)}
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* 3. MOBILE VIEW: Slide-Up Bottom Sheet Popup Modal   */}
       {/* ---------------------------------------------------- */}
       {!isCollapsed && (
         <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">

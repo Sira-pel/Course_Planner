@@ -646,7 +646,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
                 Color Accent
               </label>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap px-1.5 py-1">
                 {COURSE_COLORS.map((c) => (
                   <button
                     key={c}
@@ -1253,9 +1253,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                               })}
                             </div>
 
-                            {/* Color Selector */}
+                             {/* Color Selector */}
                             <div className="flex items-center justify-between pt-1">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 px-1 py-1">
                                 {COURSE_COLORS.slice(0, 7).map((clr) => (
                                   <button
                                     key={clr}
