@@ -306,36 +306,6 @@ export default function App() {
               onOpenCatalog={() => setIsPoolCollapsed(false)}
               isPoolOpen={!isPoolCollapsed}
             />
-
-            {/* Tablet Stationary Action Pill: Anchored in one fixed position at the bottom-right of the timetable, does NOT follow scroll */}
-            <div className="hidden sm:flex xl:hidden absolute right-5 bottom-4 z-30 items-center gap-2 drop-shadow-xl pointer-events-auto">
-              <button
-                type="button"
-                id="btn-tablet-pool-pill"
-                onClick={() => setIsPoolCollapsed((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300/80 dark:border-slate-700 shadow-md active:scale-95 transition-transform"
-                title="Open Course Pool"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Pool</span>
-                {catalogCourses.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-600 text-white">
-                    {catalogCourses.length}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                id="btn-tablet-add-course-pill"
-                onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
-                className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md active:scale-95 transition-transform"
-                title="Add New Course"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Course</span>
-              </button>
-            </div>
           </div>
 
           {/* Course Pool Sidebar on the right (bottom on mobile, drawer on tablet) */}
