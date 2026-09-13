@@ -2,7 +2,7 @@
 
 An interactive university course schedule builder and scenario planner built with React 19, TypeScript, Tailwind CSS, and Zustand. UniPlan helps students design, optimize, and compare multiple schedule options with collision detection, ghost plan overlays, syllabus text parsing, and calendar exports.
 
-[Link](course-schedule-planner.vercel.app)
+[Link to the site](course-schedule-planner.vercel.app)
 
 
 ---
