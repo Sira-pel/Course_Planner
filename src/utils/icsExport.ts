@@ -76,7 +76,7 @@ export function generateIcsCalendar(
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//UniPlan//Course Schedule Planner//EN',
+    'PRODID:-//Uniplan//Course Schedule Planner//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeIcsText(plan.name || 'Schedule')} - University Schedule`,

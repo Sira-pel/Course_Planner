@@ -48,21 +48,37 @@ export default function App() {
 
     const updatePosition = () => {
       if (!pillRef.current || !footerRef.current) return;
-      const footerRect = footerRef.current.getBoundingClientRect();
+
+      // Only active on phone mode (< 640px); tablet mode uses a stationary anchored pill
+      if (window.innerWidth >= 640) {
+        pillRef.current.style.transform = '';
+        return;
+      }
+
       const windowHeight = window.innerHeight;
-
-      // Calculate exact visible height of footer in viewport
-      // Cap to the footer's natural height so rubber-band overscroll (slow or fast fling) cannot pull the pill past its stopping point
       const maxFooterHeight = footerRef.current.offsetHeight;
-      const rawVisibleFooter = Math.max(0, windowHeight - footerRect.top);
-      const visibleFooter = Math.min(rawVisibleFooter, maxFooterHeight);
+      const targetLift = maxFooterHeight + 12;
 
-      // Fine-tuned clearance lift (12px on mobile to comfortably clear the bottom border of the timetable, 10px on tablet)
-      const isMobile = window.innerWidth < 640;
-      const extraClearance = visibleFooter > 0 ? (isMobile ? 12 : 10) : 0;
+      // Calculate the exact distance from the bottom of the page content to the bottom of the viewport.
+      // This prevents the "two-stage" stopping bug (where capping prematurely before the end of the page
+      // caused the pill to stop at an intermediate point while the user was still scrolling).
+      const mainEl = footerRef.current.closest('main');
+      const mainRect = mainEl?.getBoundingClientRect();
+
+      const scrollEl = document.scrollingElement || document.documentElement;
+      const maxScroll = Math.max(0, scrollEl.scrollHeight - windowHeight);
+      const currentScroll = window.scrollY || window.pageYOffset || scrollEl.scrollTop || 0;
+
+      const remainingScroll = mainRect
+        ? Math.max(0, mainRect.bottom - windowHeight)
+        : Math.max(0, maxScroll - currentScroll);
+
+      // Smooth 1-to-1 upward lift that progresses seamlessly until reaching the end of the page,
+      // resting at the exact final stopping position when and only when the user reaches the bottom.
+      const lift = Math.max(0, Math.min(targetLift, targetLift - remainingScroll));
 
       // Apply 1-to-1 GPU hardware-accelerated translation upward
-      pillRef.current.style.transform = `translate3d(0, ${-(visibleFooter + extraClearance)}px, 0)`;
+      pillRef.current.style.transform = `translate3d(0, ${-lift}px, 0)`;
     };
 
     const handleScrollOrResize = () => {
@@ -91,6 +107,20 @@ export default function App() {
       observer.observe(footerRef.current);
     }
 
+    // Observe layout changes so dynamically added/removed content updates the pill smoothly
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        handleScrollOrResize();
+      });
+      if (footerRef.current) {
+        resizeObserver.observe(footerRef.current);
+      }
+      if (document.body) {
+        resizeObserver.observe(document.body);
+      }
+    }
+
     updatePosition();
 
     return () => {
@@ -103,6 +133,9 @@ export default function App() {
       window.removeEventListener('touchend', handleScrollOrResize);
       window.removeEventListener('resize', handleScrollOrResize);
       observer.disconnect();
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
   }, []);
 
@@ -237,7 +270,7 @@ export default function App() {
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
         <div className="flex-1 flex flex-col xl:flex-row gap-3 min-h-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0">
+          <div className="flex-1 min-w-0 flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0 relative">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
@@ -245,6 +278,36 @@ export default function App() {
               onOpenCatalog={() => setIsPoolCollapsed(false)}
               isPoolOpen={!isPoolCollapsed}
             />
+
+            {/* Tablet Stationary Action Pill: Anchored in one fixed position at the bottom-right of the timetable, does NOT follow scroll */}
+            <div className="hidden sm:flex xl:hidden absolute right-5 bottom-4 z-30 items-center gap-2 drop-shadow-xl pointer-events-auto">
+              <button
+                type="button"
+                id="btn-tablet-pool-pill"
+                onClick={() => setIsPoolCollapsed((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300/80 dark:border-slate-700 shadow-md active:scale-95 transition-transform"
+                title="Open Course Pool"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Pool</span>
+                {catalogCourses.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-600 text-white">
+                    {catalogCourses.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                id="btn-tablet-add-course-pill"
+                onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
+                className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md active:scale-95 transition-transform"
+                title="Add New Course"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Course</span>
+              </button>
+            </div>
           </div>
 
           {/* Course Pool Sidebar on the right (bottom on mobile, drawer on tablet) */}
@@ -256,13 +319,14 @@ export default function App() {
           />
         </div>
 
-        {/* Mobile/Tablet Floating Action Pill (Floats dynamically with viewport, GPU-docks smoothly above footer) */}
+        {/* Mobile Floating Action Pill (Floats dynamically with viewport on phone, GPU-docks smoothly above footer) */}
         <div
           ref={pillRef}
-          className="xl:hidden fixed right-4 sm:right-8 bottom-4 sm:bottom-6 z-40 flex items-center gap-2 drop-shadow-xl will-change-transform"
+          className="sm:hidden fixed right-4 bottom-4 z-40 flex items-center gap-2 drop-shadow-xl will-change-transform"
         >
           <button
             type="button"
+            id="btn-mobile-pool-pill"
             onClick={() => setIsPoolCollapsed((prev) => !prev)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300/80 dark:border-slate-700 shadow-md active:scale-95 transition-transform"
             title="Open Course Pool"
@@ -278,6 +342,7 @@ export default function App() {
 
           <button
             type="button"
+            id="btn-mobile-add-course-pill"
             onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
             className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md active:scale-95 transition-transform"
             title="Add New Course"

@@ -27,7 +27,11 @@ export function timeToMinutes(timeStr: string): number {
  */
 export function minutesToTime(minutes: number, format12h: boolean = true): string {
   if (isNaN(minutes)) return format12h ? '12:00 AM' : '00:00';
-  const clamped = Math.max(0, Math.min(1439, Math.round(minutes)));
+  const rounded = Math.round(minutes);
+  if (rounded >= 1440) {
+    return format12h ? '12:00 AM' : '24:00';
+  }
+  const clamped = Math.max(0, Math.min(1439, rounded));
   const h24 = Math.floor(clamped / 60);
   const m = clamped % 60;
   const mPadded = m.toString().padStart(2, '0');

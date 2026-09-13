@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center gap-1.5 leading-none">
                 <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
-                  UniPlan
+                  Uniplan
                 </span>
               </div>
               <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">

@@ -89,8 +89,28 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const { width: containerWidth, height: containerHeight } = containerDimensions;
 
+  // Adaptive time boundaries: if any enrolled or ghost course has sessions outside startHour/endHour,
+  // gracefully expand the visible hours so no class is cropped or squeezed to zero.
+  const { effectiveStartHour, effectiveEndHour } = useMemo(() => {
+    let minH = startHour;
+    let maxH = endHour;
+    const allCourses = [...(activePlan?.courses || []), ...ghostPlans.flatMap(p => p.courses)];
+    for (const c of allCourses) {
+      for (const s of c.sessions) {
+        const sM = timeToMinutes(s.startTime);
+        const eM = timeToMinutes(s.endTime);
+        if (sM > 0) minH = Math.min(minH, Math.floor(sM / 60));
+        if (eM > 0) maxH = Math.max(maxH, Math.ceil(eM / 60));
+      }
+    }
+    return {
+      effectiveStartHour: Math.max(0, minH),
+      effectiveEndHour: Math.min(24, Math.max(minH + 1, maxH)),
+    };
+  }, [startHour, endHour, activePlan?.courses, ghostPlans]);
+
   // Total grid minutes and dimensions
-  const numHours = Math.max(1, endHour - startHour);
+  const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);
   
   // Calculate a responsive hour height. 
   // We subtract ~44px for the header from the container height.
@@ -105,11 +125,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const hourMarks = useMemo(() => {
     const arr: number[] = [];
-    for (let h = startHour; h <= endHour; h++) {
+    for (let h = effectiveStartHour; h <= effectiveEndHour; h++) {
       arr.push(h);
     }
     return arr;
-  }, [startHour, endHour]);
+  }, [effectiveStartHour, effectiveEndHour]);
 
   // Pre-calculate day layout sessions
   const dayLayoutMap = useMemo(() => {
@@ -191,7 +211,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return map[jsDay] || null;
   }, [now]);
 
-  const currentMinutesFromGridStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
+  const currentMinutesFromGridStart = (now.getHours() * 60 + now.getMinutes()) - (effectiveStartHour * 60);
   const showNowLine = currentMinutesFromGridStart >= 0 && currentMinutesFromGridStart <= totalMinutes;
   const nowPercent = (currentMinutesFromGridStart / totalMinutes) * 100;
 
@@ -361,10 +381,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     const rect = e.currentTarget.getBoundingClientRect();
                     const clickY = e.clientY - rect.top;
                     const percent = Math.max(0, Math.min(1, clickY / rect.height));
-                    const clickedMinutes = startHour * 60 + percent * totalMinutes;
-                    // Snap to nearest 30 mins, clamping between startHour and max 23:30
-                    const maxMinutes = Math.min(23 * 60 + 30, endHour * 60 - 30);
-                    const minMinutes = startHour * 60;
+                    const clickedMinutes = effectiveStartHour * 60 + percent * totalMinutes;
+                    // Snap to nearest 30 mins, clamping between effectiveStartHour and max 23:30
+                    const maxMinutes = Math.min(23 * 60 + 30, effectiveEndHour * 60 - 30);
+                    const minMinutes = effectiveStartHour * 60;
                     const snappedM = Math.max(minMinutes, Math.min(maxMinutes, Math.round(clickedMinutes / 30) * 30));
                     const h = Math.min(23, Math.floor(snappedM / 60));
                     const m = snappedM % 60;
@@ -388,7 +408,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <CourseBlock
                       key={`${layoutItem.course.id}_${layoutItem.session.id}_${layoutItem.isGhost ? 'g' : 'a'}`}
                       layout={layoutItem}
-                      startHour={startHour}
+                      startHour={effectiveStartHour}
                       totalMinutes={totalMinutes}
                       onEdit={onEditCourse}
                       onDelete={(cId) => deleteCourse(cId)}

@@ -169,14 +169,17 @@ export function parseIcsContent(icsContent: string): Course[] {
   
   // Further dedup sessions inside the course (e.g. if event repeated exactly the same)
   for (const c of Object.values(deduped)) {
-     const uniqueSessions = new Map<string, ClassSession>();
-     for (const s of c.sessions) {
-         const skey = `${s.day}-${s.startTime}-${s.endTime}`;
-         if (!uniqueSessions.has(skey)) {
-             uniqueSessions.set(skey, s);
-         }
-     }
-     c.sessions = Array.from(uniqueSessions.values());
+    const uniqueSessions = new Map<string, ClassSession>();
+    for (const s of c.sessions) {
+      const skey = `${s.day}-${s.startTime}-${s.endTime}-${s.room || ''}`;
+      if (!uniqueSessions.has(skey)) {
+        uniqueSessions.set(skey, s);
+      }
+    }
+    c.sessions = Array.from(uniqueSessions.values()).map((s, sIdx) => ({
+      ...s,
+      id: `s_${c.id}_${sIdx}`,
+    }));
   }
 
   return Object.values(deduped);

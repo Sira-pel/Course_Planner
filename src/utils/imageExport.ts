@@ -71,7 +71,7 @@ export async function exportScheduleToImage(
   // App & Plan Title
   ctx.fillStyle = textPrimary;
   ctx.font = 'bold 20px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText(`UniPlan • ${plan.name}`, 24, 40);
+  ctx.fillText(`Uniplan • ${plan.name}`, 24, 40);
 
   const totalCredits = plan.courses.reduce((sum, c) => sum + (c.credits || 0), 0);
   ctx.fillStyle = textSecondary;
@@ -147,16 +147,30 @@ export async function exportScheduleToImage(
   ctx.fillStyle = timeGutterBg;
   ctx.fillRect(0, gridTop, timeGutterWidth, gridHeight);
 
+  // Adaptive time boundaries: expand if any enrolled course falls outside default hours
+  let startHour = options.startHour;
+  let endHour = options.endHour;
+  for (const c of plan.courses) {
+    for (const s of c.sessions) {
+      const sM = timeToMinutes(s.startTime);
+      const eM = timeToMinutes(s.endTime);
+      if (sM > 0) startHour = Math.min(startHour, Math.floor(sM / 60));
+      if (eM > 0) endHour = Math.max(endHour, Math.ceil(eM / 60));
+    }
+  }
+  startHour = Math.max(0, startHour);
+  endHour = Math.min(24, Math.max(startHour + 1, endHour));
+
   // Time Rows
-  const totalMinutes = (options.endHour - options.startHour) * 60;
-  const numHours = options.endHour - options.startHour;
+  const totalMinutes = (endHour - startHour) * 60;
+  const numHours = endHour - startHour;
   const hourHeight = gridHeight / numHours;
 
-  for (let h = options.startHour; h <= options.endHour; h++) {
-    const y = gridTop + (h - options.startHour) * hourHeight;
+  for (let h = startHour; h <= endHour; h++) {
+    const y = gridTop + (h - startHour) * hourHeight;
 
     // Line across grid
-    ctx.strokeStyle = h === options.startHour || h === options.endHour ? hourLineColor : gridLineColor;
+    ctx.strokeStyle = h === startHour || h === endHour ? hourLineColor : gridLineColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(timeGutterWidth, y);
@@ -170,9 +184,9 @@ export async function exportScheduleToImage(
     const label = minutesToTime(h * 60, true);
 
     let labelY = y + 4;
-    if (h === options.startHour) {
+    if (h === startHour) {
       labelY = y + 12;
-    } else if (h === options.endHour) {
+    } else if (h === endHour) {
       labelY = y - 4;
     }
     ctx.fillText(label, timeGutterWidth - 10, labelY);
@@ -204,11 +218,11 @@ export async function exportScheduleToImage(
       const sMin = timeToMinutes(session.startTime);
       const eMin = timeToMinutes(session.endTime);
 
-      const topMin = Math.max(sMin, options.startHour * 60);
-      const bottomMin = Math.min(eMin, options.endHour * 60);
+      const topMin = Math.max(sMin, startHour * 60);
+      const bottomMin = Math.min(eMin, endHour * 60);
       if (bottomMin <= topMin) return;
 
-      const yTop = gridTop + ((topMin - options.startHour * 60) / totalMinutes) * gridHeight;
+      const yTop = gridTop + ((topMin - startHour * 60) / totalMinutes) * gridHeight;
       const blockHeight = Math.max(28, ((bottomMin - topMin) / totalMinutes) * gridHeight);
 
       const pad = 3;

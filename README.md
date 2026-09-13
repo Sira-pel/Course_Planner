@@ -1,6 +1,6 @@
-# UniPlan — University Course Schedule & Scenario Planner
+# Uniplan — University Course Schedule & Scenario Planner
 
-An interactive university course schedule builder and scenario planner built with React 19, TypeScript, Tailwind CSS, and Zustand. UniPlan helps students design, optimize, and compare multiple schedule options with collision detection, ghost plan overlays, syllabus text parsing, and calendar exports.
+An interactive university course schedule builder and scenario planner built with React 19, TypeScript, Tailwind CSS, and Zustand. Uniplan helps students design, optimize, and compare multiple schedule options with collision detection, ghost plan overlays, syllabus text parsing, and calendar exports.
 
 [Link to the site](https://course-schedule-planner.vercel.app/)
 

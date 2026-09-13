@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error caught by UniPlan ErrorBoundary:', error, errorInfo);
+    console.error('Uncaught error caught by Uniplan ErrorBoundary:', error, errorInfo);
     this.setState({ error, errorInfo });
   }
 
@@ -33,7 +33,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleResetSafeState = () => {
     try {
+      localStorage.removeItem('uniplan_schedule_storage_v2');
       localStorage.removeItem('uniplan_storage_v1');
+      localStorage.removeItem('uniplan_theme');
     } catch (e) {
       console.error(e);
     }
@@ -54,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 Something went wrong
               </h1>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                UniPlan encountered an unexpected issue while rendering this view. Your saved schedules are safe.
+                Uniplan encountered an unexpected issue while rendering this view. Your saved schedules are safe.
               </p>
             </div>
 

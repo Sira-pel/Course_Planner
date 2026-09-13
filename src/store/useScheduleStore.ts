@@ -217,15 +217,18 @@ export const useScheduleStore = create<ScheduleState>()(
         const snapshot = createHistorySnapshot(state);
 
         const newPlanId = `plan_${Date.now()}`;
-        // Deep copy courses with new IDs to prevent reference collisions
-        const clonedCourses: Course[] = sourcePlan.courses.map(c => ({
-          ...c,
-          id: `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          sessions: c.sessions.map((s, idx) => ({
-            ...s,
-            id: `s_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
-          })),
-        }));
+        // Deep copy courses with new collision-free IDs to prevent reference collisions
+        const clonedCourses: Course[] = sourcePlan.courses.map((c, cIdx) => {
+          const newCourseId = `c_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 7)}`;
+          return {
+            ...c,
+            id: newCourseId,
+            sessions: c.sessions.map((s, sIdx) => ({
+              ...s,
+              id: `s_${newCourseId}_${sIdx}`,
+            })),
+          };
+        });
 
         const duplicatedPlan: SchedulePlan = {
           id: newPlanId,
@@ -264,7 +267,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
         const remainingPlans = state.plans.filter(p => p.id !== planId);
         const newActiveId = state.activePlanId === planId ? remainingPlans[0].id : state.activePlanId;
-        const newGhostIds = state.ghostPlanIds.filter(id => id !== planId);
+        const newGhostIds = state.ghostPlanIds.filter(id => id !== planId && id !== newActiveId);
 
         set({
           past: [snapshot, ...state.past].slice(0, MAX_HISTORY),
@@ -306,7 +309,10 @@ export const useScheduleStore = create<ScheduleState>()(
         });
 
         // Also ensure it's saved in the shared course pool if not already there
-        const inCatalog = state.catalogCourses.some(c => c.code === course.code && c.section === course.section);
+        const inCatalog = state.catalogCourses.some(
+          c => c.code.trim().toUpperCase() === course.code.trim().toUpperCase() &&
+               (c.section || '').trim().toUpperCase() === (course.section || '').trim().toUpperCase()
+        );
         const updatedCatalog = inCatalog
           ? state.catalogCourses
           : [...state.catalogCourses, { ...course, id: `cat_${course.id}` }];
@@ -382,7 +388,10 @@ export const useScheduleStore = create<ScheduleState>()(
         // Add to catalog pool as well
         const currentCatalog = [...state.catalogCourses];
         newCourses.forEach(c => {
-          const exists = currentCatalog.some(cat => cat.code === c.code && cat.section === c.section);
+          const exists = currentCatalog.some(
+            cat => cat.code.trim().toUpperCase() === c.code.trim().toUpperCase() &&
+                   (cat.section || '').trim().toUpperCase() === (c.section || '').trim().toUpperCase()
+          );
           if (!exists) {
             currentCatalog.push({ ...c, id: `cat_${c.id}` });
           }
