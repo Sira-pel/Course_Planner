@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { generateScheduleText, TextExportFormat } from '../utils/textExport';
 import { downloadIcsFile } from '../utils/icsExport';
@@ -27,7 +27,7 @@ type TabType = 'text' | 'ics' | 'image' | 'backup';
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
   const { plans, activePlanId, catalogCourses, showWeekends, startHour, endHour, theme, importFullState } =
     useScheduleStore();
-  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
   const [activeTab, setActiveTab] = useState<TabType>('text');
 
@@ -49,9 +49,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
-  if (!isOpen) return null;
+  // Memoize generated text so it only recalculates when activePlan or textFormat changes
+  const generatedText = useMemo(() => {
+    if (!activePlan) return '';
+    return generateScheduleText(activePlan, textFormat);
+  }, [activePlan, textFormat]);
 
-  const generatedText = generateScheduleText(activePlan, textFormat);
+  if (!isOpen) return null;
 
   const handleCopyText = async () => {
     try {
@@ -110,7 +114,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

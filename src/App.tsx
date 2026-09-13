@@ -44,6 +44,8 @@ export default function App() {
   const footerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    let rafId: number | null = null;
+
     const updatePosition = () => {
       if (!pillRef.current || !footerRef.current) return;
       const footerRect = footerRef.current.getBoundingClientRect();
@@ -64,7 +66,11 @@ export default function App() {
     };
 
     const handleScrollOrResize = () => {
-      updatePosition();
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        updatePosition();
+        rafId = null;
+      });
     };
 
     window.addEventListener('scroll', handleScrollOrResize, { passive: true });
@@ -88,6 +94,9 @@ export default function App() {
     updatePosition();
 
     return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       window.removeEventListener('scroll', handleScrollOrResize);
       document.removeEventListener('scroll', handleScrollOrResize, { capture: true });
       window.removeEventListener('touchmove', handleScrollOrResize);

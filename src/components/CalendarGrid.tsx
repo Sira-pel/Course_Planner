@@ -62,7 +62,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const activePlan = plans.find(p => p.id === activePlanId) || plans[0];
+  const activePlan = useMemo(() => plans.find(p => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const ghostPlans = useMemo(() => {
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
@@ -76,7 +76,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Conflict set for active plan
   const conflicts = useMemo(() => {
     return activePlan ? detectPlanConflicts(activePlan.courses) : [];
-  }, [activePlan]);
+  }, [activePlan?.courses]);
 
   const conflictingCourseIds = useMemo(() => {
     const set = new Set<string>();
@@ -362,9 +362,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     const clickY = e.clientY - rect.top;
                     const percent = Math.max(0, Math.min(1, clickY / rect.height));
                     const clickedMinutes = startHour * 60 + percent * totalMinutes;
-                    // Snap to nearest 30 mins
-                    const snappedM = Math.round(clickedMinutes / 30) * 30;
-                    const h = Math.floor(snappedM / 60);
+                    // Snap to nearest 30 mins, clamping between startHour and max 23:30
+                    const maxMinutes = Math.min(23 * 60 + 30, endHour * 60 - 30);
+                    const minMinutes = startHour * 60;
+                    const snappedM = Math.max(minMinutes, Math.min(maxMinutes, Math.round(clickedMinutes / 30) * 30));
+                    const h = Math.min(23, Math.floor(snappedM / 60));
                     const m = snappedM % 60;
                     const timeFormatted = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
                     onAddCourseAtTime(day.id, timeFormatted);

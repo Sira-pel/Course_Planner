@@ -15,13 +15,25 @@ function sanitizeCourse(c: any, index: number): Course {
   const sessions: ClassSession[] = Array.isArray(c?.sessions)
     ? c.sessions
         .filter((s: any) => s && typeof s === 'object')
-        .map((s: any, sIdx: number): ClassSession => ({
-          id: typeof s.id === 'string' && s.id ? s.id : `s_${courseId}_${sIdx}`,
-          day: VALID_DAYS.includes(s.day) ? s.day : 'monday',
-          startTime: typeof s.startTime === 'string' && s.startTime ? s.startTime : '09:00',
-          endTime: typeof s.endTime === 'string' && s.endTime ? s.endTime : '10:15',
-          room: typeof s.room === 'string' && s.room.trim() ? s.room.trim() : undefined,
-        }))
+        .map((s: any, sIdx: number): ClassSession => {
+          const rawStart = typeof s.startTime === 'string' && s.startTime ? s.startTime : '09:00';
+          let rawEnd = typeof s.endTime === 'string' && s.endTime ? s.endTime : '10:15';
+          const [sh, sm] = rawStart.split(':').map(Number);
+          const [eh, em] = rawEnd.split(':').map(Number);
+          const sMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+          const eMin = (isNaN(eh) ? 10 : eh) * 60 + (isNaN(em) ? 15 : em);
+          if (eMin <= sMin) {
+            const adj = Math.min(23 * 60 + 59, sMin + 50);
+            rawEnd = `${Math.floor(adj / 60).toString().padStart(2, '0')}:${(adj % 60).toString().padStart(2, '0')}`;
+          }
+          return {
+            id: typeof s.id === 'string' && s.id ? s.id : `s_${courseId}_${sIdx}`,
+            day: VALID_DAYS.includes(s.day) ? s.day : 'monday',
+            startTime: rawStart,
+            endTime: rawEnd,
+            room: typeof s.room === 'string' && s.room.trim() ? s.room.trim() : undefined,
+          };
+        })
     : [];
 
   return {
@@ -66,6 +78,23 @@ function sanitizeCatalog(rawCatalog: any[]): Course[] {
 interface HistorySnapshot {
   plans: SchedulePlan[];
   catalogCourses: Course[];
+}
+
+function createHistorySnapshot(state: { plans: SchedulePlan[]; catalogCourses: Course[] }): HistorySnapshot {
+  if (typeof structuredClone === 'function') {
+    try {
+      return {
+        plans: structuredClone(state.plans),
+        catalogCourses: structuredClone(state.catalogCourses),
+      };
+    } catch {
+      // Fallback if environment throws
+    }
+  }
+  return {
+    plans: JSON.parse(JSON.stringify(state.plans)),
+    catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
+  };
 }
 
 interface ScheduleState {
@@ -157,10 +186,7 @@ export const useScheduleStore = create<ScheduleState>()(
       createPlan: (name?: string) => {
         const state = get();
         // Save history snapshot
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const planCount = state.plans.length + 1;
         const alphabet = String.fromCharCode(65 + ((planCount - 1) % 26));
@@ -188,10 +214,7 @@ export const useScheduleStore = create<ScheduleState>()(
         const sourcePlan = state.plans.find(p => p.id === planId);
         if (!sourcePlan) return planId;
 
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const newPlanId = `plan_${Date.now()}`;
         // Deep copy courses with new IDs to prevent reference collisions
@@ -224,10 +247,7 @@ export const useScheduleStore = create<ScheduleState>()(
         const trimmed = newName.trim();
         if (!trimmed) return;
         const state = get();
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         set({
           past: [snapshot, ...state.past].slice(0, MAX_HISTORY),
@@ -240,10 +260,7 @@ export const useScheduleStore = create<ScheduleState>()(
         const state = get();
         if (state.plans.length <= 1) return; // Keep at least one plan
 
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const remainingPlans = state.plans.filter(p => p.id !== planId);
         const newActiveId = state.activePlanId === planId ? remainingPlans[0].id : state.activePlanId;
@@ -276,10 +293,7 @@ export const useScheduleStore = create<ScheduleState>()(
       addCourse: (course: Course, targetPlanId?: string) => {
         const state = get();
         const targetId = targetPlanId || state.activePlanId;
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const updatedPlans = state.plans.map(p => {
           if (p.id === targetId) {
@@ -308,10 +322,7 @@ export const useScheduleStore = create<ScheduleState>()(
       updateCourse: (updatedCourse: Course, targetPlanId?: string) => {
         const state = get();
         const targetId = targetPlanId || state.activePlanId;
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const updatedPlans = state.plans.map(p => {
           if (p.id === targetId) {
@@ -333,10 +344,7 @@ export const useScheduleStore = create<ScheduleState>()(
       deleteCourse: (courseId: string, targetPlanId?: string) => {
         const state = get();
         const targetId = targetPlanId || state.activePlanId;
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const updatedPlans = state.plans.map(p => {
           if (p.id === targetId) {
@@ -359,10 +367,7 @@ export const useScheduleStore = create<ScheduleState>()(
         if (newCourses.length === 0) return;
         const state = get();
         const targetId = targetPlanId || state.activePlanId;
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const updatedPlans = state.plans.map(p => {
           if (p.id === targetId) {
@@ -445,10 +450,7 @@ export const useScheduleStore = create<ScheduleState>()(
         );
         if (alreadyInPlan) return;
 
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         // Deep copy with fresh unique IDs
         const newCourseId = `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -488,10 +490,7 @@ export const useScheduleStore = create<ScheduleState>()(
         );
         if (!existingInPlan) return;
 
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
 
         const updatedPlans = state.plans.map(p =>
           p.id === targetId
@@ -534,10 +533,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
         const previous = state.past[0];
         const newPast = state.past.slice(1);
-        const currentSnapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const currentSnapshot = createHistorySnapshot(state);
 
         // Ensure activePlanId points to an existing plan
         const hasActive = previous.plans.some(p => p.id === state.activePlanId);
@@ -558,10 +554,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
         const next = state.future[0];
         const newFuture = state.future.slice(1);
-        const currentSnapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const currentSnapshot = createHistorySnapshot(state);
 
         const hasActive = next.plans.some(p => p.id === state.activePlanId);
         const validActiveId = hasActive ? state.activePlanId : next.plans[0]?.id || '';
@@ -604,10 +597,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
       resetToBlank: () => {
         const state = get();
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
         const newPlanId = `plan_${Date.now()}`;
         set({
           past: [snapshot, ...state.past].slice(0, MAX_HISTORY),
@@ -621,10 +611,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
       resetToSample: () => {
         const state = get();
-        const snapshot: HistorySnapshot = {
-          plans: JSON.parse(JSON.stringify(state.plans)),
-          catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-        };
+        const snapshot = createHistorySnapshot(state);
         set({
           past: [snapshot, ...state.past].slice(0, MAX_HISTORY),
           future: [],
@@ -647,10 +634,7 @@ export const useScheduleStore = create<ScheduleState>()(
           }
 
           const state = get();
-          const snapshot: HistorySnapshot = {
-            plans: JSON.parse(JSON.stringify(state.plans)),
-            catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
-          };
+          const snapshot = createHistorySnapshot(state);
 
           const targetActiveId = sanitizedPlans.some(p => p.id === parsed.activePlanId)
             ? parsed.activePlanId

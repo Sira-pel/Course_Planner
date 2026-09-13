@@ -10,24 +10,36 @@ const dayMap: Record<string, DayOfWeek> = {
   'SU': 'sunday',
 };
 
-function parseIcsTime(dateStr: string): string {
-  const isUTC = dateStr.endsWith('Z');
-  
-  const year = parseInt(dateStr.substring(0,4), 10);
-  const month = parseInt(dateStr.substring(4,6), 10) - 1;
-  const day = parseInt(dateStr.substring(6,8), 10);
-  const hours = parseInt(dateStr.substring(9,11), 10);
-  const mins = parseInt(dateStr.substring(11,13), 10);
-  const secs = parseInt(dateStr.substring(13,15), 10);
-  
-  let d: Date;
-  if (isUTC) {
-      d = new Date(Date.UTC(year, month, day, hours, mins, secs));
-  } else {
-      d = new Date(year, month, day, hours, mins, secs);
+function parseIcsTime(dateStr: string, defaultTime: string = '09:00'): string {
+  if (!dateStr || typeof dateStr !== 'string') return defaultTime;
+  const cleanStr = dateStr.trim();
+  const tIndex = cleanStr.indexOf('T');
+  if (tIndex === -1) {
+    // All-day event or date-only value (e.g. 20260901)
+    return defaultTime;
   }
-  
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
+  const isUTC = cleanStr.endsWith('Z');
+  const timePart = cleanStr.substring(tIndex + 1).replace('Z', '');
+  if (timePart.length < 4) return defaultTime;
+
+  const hours = parseInt(timePart.substring(0, 2), 10);
+  const mins = parseInt(timePart.substring(2, 4), 10);
+  const secs = timePart.length >= 6 ? parseInt(timePart.substring(4, 6), 10) : 0;
+
+  if (isNaN(hours) || isNaN(mins)) return defaultTime;
+
+  if (isUTC) {
+    const year = parseInt(cleanStr.substring(0, 4), 10);
+    const month = parseInt(cleanStr.substring(4, 6), 10) - 1;
+    const day = parseInt(cleanStr.substring(6, 8), 10);
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      const d = new Date(Date.UTC(year, month, day, hours, mins, isNaN(secs) ? 0 : secs));
+      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    }
+  }
+
+  return `${Math.min(23, Math.max(0, hours)).toString().padStart(2, '0')}:${Math.min(59, Math.max(0, mins)).toString().padStart(2, '0')}`;
 }
 
 export function parseIcsContent(icsContent: string): Course[] {
@@ -52,8 +64,23 @@ export function parseIcsContent(icsContent: string): Course[] {
         .replace(/\\n/gi, '\n')
         .replace(/\\\\/g, '\\');
       
-      const startTime = parseIcsTime(startMatch[1]);
-      const endTime = parseIcsTime(endMatch[1]);
+      const startTime = parseIcsTime(startMatch[1], '09:00');
+      const endTimeRaw = parseIcsTime(endMatch[1], '10:15');
+
+      // Guarantee chronological order (end time after start time)
+      let finalStartTime = startTime;
+      let finalEndTime = endTimeRaw;
+      const [sh, sm] = finalStartTime.split(':').map(Number);
+      const [eh, em] = finalEndTime.split(':').map(Number);
+      const startMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+      const endMin = (isNaN(eh) ? 10 : eh) * 60 + (isNaN(em) ? 0 : em);
+      if (endMin <= startMin) {
+        const adjustedEnd = Math.min(23 * 60 + 59, startMin + 50);
+        const adjH = Math.floor(adjustedEnd / 60).toString().padStart(2, '0');
+        const adjM = (adjustedEnd % 60).toString().padStart(2, '0');
+        finalEndTime = `${adjH}:${adjM}`;
+      }
+
       const location = locationMatch 
         ? locationMatch[1].trim()
             .replace(/\\,/g, ',')
@@ -94,25 +121,33 @@ export function parseIcsContent(icsContent: string): Course[] {
         sessions.push({
           id: `tmp_${Math.random()}`,
           day: d,
-          startTime,
-          endTime,
+          startTime: finalStartTime,
+          endTime: finalEndTime,
           room: location,
         });
       }
       
-      // Attempt to extract code from summary e.g. "CS101 - Intro" -> "CS101"
+      // Attempt to extract code and section from summary e.g. "CS101-01 - Intro" -> code: "CS101", section: "01"
       let code = summary.substring(0, 8);
+      let section: string | undefined = undefined;
+
       const codeMatch = summary.match(/^([A-Z]{2,4}\s*\d{3,4}[A-Z]?)/i);
       if (codeMatch) {
-        code = codeMatch[1].trim();
+        code = codeMatch[1].trim().toUpperCase();
       } else if (summary.split(/[-: ]/).length > 1) {
-        code = summary.split(/[-:]/)[0].trim().substring(0, 10);
+        code = summary.split(/[-:]/)[0].trim().substring(0, 10).toUpperCase();
+      }
+
+      const secMatch = summary.match(/(?:sec(?:tion)?\.?\s*|–\s*sec\s*|,\s*\(?[A-Z0-9]?\)?\s*)([0-9]{1,4}[A-Z]?)/i) || summary.match(/-([0-9]{2,4})/);
+      if (secMatch) {
+        section = secMatch[1].trim();
       }
       
       courses.push({
         id: `c_ics_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         code,
         name: summary,
+        section,
         credits: 3, // default
         color: COURSE_COLORS[courses.length % COURSE_COLORS.length],
         sessions,
@@ -120,11 +155,11 @@ export function parseIcsContent(icsContent: string): Course[] {
     }
   }
   
-  // Try to deduplicate repeating courses (sometimes an ICS will have the same course in multiple events if they have different locations/days)
+  // Try to deduplicate repeating courses without merging distinct sections
   const deduped: Record<string, Course> = {};
   
   for (const c of courses) {
-    const key = c.code + c.name;
+    const key = `${c.code.trim().toUpperCase()}__${(c.section || '').trim().toUpperCase()}__${c.name.trim().toLowerCase()}`;
     if (deduped[key]) {
       deduped[key].sessions.push(...c.sessions);
     } else {

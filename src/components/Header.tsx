@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { detectPlanConflicts } from '../utils/timeUtils';
 import { COURSE_COLORS, GHOST_PLAN_COLORS } from '../types/schedule';
@@ -90,12 +90,15 @@ export const Header: React.FC<HeaderProps> = ({
     }, 4000);
   };
 
-  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
-  const conflicts = activePlan ? detectPlanConflicts(activePlan.courses) : [];
-  const totalCredits = activePlan?.courses.reduce((sum, c) => sum + (c.credits || 0), 0) || 0;
+  const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
+  const conflicts = useMemo(() => (activePlan ? detectPlanConflicts(activePlan.courses) : []), [activePlan?.courses]);
+  const totalCredits = useMemo(
+    () => activePlan?.courses.reduce((sum, c) => sum + (c.credits || 0), 0) || 0,
+    [activePlan?.courses]
+  );
 
   // Next suggested plan name based on existing plan count
-  const nextSuggestedName = `Plan ${String.fromCharCode(65 + (plans.length % 26))}`;
+  const nextSuggestedName = useMemo(() => `Plan ${String.fromCharCode(65 + (plans.length % 26))}`, [plans.length]);
 
   // Close menus when clicking outside
   useEffect(() => {

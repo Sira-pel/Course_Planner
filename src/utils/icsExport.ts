@@ -41,11 +41,12 @@ function formatIcsDateTime(date: Date, timeStr: string): string {
   return `${year}${month}${day}T${hours}${minutes}00`;
 }
 
-function formatIcsDateOnly(date: Date): string {
+function formatIcsUntil(date: Date): string {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
-  return `${year}${month}${day}T235959Z`;
+  // Per RFC 5545 §3.3.10: If DTSTART has floating local time, UNTIL MUST also be floating local time (no Z)
+  return `${year}${month}${day}T235959`;
 }
 
 /**
@@ -70,7 +71,7 @@ export function generateIcsCalendar(
 ): string {
   const startDate = parseLocalDate(semesterStart);
   const endDate = parseLocalDate(semesterEnd);
-  const untilStr = formatIcsDateOnly(endDate);
+  const untilStr = formatIcsUntil(endDate);
 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
@@ -79,11 +80,10 @@ export function generateIcsCalendar(
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeIcsText(plan.name || 'Schedule')} - University Schedule`,
-    'X-WR-TIMEZONE:UTC',
   ];
 
   const now = new Date();
-  const dtStamp = formatIcsDateTime(now, `${now.getHours()}:${now.getMinutes()}`) + 'Z';
+  const dtStamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   (plan.courses || []).forEach((course) => {
     (course.sessions || []).forEach((session) => {
@@ -103,8 +103,12 @@ export function generateIcsCalendar(
       const description = escapeIcsText(descParts.join(' | '));
       const location = escapeIcsText(session.room || '');
 
+      const safeCourseId = String(course.id).replace(/[^a-zA-Z0-9_-]/g, '');
+      const safeSessionId = String(session.id).replace(/[^a-zA-Z0-9_-]/g, '');
+      const uid = `event_${safeCourseId || 'c'}_${safeSessionId || 's'}_${Date.now()}@uniplan.app`;
+
       lines.push('BEGIN:VEVENT');
-      lines.push(`UID:event_${course.id}_${session.id}_${Date.now()}@uniplan.app`);
+      lines.push(`UID:${uid}`);
       lines.push(`DTSTAMP:${dtStamp}`);
       lines.push(`DTSTART:${dtStart}`);
       lines.push(`DTEND:${dtEnd}`);
@@ -140,5 +144,5 @@ export function downloadIcsFile(
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

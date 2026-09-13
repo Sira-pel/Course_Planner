@@ -269,7 +269,11 @@ export async function exportScheduleToImage(
     });
   });
 
-  return canvas.toDataURL('image/png');
+  const dataUrl = canvas.toDataURL('image/png');
+  // Release backing GPU/canvas bitmap buffer immediately to avoid memory bloat
+  canvas.width = 0;
+  canvas.height = 0;
+  return dataUrl;
 }
 
 /**

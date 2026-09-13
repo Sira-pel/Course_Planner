@@ -71,7 +71,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     getNextColor,
   } = useScheduleStore();
 
-  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
   const existingCourse = editingCourseId
     ? activePlan?.courses.find((c) => c.id === editingCourseId) ||
@@ -112,53 +112,57 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   // Editable recognized items state
   const [recognizedItems, setRecognizedItems] = useState<EditableRecognizedItem[]>([]);
 
-  // Synchronize recognized items whenever rawText changes
+  // Synchronize recognized items whenever rawText changes (debounced 150ms to prevent heavy regex runs per keystroke)
   useEffect(() => {
     if (!rawText.trim()) {
       setRecognizedItems([]);
       return;
     }
 
-    const parsed = parseBulkCourses(rawText, activePlan?.courses.length || 0);
-    const newItems: EditableRecognizedItem[] = parsed.map((res, idx) => {
-      if (res.success && res.course) {
-        return {
-          id: res.course.id || `rec_${idx}_${Date.now()}`,
-          rawText: res.rawText,
-          course: res.course,
-          selected: true,
-          isEditing: false,
+    const timer = setTimeout(() => {
+      const parsed = parseBulkCourses(rawText, activePlan?.courses.length || 0);
+      const newItems: EditableRecognizedItem[] = parsed.map((res, idx) => {
+        if (res.success && res.course) {
+          return {
+            id: res.course.id || `rec_${idx}_${Date.now()}`,
+            rawText: res.rawText,
+            course: res.course,
+            selected: true,
+            isEditing: false,
+          };
+        }
+        // Fallback draft course for failed lines so user can fix them easily
+        const fallbackCourse: Course = {
+          id: `rec_fail_${idx}_${Date.now()}`,
+          code: 'COURSE 101',
+          name: res.rawText.slice(0, 40) || 'Custom Course',
+          credits: 3,
+          color: COURSE_COLORS[idx % COURSE_COLORS.length],
+          sessions: [
+            {
+              id: `s_fail_${idx}`,
+              day: 'monday',
+              startTime: '09:00',
+              endTime: '10:15',
+            },
+          ],
         };
-      }
-      // Fallback draft course for failed lines so user can fix them easily
-      const fallbackCourse: Course = {
-        id: `rec_fail_${idx}_${Date.now()}`,
-        code: 'COURSE 101',
-        name: res.rawText.slice(0, 40) || 'Custom Course',
-        credits: 3,
-        color: COURSE_COLORS[idx % COURSE_COLORS.length],
-        sessions: [
-          {
-            id: `s_fail_${idx}`,
-            day: 'monday',
-            startTime: '09:00',
-            endTime: '10:15',
-          },
-        ],
-      };
-      return {
-        id: fallbackCourse.id,
-        rawText: res.rawText,
-        course: fallbackCourse,
-        selected: false,
-        isEditing: false,
-        hasError: true,
-        errorMessage: res.error || 'Check formatting',
-      };
-    });
+        return {
+          id: fallbackCourse.id,
+          rawText: res.rawText,
+          course: fallbackCourse,
+          selected: false,
+          isEditing: false,
+          hasError: true,
+          errorMessage: res.error || 'Check formatting',
+        };
+      });
 
-    setRecognizedItems(newItems);
-  }, [rawText, activePlan]);
+      setRecognizedItems(newItems);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [rawText, activePlan?.courses.length]);
 
   const selectedCourses = useMemo(() => {
     return recognizedItems.filter((item) => item.selected && !item.hasError).map((item) => item.course);

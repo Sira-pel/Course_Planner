@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { Course, DAYS_LIST } from '../types/schedule';
 import { minutesToTime, timeToMinutes, checkSessionCollision } from '../utils/timeUtils';
@@ -44,17 +44,26 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const [filterMode, setFilterMode] = useState<'all' | 'in_plan' | 'not_in_plan'>('all');
   const [confirmDeleteCourseId, setConfirmDeleteCourseId] = useState<string | null>(null);
 
-  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
-  // Helper to test if a catalog course is enrolled in the active plan
-  const isEnrolledInActivePlan = (catalogItem: Course): boolean => {
-    if (!activePlan) return false;
-    return activePlan.courses.some(
-      (c) =>
-        c.code.trim().toUpperCase() === catalogItem.code.trim().toUpperCase() &&
-        (c.section || '').trim().toUpperCase() === (catalogItem.section || '').trim().toUpperCase()
+  // Precomputed fast lookup set of enrolled course codes and sections
+  const activeCourseKeys = useMemo(() => {
+    if (!activePlan) return new Set<string>();
+    return new Set(
+      activePlan.courses.map(
+        (c) => `${c.code.trim().toUpperCase()}__${(c.section || '').trim().toUpperCase()}`
+      )
     );
-  };
+  }, [activePlan?.courses]);
+
+  // O(1) helper to test if a catalog course is enrolled in the active plan
+  const isEnrolledInActivePlan = useCallback(
+    (catalogItem: Course): boolean => {
+      const key = `${catalogItem.code.trim().toUpperCase()}__${(catalogItem.section || '').trim().toUpperCase()}`;
+      return activeCourseKeys.has(key);
+    },
+    [activeCourseKeys]
+  );
 
   // Helper to check for schedule conflicts with the active plan
   const findConflictInActivePlan = (catalogItem: Course): Course | null => {
@@ -80,23 +89,29 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     return null;
   };
 
-  // Filtered pool list
-  const filteredCourses = catalogCourses.filter((c) => {
-    const matchesSearch =
-      c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.section && c.section.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (c.instructor && c.instructor.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filtered pool list (memoized with single-pass lowercase query)
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return catalogCourses.filter((c) => {
+      const matchesSearch =
+        !q ||
+        c.code.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        (c.section && c.section.toLowerCase().includes(q)) ||
+        (c.instructor && c.instructor.toLowerCase().includes(q));
 
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    const inPlan = isEnrolledInActivePlan(c);
-    if (filterMode === 'in_plan') return inPlan;
-    if (filterMode === 'not_in_plan') return !inPlan;
-    return true;
-  });
+      const inPlan = isEnrolledInActivePlan(c);
+      if (filterMode === 'in_plan') return inPlan;
+      if (filterMode === 'not_in_plan') return !inPlan;
+      return true;
+    });
+  }, [catalogCourses, searchQuery, filterMode, isEnrolledInActivePlan]);
 
-  const totalInPlan = catalogCourses.filter(isEnrolledInActivePlan).length;
+  const totalInPlan = useMemo(() => {
+    return catalogCourses.filter(isEnrolledInActivePlan).length;
+  }, [catalogCourses, isEnrolledInActivePlan]);
 
   // Shared Course Pool Inner Content for both Desktop Sidebar and Mobile Bottom Sheet
   const renderPoolContent = (isMobileSheet = false) => (
