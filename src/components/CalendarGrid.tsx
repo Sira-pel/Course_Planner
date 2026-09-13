@@ -63,7 +63,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   }, []);
 
   const activePlan = plans.find(p => p.id === activePlanId) || plans[0];
-  const ghostPlans = plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
+  const ghostPlans = useMemo(() => {
+    return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
+  }, [plans, ghostPlanIds, activePlanId]);
 
   const days = useMemo(() => {
     return showWeekends

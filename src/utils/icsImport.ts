@@ -39,18 +39,28 @@ export function parseIcsContent(icsContent: string): Course[] {
   
   for (let i = 1; i < eventStrs.length; i++) {
     const evStr = eventStrs[i].split(/END:VEVENT/i)[0];
-    const summaryMatch = evStr.match(/SUMMARY:(.+)/i);
-    const startMatch = evStr.match(/DTSTART.*?:(\d{8}T\d{6}Z?)/i);
-    const endMatch = evStr.match(/DTEND.*?:(\d{8}T\d{6}Z?)/i);
-    const rruleMatch = evStr.match(/RRULE:(.+)/i);
-    const locationMatch = evStr.match(/LOCATION:(.+)/i);
+    const summaryMatch = evStr.match(/(?:SUMMARY|SUMMARY;[^:]*):(.+)/i);
+    const startMatch = evStr.match(/(?:DTSTART|DTSTART;[^:]*):(\d{8}T?\d{0,6}Z?)/i);
+    const endMatch = evStr.match(/(?:DTEND|DTEND;[^:]*):(\d{8}T?\d{0,6}Z?)/i);
+    const rruleMatch = evStr.match(/(?:RRULE|RRULE;[^:]*):(.+)/i);
+    const locationMatch = evStr.match(/(?:LOCATION|LOCATION;[^:]*):(.+)/i);
 
     if (summaryMatch && startMatch && endMatch) {
-      const summary = summaryMatch[1].trim().replace(/\\,/g, ',').replace(/\\;/g, ';');
+      const summary = summaryMatch[1].trim()
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\n/gi, '\n')
+        .replace(/\\\\/g, '\\');
       
       const startTime = parseIcsTime(startMatch[1]);
       const endTime = parseIcsTime(endMatch[1]);
-      const location = locationMatch ? locationMatch[1].trim().replace(/\\,/g, ',').replace(/\\;/g, ';') : undefined;
+      const location = locationMatch 
+        ? locationMatch[1].trim()
+            .replace(/\\,/g, ',')
+            .replace(/\\;/g, ';')
+            .replace(/\\n/gi, ' ')
+            .replace(/\\\\/g, '\\') 
+        : undefined;
       
       const sessions: ClassSession[] = [];
       

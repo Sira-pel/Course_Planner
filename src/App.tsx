@@ -39,42 +39,57 @@ export default function App() {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
-  // Dynamic smooth docking for mobile floating action pill
+  // Dynamic butter-smooth GPU-accelerated docking for mobile floating action pill
   const pillRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    let animationFrameId: number;
+    let rafId: number;
 
     const updatePosition = () => {
       if (!pillRef.current || !footerRef.current) return;
       const footerRect = footerRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      const baseBottom = 16;
-      const extraGap = 28; // 28px clearance above footer top border
 
-      if (footerRect.top < windowHeight) {
-        const visibleFooterHeight = windowHeight - footerRect.top;
-        const newBottom = Math.max(baseBottom, visibleFooterHeight + extraGap);
-        pillRef.current.style.bottom = `${newBottom}px`;
-      } else {
-        pillRef.current.style.bottom = `${baseBottom}px`;
-      }
+      // Calculate exact visible height of footer in viewport
+      const visibleFooter = Math.max(0, windowHeight - footerRect.top);
+      // Fine-tuned clearance lift (6px on mobile for slightly lower stopping position, 10px on tablet)
+      const isMobile = window.innerWidth < 640;
+      const extraClearance = visibleFooter > 0 ? (isMobile ? 6 : 10) : 0;
+
+      // Apply 1-to-1 GPU hardware-accelerated translation upward
+      pillRef.current.style.transform = `translate3d(0, ${-(visibleFooter + extraClearance)}px, 0)`;
     };
 
-    const onScrollOrResize = () => {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(updatePosition);
+    const handleScrollOrResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updatePosition);
     };
 
-    window.addEventListener('scroll', onScrollOrResize, { passive: true });
-    window.addEventListener('resize', onScrollOrResize, { passive: true });
+    window.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    document.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true });
+    window.addEventListener('resize', handleScrollOrResize, { passive: true });
+
+    // Observe footer intersection thresholds for instant trigger when scrolling into view
+    const observer = new IntersectionObserver(
+      () => {
+        handleScrollOrResize();
+      },
+      { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0] }
+    );
+
+    if (footerRef.current) {
+      observer.observe(footerRef.current);
+    }
+
     updatePosition();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('scroll', onScrollOrResize);
-      window.removeEventListener('resize', onScrollOrResize);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', handleScrollOrResize);
+      document.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+      window.removeEventListener('resize', handleScrollOrResize);
+      observer.disconnect();
     };
   }, []);
 
@@ -228,11 +243,10 @@ export default function App() {
           />
         </div>
 
-        {/* Mobile/Tablet Floating Action Pill (Floats with screen, smoothly docks above footer) */}
+        {/* Mobile/Tablet Floating Action Pill (Floats dynamically with viewport, GPU-docks smoothly above footer) */}
         <div
           ref={pillRef}
-          className="xl:hidden fixed right-4 sm:right-8 z-40 flex items-center gap-2 drop-shadow-lg"
-          style={{ bottom: '16px' }}
+          className="xl:hidden fixed right-4 sm:right-8 bottom-4 sm:bottom-6 z-40 flex items-center gap-2 drop-shadow-xl will-change-transform"
         >
           <button
             type="button"

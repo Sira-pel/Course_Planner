@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { Course, DAYS_LIST } from '../types/schedule';
-import { minutesToTime, timeToMinutes } from '../utils/timeUtils';
+import { minutesToTime, timeToMinutes, checkSessionCollision } from '../utils/timeUtils';
 import {
   ChevronRight,
   ChevronLeft,
@@ -69,18 +69,10 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     );
 
     for (const poolSession of catalogItem.sessions) {
-      const pStart = timeToMinutes(poolSession.startTime);
-      const pEnd = timeToMinutes(poolSession.endTime);
-
       for (const enrolled of activeNonSelfCourses) {
         for (const enrSession of enrolled.sessions) {
-          if (enrSession.day === poolSession.day) {
-            const eStart = timeToMinutes(enrSession.startTime);
-            const eEnd = timeToMinutes(enrSession.endTime);
-            // Overlap check
-            if (pStart < eEnd && pEnd > eStart) {
-              return enrolled;
-            }
+          if (checkSessionCollision(poolSession, enrSession)) {
+            return enrolled;
           }
         }
       }
