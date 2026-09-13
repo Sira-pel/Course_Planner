@@ -468,7 +468,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         }
       }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[88vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-3.5 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
@@ -538,11 +538,11 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         {/* ========================================================= */}
         {mode === 'form' ? (
           <form onSubmit={handleFormSubmit} className="mt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 py-1">
-            {/* Row 1: Code & Title */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-              <div className="sm:col-span-4">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
+            <div className="flex-1 overflow-y-auto px-2 sm:px-2.5 py-1 space-y-3.5">
+            {/* Row 1: Code & Title (Side-by-side on mobile & desktop, perfectly aligned with Row 2) */}
+            <div className="grid grid-cols-12 gap-2 sm:gap-2.5">
+              <div className="col-span-4 sm:col-span-4 min-w-0">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1 truncate">
                   Course Code *
                 </label>
                 <div className="relative">
@@ -558,18 +558,18 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                         nameInputRef.current?.focus();
                       }
                     }}
-                    placeholder="e.g. CS 101"
+                    placeholder="CS 101"
                     autoFocus
                     required
-                    className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                   <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 font-mono hidden sm:inline select-none pointer-events-none">
                     ↵
                   </span>
                 </div>
               </div>
-              <div className="sm:col-span-8">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
+              <div className="col-span-8 sm:col-span-8 min-w-0">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1 truncate">
                   Course Title *
                 </label>
                 <div className="relative">
@@ -585,9 +585,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                         startTimeInputRef.current?.focus();
                       }
                     }}
-                    placeholder="e.g. Intro to Computer Science"
+                    placeholder="Intro to CS"
                     required
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                   <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 font-mono hidden sm:inline select-none pointer-events-none">
                     ↵ time
@@ -597,8 +597,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
             </div>
 
             {/* Row 2: Course Metadata (Credits, Section, Instructor) */}
-            <div className="grid grid-cols-3 gap-2.5">
-              <div>
+            <div className="grid grid-cols-12 gap-2 sm:gap-2.5">
+              <div className="col-span-4 sm:col-span-3 min-w-0">
                 <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Credits
                 </label>
@@ -613,7 +613,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                   className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
-              <div>
+              <div className="col-span-8 sm:col-span-4 min-w-0">
                 <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1">
                   Section (Opt.)
                 </label>
@@ -626,7 +626,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                   className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
-              <div>
+              <div className="col-span-12 sm:col-span-5 min-w-0">
                 <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1 truncate">
                   Instructor (Opt.)
                 </label>
@@ -808,8 +808,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                     </div>
 
                     {/* Time Range & Room with Direct Tabbing */}
-                    <div className="grid grid-cols-3 gap-2 pt-0.5">
-                      <div>
+                    <div className="grid grid-cols-12 gap-2 pt-0.5">
+                      <div className="col-span-6 sm:col-span-4 min-w-0">
                         <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-0.5">Start Time</span>
                         <input
                           ref={index === 0 ? startTimeInputRef : undefined}
@@ -826,7 +826,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                           className="w-full px-2 py-1 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                       </div>
-                      <div>
+                      <div className="col-span-6 sm:col-span-4 min-w-0">
                         <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-0.5">End Time</span>
                         <input
                           ref={index === 0 ? endTimeInputRef : undefined}
@@ -843,7 +843,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                           className="w-full px-2 py-1 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                       </div>
-                      <div>
+                      <div className="col-span-12 sm:col-span-4 min-w-0">
                         <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-0.5">Room (Opt.)</span>
                         <input
                           type="text"
@@ -938,7 +938,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           /* MODE 2: QUICK PASTE (TEXT) PARSER WITH INLINE EDITOR      */
           /* ========================================================= */
           <div className="mt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3 py-1">
+            <div className="flex-1 overflow-y-auto px-2 sm:px-2.5 py-1 space-y-3">
             {/* Quick Helper Banner */}
             <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-1.5">
@@ -1174,7 +1174,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                             </div>
 
                             {/* Time & Section & Instructor */}
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                               <div>
                                 <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Start Time</label>
                                 <input
