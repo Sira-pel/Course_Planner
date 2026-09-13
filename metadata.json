@@ -1,5 +1,5 @@
 {
-  "name": "UniPlan — Course Schedule & Scenario Planner",
+  "name": "Uniplan",
   "description": "University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
