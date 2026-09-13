@@ -31,8 +31,11 @@ function parseIcsTime(dateStr: string): string {
 }
 
 export function parseIcsContent(icsContent: string): Course[] {
+  if (!icsContent || typeof icsContent !== 'string') return [];
+  // RFC 5545 line unfolding: replace CRLF followed by space/tab
+  const unfolded = icsContent.replace(/\r?\n[ \t]/g, '');
   const courses: Course[] = [];
-  const eventStrs = icsContent.split(/BEGIN:VEVENT/i);
+  const eventStrs = unfolded.split(/BEGIN:VEVENT/i);
   
   for (let i = 1; i < eventStrs.length; i++) {
     const evStr = eventStrs[i].split(/END:VEVENT/i)[0];

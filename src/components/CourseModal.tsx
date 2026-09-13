@@ -455,7 +455,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto"
       onKeyDown={(e) => {
         // Global modal shortcut: Ctrl/Cmd + Enter submits form instantly
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -468,9 +468,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         }
       }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-5 sm:p-6 my-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               {existingCourse ? 'Edit Course' : 'Add Course'}
@@ -490,7 +490,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
         {/* Mode Switcher Tabs (Only when adding a new course) */}
         {!existingCourse && (
-          <div className="mt-3.5 flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/70 dark:border-slate-700/60">
+          <div className="mt-3 flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/70 dark:border-slate-700/60 shrink-0">
             <button
               type="button"
               id="tab-mode-form"
@@ -528,7 +528,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
         {/* Error message banner */}
         {error && (
-          <div className="mt-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs">
+          <div className="mt-2.5 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs shrink-0">
             {error}
           </div>
         )}
@@ -537,7 +537,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         {/* MODE 1: STANDARD FORM                                     */}
         {/* ========================================================= */}
         {mode === 'form' ? (
-          <form onSubmit={handleFormSubmit} className="mt-3.5 space-y-3.5">
+          <form onSubmit={handleFormSubmit} className="mt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 py-1">
             {/* Row 1: Code & Title */}
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
               <div className="sm:col-span-4">
@@ -869,9 +870,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                 <kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px]">Ctrl+Enter</kbd> to save
               </span>
             </div>
+            </div>
 
             {/* Form Actions */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
               {existingCourse ? (
                 isConfirmingDelete ? (
                   <div className="flex items-center gap-1.5 animate-in fade-in">
@@ -935,7 +937,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           /* ========================================================= */
           /* MODE 2: QUICK PASTE (TEXT) PARSER WITH INLINE EDITOR      */
           /* ========================================================= */
-          <div className="mt-3.5 space-y-3">
+          <div className="mt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 py-1">
             {/* Quick Helper Banner */}
             <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-1.5">
@@ -1282,9 +1285,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                 )}
               </div>
             </div>
+          </div>
 
             {/* Quick Add Actions */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={onClose}

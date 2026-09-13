@@ -19,7 +19,7 @@ export const CourseBlock: React.FC<CourseBlockProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const { setActivePlan } = useScheduleStore();
+  const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict } = layout;
 
   const startMin = timeToMinutes(session.startTime);

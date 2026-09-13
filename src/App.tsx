@@ -51,7 +51,7 @@ export default function App() {
       const footerRect = footerRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       const baseBottom = 16;
-      const extraGap = 28; // 28px clearance above footer top edge
+      const extraGap = 28; // 28px clearance above footer top border
 
       if (footerRect.top < windowHeight) {
         const visibleFooterHeight = windowHeight - footerRect.top;
@@ -213,6 +213,9 @@ export default function App() {
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
+              onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+              onOpenCatalog={() => setIsPoolCollapsed(false)}
+              isPoolOpen={!isPoolCollapsed}
             />
           </div>
 
@@ -225,10 +228,10 @@ export default function App() {
           />
         </div>
 
-        {/* Mobile Floating Action Pill (Floats with screen, smoothly docks above footer) */}
+        {/* Mobile/Tablet Floating Action Pill (Floats with screen, smoothly docks above footer) */}
         <div
           ref={pillRef}
-          className="md:hidden fixed right-4 z-40 flex items-center gap-2 drop-shadow-lg"
+          className="md:hidden fixed right-4 sm:right-10 z-40 flex items-center gap-2 drop-shadow-lg"
           style={{ bottom: '16px' }}
         >
           <button

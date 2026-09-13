@@ -16,6 +16,14 @@ export async function exportScheduleToImage(
   plan: SchedulePlan,
   options: ImageExportOptions = { theme: 'light', showWeekends: false, startHour: 7, endHour: 21 }
 ): Promise<string> {
+  if (typeof document !== 'undefined' && document.fonts) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // Fallback gracefully if font loading check fails
+    }
+  }
+
   const isDark = options.theme === 'dark';
   const scale = 2; // Retina 2x
 

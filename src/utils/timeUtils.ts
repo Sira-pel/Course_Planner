@@ -1,14 +1,23 @@
 import { ClassSession, Course, Conflict, DayOfWeek, LayoutSession } from '../types/schedule';
 
 /**
- * Converts HH:mm string to minutes from midnight (0 to 1439).
+ * Converts HH:mm or HH:mm AM/PM string to minutes from midnight (0 to 1439).
  */
 export function timeToMinutes(timeStr: string): number {
   if (!timeStr || typeof timeStr !== 'string') return 0;
-  const parts = timeStr.trim().split(':');
-  const h = parseInt(parts[0], 10);
+  const clean = timeStr.trim().toLowerCase();
+  const isPM = clean.includes('pm') || clean.endsWith('p');
+  const isAM = clean.includes('am') || clean.endsWith('a');
+
+  const stripped = clean.replace(/[ap]m?/g, '').trim();
+  const parts = stripped.split(':');
+  let h = parseInt(parts[0], 10);
   const m = parts[1] ? parseInt(parts[1], 10) : 0;
   if (isNaN(h)) return 0;
+
+  if (isPM && h < 12) h += 12;
+  else if (isAM && h === 12) h = 0;
+
   const total = h * 60 + (isNaN(m) ? 0 : m);
   return Math.max(0, Math.min(1439, total));
 }
@@ -227,19 +236,32 @@ export function computeDayLayout(
 }
 
 /**
- * Computes contrast text color (black or white) for a given hex background.
+ * Computes contrast text color (black or white) for a given hex or rgb background.
  */
 export function getContrastTextColor(hexColor: string): 'text-white' | 'text-slate-900' {
   if (!hexColor || typeof hexColor !== 'string') return 'text-white';
-  let cleanHex = hexColor.replace('#', '').trim();
-  if (cleanHex.length === 3) {
-    cleanHex = cleanHex.split('').map((char) => char + char).join('');
-  }
-  if (cleanHex.length < 6) return 'text-white';
 
-  const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
-  const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
-  const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+  let r = 0, g = 0, b = 0;
+
+  if (hexColor.startsWith('rgb')) {
+    const rgbMatch = hexColor.match(/\d+/g);
+    if (rgbMatch && rgbMatch.length >= 3) {
+      r = parseInt(rgbMatch[0], 10) || 0;
+      g = parseInt(rgbMatch[1], 10) || 0;
+      b = parseInt(rgbMatch[2], 10) || 0;
+    }
+  } else {
+    let cleanHex = hexColor.replace('#', '').trim();
+    if (cleanHex.length === 3) {
+      cleanHex = cleanHex.split('').map((char) => char + char).join('');
+    }
+    if (cleanHex.length >= 6) {
+      r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+      g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+      b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+    }
+  }
+
   // Perceived luminance formula (YIQ)
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 145 ? 'text-slate-900' : 'text-white';

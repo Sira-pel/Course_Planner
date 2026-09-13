@@ -169,10 +169,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="flex flex-col gap-2.5 pb-2 w-full max-w-full">
-      {/* Top Bar: Brand, Undo/Redo, Settings & Action Buttons */}
+      {/* Top Bar: Brand, Badges & Actions */}
       <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 shadow-sm w-full max-w-full">
         {/* Left: Brand & Badges */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-xs">
               <Calendar className="w-4 h-4" />
@@ -194,13 +194,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Credits tally badge */}
           <div
             title="Total enrolled credit hours in active plan"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100/90 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100/90 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs"
           >
             <span className="text-slate-600 dark:text-slate-300 font-normal">Enrolled:</span>
             <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
               {totalCredits} cr
             </span>
-            <span className="text-slate-600 dark:text-slate-300">({activePlan?.courses.length || 0} classes)</span>
+            <span className="hidden sm:inline text-slate-600 dark:text-slate-300">({activePlan?.courses.length || 0} classes)</span>
           </div>
 
           {/* Conflict Alert Banner / Pill */}
@@ -225,10 +225,10 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: Actions, History & Controls */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Undo / Redo */}
-          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-800/60 mr-1">
+        {/* Right: Actions Row (Left: Undo/Redo, Right: Add Course + Tools) */}
+        <div className="flex items-center justify-between gap-1.5 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
+          {/* Left inside action bar: Undo / Redo */}
+          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-800/60">
             <button
               type="button"
               id="btn-undo"
@@ -251,53 +251,55 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Add Course (Unified Modal with Form and Quick-Add modes) */}
-          <button
-            type="button"
-            id="btn-add-course"
-            onClick={() => onOpenNewCourse('form')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Course</span>
-          </button>
+          {/* Right inside action bar: Add Course & Tools */}
+          <div className="flex items-center gap-1.5">
+            {/* Add Course */}
+            <button
+              type="button"
+              id="btn-add-course"
+              onClick={() => onOpenNewCourse('form')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Course</span>
+            </button>
 
-          {/* Course Pool / Scratchpad */}
-          <button
-            type="button"
-            id="btn-open-catalog"
-            onClick={onOpenCatalog}
-            title="Shared Course Pool (Candidate sections & shopping cart)"
-            className={`relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-              isPoolOpen
-                ? 'border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold shadow-2xs'
-                : 'border-slate-300/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs'
-            }`}
-          >
-            <BookOpen className={`w-3.5 h-3.5 ${isPoolOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`} />
-            <span className="hidden sm:inline">Course Pool</span>
-            {catalogCourses.length > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            {/* Course Pool / Scratchpad */}
+            <button
+              type="button"
+              id="btn-open-catalog"
+              onClick={onOpenCatalog}
+              title="Shared Course Pool (Candidate sections & shopping cart)"
+              className={`relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                 isPoolOpen
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-              }`}>
-                {catalogCourses.length}
-              </span>
-            )}
-          </button>
+                  ? 'border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold shadow-2xs'
+                  : 'border-slate-300/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs'
+              }`}
+            >
+              <BookOpen className={`w-3.5 h-3.5 ${isPoolOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300'}`} />
+              <span className="hidden md:inline">Course Pool</span>
+              {catalogCourses.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  isPoolOpen
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                }`}>
+                  {catalogCourses.length}
+                </span>
+              )}
+            </button>
 
-          {/* Export */}
-          <button
-            type="button"
-            id="btn-export"
-            onClick={onOpenExport}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
-            title="Export schedule as PNG, PDF, ICS, or Text"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+            {/* Export */}
+            <button
+              type="button"
+              id="btn-export"
+              onClick={onOpenExport}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
+              title="Export schedule as PNG, PDF, ICS, or Text"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+              <span className="hidden md:inline">Export</span>
+            </button>
 
           {/* Hidden file input for .ics import */}
           <input
@@ -430,6 +432,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
+    </div>
 
       {/* Second Row: Plans Dropdown & Multi-Plan Ghost Comparison */}
       <div className="flex items-center justify-between gap-2.5 sm:gap-3 flex-wrap bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl px-3 sm:px-3.5 py-2 shadow-sm w-full max-w-full">

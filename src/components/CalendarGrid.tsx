@@ -8,21 +8,25 @@ import { Plus, Clock } from 'lucide-react';
 interface CalendarGridProps {
   onEditCourse: (courseId: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
+  onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
+  onOpenCatalog?: () => void;
+  isPoolOpen?: boolean;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
   onEditCourse,
   onAddCourseAtTime,
+  onOpenNewCourse,
+  onOpenCatalog,
+  isPoolOpen = false,
 }) => {
-  const {
-    plans,
-    activePlanId,
-    ghostPlanIds,
-    showWeekends,
-    startHour,
-    endHour,
-    deleteCourse,
-  } = useScheduleStore();
+  const plans = useScheduleStore((state) => state.plans);
+  const activePlanId = useScheduleStore((state) => state.activePlanId);
+  const ghostPlanIds = useScheduleStore((state) => state.ghostPlanIds);
+  const showWeekends = useScheduleStore((state) => state.showWeekends);
+  const startHour = useScheduleStore((state) => state.startHour);
+  const endHour = useScheduleStore((state) => state.endHour);
+  const deleteCourse = useScheduleStore((state) => state.deleteCourse);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState(() => ({
@@ -42,10 +46,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        if (entry.contentRect.width || entry.contentRect.height) {
-          setContainerDimensions({ 
-            width: entry.contentRect.width, 
-            height: entry.contentRect.height 
+        const w = entry.contentRect.width;
+        const h = entry.contentRect.height;
+        if (w > 0 || h > 0) {
+          setContainerDimensions((prev) => {
+            if (Math.abs(prev.width - w) < 1 && Math.abs(prev.height - h) < 1) {
+              return prev;
+            }
+            return { width: w, height: h };
           });
         }
       }
@@ -185,7 +193,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   const showNowLine = currentMinutesFromGridStart >= 0 && currentMinutesFromGridStart <= totalMinutes;
   const nowPercent = (currentMinutesFromGridStart / totalMinutes) * 100;
 
-  const gutterWidth = containerWidth < 520 ? 46 : 64;
+  const gutterWidth = containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
   const colWidth = days.length > 0 ? (containerWidth - gutterWidth) / days.length : 120;
 
   // Responsive day formatting:
@@ -282,7 +290,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             className="shrink-0 select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/60 relative"
           >
             {hourMarks.map((hour, idx) => {
-              const timeStr = minutesToTime(hour * 60, true);
+              const timeStr = containerWidth < 380
+                ? (hour === 0 || hour === 24 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`)
+                : minutesToTime(hour * 60, true);
               const topPx = idx * HOUR_HEIGHT;
               const isFirst = idx === 0;
               const isLast = idx === numHours;
@@ -291,8 +301,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <div
                   key={hour}
                   style={{ top: `${topPx}px` }}
-                  className={`absolute right-2 font-mono text-slate-600 dark:text-slate-400 select-none pointer-events-none whitespace-nowrap leading-none font-semibold ${
-                    colWidth < 68 ? 'text-[9px]' : 'text-[10px]'
+                  className={`absolute right-1 sm:right-2 font-mono text-slate-600 dark:text-slate-400 select-none pointer-events-none whitespace-nowrap leading-none font-semibold ${
+                    colWidth < 68 ? 'text-[9px] sm:text-[9.5px]' : 'text-[10px]'
                   } ${
                     isFirst
                       ? 'top-1.5 translate-y-0'
