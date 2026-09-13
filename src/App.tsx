@@ -44,21 +44,19 @@ export default function App() {
   const footerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    let rafId: number;
-
     const updatePosition = () => {
       if (!pillRef.current || !footerRef.current) return;
       const footerRect = footerRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
 
       // Calculate exact visible height of footer in viewport
-      // Cap to the footer's natural height so mobile rubber-band overscroll cannot pull the pill past its stopping point
+      // Cap to the footer's natural height so rubber-band overscroll (slow or fast fling) cannot pull the pill past its stopping point
       const maxFooterHeight = footerRef.current.offsetHeight;
       const rawVisibleFooter = Math.max(0, windowHeight - footerRect.top);
-      const isMobile = window.innerWidth < 640;
-      const visibleFooter = isMobile ? Math.min(rawVisibleFooter, maxFooterHeight) : rawVisibleFooter;
+      const visibleFooter = Math.min(rawVisibleFooter, maxFooterHeight);
 
       // Fine-tuned clearance lift (12px on mobile to comfortably clear the bottom border of the timetable, 10px on tablet)
+      const isMobile = window.innerWidth < 640;
       const extraClearance = visibleFooter > 0 ? (isMobile ? 12 : 10) : 0;
 
       // Apply 1-to-1 GPU hardware-accelerated translation upward
@@ -66,12 +64,13 @@ export default function App() {
     };
 
     const handleScrollOrResize = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updatePosition);
+      updatePosition();
     };
 
     window.addEventListener('scroll', handleScrollOrResize, { passive: true });
     document.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true });
+    window.addEventListener('touchmove', handleScrollOrResize, { passive: true });
+    window.addEventListener('touchend', handleScrollOrResize, { passive: true });
     window.addEventListener('resize', handleScrollOrResize, { passive: true });
 
     // Observe footer intersection thresholds for instant trigger when scrolling into view
@@ -89,9 +88,10 @@ export default function App() {
     updatePosition();
 
     return () => {
-      cancelAnimationFrame(rafId);
       window.removeEventListener('scroll', handleScrollOrResize);
       document.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+      window.removeEventListener('touchmove', handleScrollOrResize);
+      window.removeEventListener('touchend', handleScrollOrResize);
       window.removeEventListener('resize', handleScrollOrResize);
       observer.disconnect();
     };
