@@ -58,11 +58,37 @@ export function parseIcsContent(icsContent: string): Course[] {
     const locationMatch = evStr.match(/(?:LOCATION|LOCATION;[^:]*):(.+)/i);
 
     if (summaryMatch && startMatch && endMatch) {
-      const summary = summaryMatch[1].trim()
+      const rawSummary = summaryMatch[1].trim()
         .replace(/\\,/g, ',')
         .replace(/\\;/g, ';')
         .replace(/\\n/gi, '\n')
         .replace(/\\\\/g, '\\');
+
+      // Check for color properties in event (RFC 7986, Apple, Outlook, generic)
+      const colorMatch = evStr.match(/(?:COLOR|X-APPLE-CALENDAR-COLOR|X-OUTLOOK-COLOR|X-COLOR):([^\r\n]+)/i);
+      let eventColor = colorMatch ? colorMatch[1].trim() : undefined;
+
+      // Check for color emoji prefix e.g. 🔵 CS101 or 🟢 MATH201
+      const emojiMatch = rawSummary.match(/^([🔴🟠🟡🟢🩵🔵🟣🩷🟤⚪⚫]|[\uD800-\uDBFF][\uDC00-\uDFFF])\s*(.+)$/u);
+      let summary = rawSummary;
+      if (emojiMatch) {
+        summary = emojiMatch[2].trim();
+        if (!eventColor) {
+          const emojiToColor: Record<string, string> = {
+            '🔵': '#3B82F6',
+            '🟢': '#10B981',
+            '🟡': '#F59E0B',
+            '🔴': '#EF4444',
+            '🟣': '#8B5CF6',
+            '🩷': '#EC4899',
+            '🩵': '#06B6D4',
+            '🟠': '#F97316',
+          };
+          if (emojiToColor[emojiMatch[1]]) {
+            eventColor = emojiToColor[emojiMatch[1]];
+          }
+        }
+      }
       
       const startTime = parseIcsTime(startMatch[1], '09:00');
       const endTimeRaw = parseIcsTime(endMatch[1], '10:15');
@@ -149,7 +175,7 @@ export function parseIcsContent(icsContent: string): Course[] {
         name: summary,
         section,
         credits: 3, // default
-        color: COURSE_COLORS[courses.length % COURSE_COLORS.length],
+        color: eventColor || COURSE_COLORS[courses.length % COURSE_COLORS.length],
         sessions,
       });
     }
