@@ -355,7 +355,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const handleSessionChange = (index: number, field: keyof ClassSession, value: string) => {
     setSessions(
       sessions.map((s, i) => {
-        if (i !== index) return s;
+        if (field === 'day' && i !== index) return s;
         const updated = { ...s, [field]: value };
         // If changing start time and end time was default or invalid, auto-adjust end time by 75 mins
         if (field === 'startTime' && value) {
@@ -374,7 +374,6 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const handleSetSessionDuration = (index: number, durationMinutes: number) => {
     setSessions(
       sessions.map((s, i) => {
-        if (i !== index) return s;
         const startM = timeToMinutes(s.startTime || '09:00');
         return {
           ...s,

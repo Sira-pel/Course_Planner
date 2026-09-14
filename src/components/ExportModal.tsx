@@ -4,6 +4,7 @@ import { Course } from '../types/schedule';
 import { generateScheduleText, TextExportFormat } from '../utils/textExport';
 import { downloadIcsFile, downloadCourseIcsFile, getColorEmoji } from '../utils/icsExport';
 import { parseIcsContent } from '../utils/icsImport';
+import { GoogleCalendarSync } from './GoogleCalendarSync';
 import { downloadScheduleImage, exportScheduleToImage } from '../utils/imageExport';
 import {
   X,
@@ -39,7 +40,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   // ICS Export State
   const [semesterStart, setSemesterStart] = useState('2026-09-01');
   const [semesterEnd, setSemesterEnd] = useState('2026-12-18');
-  const [includeColorEmoji, setIncludeColorEmoji] = useState(true);
 
   // Image Export State
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -70,11 +70,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   };
 
   const handleDownloadIcs = () => {
-    downloadIcsFile(activePlan, semesterStart, semesterEnd, { includeColorEmoji });
+    downloadIcsFile(activePlan, semesterStart, semesterEnd);
   };
 
   const handleDownloadCourseIcs = (course: Course) => {
-    downloadCourseIcsFile(activePlan, course, semesterStart, semesterEnd, { includeColorEmoji });
+    downloadCourseIcsFile(activePlan, course, semesterStart, semesterEnd);
   };
 
   const handleGeneratePreviewImage = async () => {
@@ -330,61 +330,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
                   </div>
                 </div>
 
-                {/* Color Preservation Section */}
-                <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-white">
-                        <span>Google Calendar Color Preservation</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                        Google Calendar imports all events under the target calendar's single default color. Uniplan embeds matching color badges (🔵, 🟢, 🟡) directly in event titles and includes RFC 7986 / Apple / Outlook color properties so courses stay color-differentiated.
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={includeColorEmoji}
-                        onChange={(e) => setIncludeColorEmoji(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
-                    </label>
-                  </div>
-
-                  {/* Live Event Title Preview */}
-                  {activePlan.courses.length > 0 && (
-                    <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
-                        Imported Event Title Preview:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-                        {activePlan.courses.map((course) => {
-                          const badge = includeColorEmoji ? getColorEmoji(course.color) : null;
-                          const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
-                          return (
-                            <div
-                              key={course.id}
-                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-2xs"
-                            >
-                              <span
-                                className="w-2 h-2 rounded-full shrink-0"
-                                style={{ backgroundColor: course.color }}
-                              />
-                              <span className="font-mono font-medium">
-                                {badge ? `${badge} ` : ''}{codeSec}
-                              </span>
-                              <span className="text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
-                                {course.name}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-3">
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     {activePlan.courses.length} courses ({activePlan.courses.reduce((acc, c) => acc + (c.sessions?.length || 0), 0)} weekly sessions)
@@ -399,6 +344,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
                   </button>
                 </div>
 
+                <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
                 {/* Optional: Individual Course .ics Download */}
                 {activePlan.courses.length > 1 && (
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">

@@ -200,7 +200,7 @@ export function generateIcsCalendar(
       const dtEnd = formatIcsDateTime(firstSessionDate, session.endTime);
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
-      const colorPrefix = includeColorEmoji ? `${getColorEmoji(course.color)} ` : '';
+      const colorPrefix = '';
       const summary = escapeIcsText(`${colorPrefix}${codeSec} ${course.name}`.trim());
 
       const descParts: string[] = [];
