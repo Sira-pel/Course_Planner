@@ -554,24 +554,24 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   return (
     <>
       {layout === 'desktop' && (
-        <>
-          {isCollapsed && (
-            <button
-              type="button"
-              id="course-pool-collapsed"
-              onClick={onToggleCollapse}
-              className="up-pool-rail up-chrome-btn"
-              title="Open course pool"
-              aria-label="Open course pool"
-            >
-              <span className="relative flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4" />
-                <span className="absolute -top-2 -right-3">{countBadge}</span>
-              </span>
-              <span className="up-pool-rail-label">Course pool</span>
-            </button>
-          )}
-          <AnimatePresence>
+        <div className="up-pool-desktop">
+          <button
+            type="button"
+            id="course-pool-collapsed"
+            onClick={onToggleCollapse}
+            className="up-pool-rail up-chrome-btn"
+            title="Open course pool"
+            aria-label="Open course pool"
+            tabIndex={isCollapsed ? 0 : -1}
+            aria-hidden={!isCollapsed}
+          >
+            <span className="relative flex items-center justify-center">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="absolute -top-2 -right-3">{countBadge}</span>
+            </span>
+            <span className="up-pool-rail-label">Course pool</span>
+          </button>
+          <AnimatePresence presenceAffectsLayout={false}>
             {!isCollapsed && (
               <motion.aside
                 key="pool-desktop-panel"
@@ -590,7 +590,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
               </motion.aside>
             )}
           </AnimatePresence>
-        </>
+        </div>
       )}
 
       {layout === 'tablet' && isCollapsed && (
