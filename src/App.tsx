@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/Header';
@@ -13,7 +14,7 @@ import { ExportModal } from './components/ExportModal';
 import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { DayOfWeek } from './types/schedule';
-import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
@@ -42,7 +43,20 @@ export default function App() {
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  const menuOpenTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.25, ease: EASE_OUT };
+  const menuCloseTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.15, ease: EASE_OUT };
+
+  const closeMoreMenu = useCallback(() => {
+    setIsMoreOpen(false);
+    setIsConfirmingClear(false);
+  }, []);
 
   // Sync theme with DOM documentElement and colorScheme
   useEffect(() => {
@@ -107,6 +121,11 @@ export default function App() {
           target.classList.contains('up-pool-input') &&
           target.value.trim() !== ''
         ) {
+          return;
+        }
+        if (isMoreOpen) {
+          if (isConfirmingClear) setIsConfirmingClear(false);
+          else setIsMoreOpen(false);
           return;
         }
         setIsCourseModalOpen(false);
@@ -181,7 +200,20 @@ export default function App() {
     undo,
     redo,
     setActivePlan,
+    isMoreOpen,
+    isConfirmingClear,
   ]);
+
+  useEffect(() => {
+    if (!isMoreOpen) return;
+    document.body.classList.add('up-sheet-open');
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.classList.remove('up-sheet-open');
+      document.body.style.overflow = previous;
+    };
+  }, [isMoreOpen]);
 
   return (
     <div className="up-app min-h-screen lg:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-clip lg:overflow-hidden w-full max-w-full min-w-0">
@@ -285,6 +317,21 @@ export default function App() {
       <div className="up-fab-cluster">
         <button
           type="button"
+          id="btn-mobile-more"
+          onClick={() => {
+            setIsConfirmingClear(false);
+            setIsMoreOpen((open) => !open);
+          }}
+          className={`up-fab-more up-chrome-btn ${isMoreOpen ? 'is-open' : ''}`}
+          title="More actions"
+          aria-label="More actions"
+          aria-haspopup="menu"
+          aria-expanded={isMoreOpen}
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
           id="btn-mobile-pool-pill"
           onClick={() => setIsPoolCollapsed((prev) => !prev)}
           className="up-fab-secondary up-chrome-btn"
@@ -323,6 +370,102 @@ export default function App() {
           <span>Add course</span>
         </button>
       </div>
+
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {isMoreOpen && (
+              <motion.div
+                key="more-backdrop"
+                className="up-sheet-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{
+                  opacity: 0,
+                  transition: reduceMotion ? { duration: 0 } : menuCloseTransition,
+                }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
+                onClick={closeMoreMenu}
+              />
+            )}
+            {isMoreOpen && (
+              <motion.div
+                key="more-menu"
+                role="menu"
+                aria-label="More actions"
+                className="up-menu up-more-menu"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={
+                  reduceMotion
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : { opacity: 0, y: 8, transition: menuCloseTransition }
+                }
+                transition={menuOpenTransition}
+              >
+                {isConfirmingClear ? (
+                  <div className="up-sheet-empty">
+                    <p>Clear all plans and pool?</p>
+                    <button
+                      type="button"
+                      className="up-sheet-btn up-sheet-btn-primary up-chrome-btn"
+                      onClick={() => {
+                        resetToBlank();
+                        closeMoreMenu();
+                      }}
+                    >
+                      Yes, clear all
+                    </button>
+                    <button
+                      type="button"
+                      className="up-sheet-btn up-sheet-btn-secondary up-chrome-btn"
+                      onClick={() => setIsConfirmingClear(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="up-more-item up-chrome-btn"
+                      onClick={() => {
+                        closeMoreMenu();
+                        resetToSample();
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Load demo
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="up-more-item up-chrome-btn"
+                      onClick={() => {
+                        closeMoreMenu();
+                        handleOpenShortcuts();
+                      }}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Shortcuts
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="up-more-item up-more-item-danger up-chrome-btn"
+                      onClick={() => setIsConfirmingClear(true)}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Clear all
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       {/* Modal Dialogs */}
       <CourseModal
