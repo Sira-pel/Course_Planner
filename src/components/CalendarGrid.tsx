@@ -393,7 +393,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                   {/* Current Time Indicator on today's column */}
                   {isToday && showNowLine && (
                     <div
-                      className="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
+                      className="absolute left-0 right-0 z-40 flex items-center pointer-events-none"
                       style={{ top: `${nowPercent}%` }}
                     >
                       <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs" />
