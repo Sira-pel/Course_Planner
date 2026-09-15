@@ -188,6 +188,7 @@ export default function App() {
   // Handler for opening new course modal
   const handleOpenNewCourse = useCallback(
     (day: DayOfWeek = 'monday', startTime: string = '09:00', mode: 'form' | 'quick' = 'form') => {
+      setIsPoolCollapsed(true);
       setEditingCourseId(null);
       setModalInitialDay(day);
       setModalInitialStartTime(startTime);
@@ -199,9 +200,20 @@ export default function App() {
 
   // Handler for editing an existing course
   const handleEditCourse = useCallback((courseId: string) => {
+    setIsPoolCollapsed(true);
     setEditingCourseId(courseId);
     setModalInitialMode('form');
     setIsCourseModalOpen(true);
+  }, []);
+
+  const handleOpenExport = useCallback(() => {
+    setIsPoolCollapsed(true);
+    setIsExportOpen(true);
+  }, []);
+
+  const handleOpenShortcuts = useCallback(() => {
+    setIsPoolCollapsed(true);
+    setIsShortcutsOpen(true);
   }, []);
 
   // Global Keyboard Shortcuts
@@ -215,8 +227,16 @@ export default function App() {
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable);
 
-      // Escape always closes any open modal
+      // Escape always closes any open modal. If pool search has text, the
+      // input handler clears it and stops this listener.
       if (e.key === 'Escape') {
+        if (
+          target instanceof HTMLInputElement &&
+          target.classList.contains('up-pool-input') &&
+          target.value.trim() !== ''
+        ) {
+          return;
+        }
         setIsCourseModalOpen(false);
         setIsExportOpen(false);
         setIsShortcutsOpen(false);
@@ -240,7 +260,7 @@ export default function App() {
           duplicatePlan(activePlanId);
         } else if (e.key.toLowerCase() === 'e') {
           e.preventDefault();
-          setIsExportOpen(true);
+          handleOpenExport();
         } else if (e.key.toLowerCase() === 'z') {
           e.preventDefault();
           if (e.shiftKey) {
@@ -258,7 +278,7 @@ export default function App() {
       // Help cheatsheet: '?'
       if (e.key === '?') {
         e.preventDefault();
-        setIsShortcutsOpen(true);
+        handleOpenShortcuts();
         return;
       }
 
@@ -283,6 +303,8 @@ export default function App() {
     activePlanId,
     plans,
     handleOpenNewCourse,
+    handleOpenExport,
+    handleOpenShortcuts,
     duplicatePlan,
     undo,
     redo,
@@ -296,9 +318,9 @@ export default function App() {
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-          onOpenExport={() => setIsExportOpen(true)}
-          onOpenShortcuts={() => setIsShortcutsOpen(true)}
-          onOpenCatalog={() => setIsPoolCollapsed((prev) => !prev)}
+          onOpenExport={handleOpenExport}
+          onOpenShortcuts={handleOpenShortcuts}
+          onOpenCatalog={() => setIsPoolCollapsed(false)}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -336,7 +358,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsShortcutsOpen(true)}
+              onClick={handleOpenShortcuts}
               className="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               <HelpCircle className="w-3.5 h-3.5" />

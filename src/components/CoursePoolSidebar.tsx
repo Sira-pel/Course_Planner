@@ -81,6 +81,8 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const tabsRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
   const pillPaintedRef = useRef(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const wasOverlayOpenRef = useRef(false);
 
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
@@ -191,15 +193,6 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   }, [updatePill, isCollapsed, layout]);
 
   useEffect(() => {
-    if (isCollapsed) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onToggleCollapse();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isCollapsed, onToggleCollapse]);
-
-  useEffect(() => {
     if (isCollapsed || layout === 'desktop') return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -212,8 +205,22 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     };
   }, [isCollapsed, layout]);
 
-  const openNewCourse = (fromSheet: boolean) => {
-    if (fromSheet) onToggleCollapse();
+  useEffect(() => {
+    const overlayOpen = !isCollapsed && layout !== 'desktop';
+    if (overlayOpen) {
+      wasOverlayOpenRef.current = true;
+      searchRef.current?.focus();
+      return;
+    }
+    if (!wasOverlayOpenRef.current) return;
+    wasOverlayOpenRef.current = false;
+    const trigger =
+      document.getElementById('course-pool-collapsed') ??
+      document.getElementById('btn-mobile-pool-pill');
+    if (trigger instanceof HTMLElement) trigger.focus();
+  }, [isCollapsed, layout]);
+
+  const openNewCourse = () => {
     onOpenNewCourse('form');
   };
 
@@ -278,9 +285,16 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
         <div className="up-pool-search-wrap">
           <Search className="w-3.5 h-3.5" />
           <input
+            ref={searchRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Escape' || searchQuery.trim() === '') return;
+              e.stopPropagation();
+              e.preventDefault();
+              setSearchQuery('');
+            }}
             placeholder="Search code, title, professor"
             className="up-pool-input"
           />
@@ -330,7 +344,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
           <button
             type="button"
-            onClick={() => openNewCourse(isMobileSheet)}
+            onClick={openNewCourse}
             className="up-pool-create up-chrome-btn"
             title="Create course"
             aria-label="Create course"
@@ -358,7 +372,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
               </span>
               <button
                 type="button"
-                onClick={() => openNewCourse(isMobileSheet)}
+                onClick={openNewCourse}
                 className="up-pool-add up-chrome-btn mt-1"
                 style={{ width: 'auto', paddingInline: 16 }}
               >
@@ -419,13 +433,10 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-0.5 lg:opacity-0 lg:group-hover:opacity-100">
+                        <div className="up-pool-row-actions flex items-center gap-0.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (isMobileSheet) onToggleCollapse();
-                              onEditCourse(item.id);
-                            }}
+                            onClick={() => onEditCourse(item.id)}
                             title="Edit course"
                             aria-label={`Edit ${item.code}`}
                             className="up-icon-btn up-chrome-btn up-pool-icon-hit"
@@ -516,7 +527,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
         <span>Adding creates independent copies</span>
         <button
           type="button"
-          onClick={() => openNewCourse(isMobileSheet)}
+          onClick={openNewCourse}
           className="up-pool-text-btn up-chrome-btn"
         >
           Create course
@@ -542,42 +553,45 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
   return (
     <>
-      {layout === 'desktop' && isCollapsed && (
-        <button
-          type="button"
-          id="course-pool-collapsed"
-          onClick={onToggleCollapse}
-          className="up-pool-rail up-chrome-btn"
-          title="Open course pool"
-          aria-label="Open course pool"
-        >
-          <span className="relative flex items-center justify-center">
-            <ShoppingBag className="w-4 h-4" />
-            <span className="absolute -top-2 -right-3">{countBadge}</span>
-          </span>
-          <span className="up-pool-rail-label">Course pool</span>
-        </button>
+      {layout === 'desktop' && (
+        <>
+          {isCollapsed && (
+            <button
+              type="button"
+              id="course-pool-collapsed"
+              onClick={onToggleCollapse}
+              className="up-pool-rail up-chrome-btn"
+              title="Open course pool"
+              aria-label="Open course pool"
+            >
+              <span className="relative flex items-center justify-center">
+                <ShoppingBag className="w-4 h-4" />
+                <span className="absolute -top-2 -right-3">{countBadge}</span>
+              </span>
+              <span className="up-pool-rail-label">Course pool</span>
+            </button>
+          )}
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.aside
+                key="pool-desktop-panel"
+                id="course-pool-sidebar"
+                className="up-pool-panel"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={
+                  reduceMotion
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : { opacity: 0, x: 12, transition: panelCloseTransition }
+                }
+                transition={panelOpenTransition}
+              >
+                {renderPoolContent(false)}
+              </motion.aside>
+            )}
+          </AnimatePresence>
+        </>
       )}
-
-      <AnimatePresence>
-        {layout === 'desktop' && !isCollapsed && (
-          <motion.aside
-            key="pool-desktop-panel"
-            id="course-pool-sidebar"
-            className="up-pool-panel"
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={
-              reduceMotion
-                ? { opacity: 0, transition: { duration: 0 } }
-                : { opacity: 0, x: 12, transition: panelCloseTransition }
-            }
-            transition={panelOpenTransition}
-          >
-            {renderPoolContent(false)}
-          </motion.aside>
-        )}
-      </AnimatePresence>
 
       {layout === 'tablet' && isCollapsed && (
         <button

@@ -31,7 +31,7 @@ interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
-  onOpenCatalog?: () => void;
+  onOpenCatalog: () => void;
 }
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
@@ -465,21 +465,19 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
 
                   <div className="py-1">
-                    {onOpenCatalog && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        id="btn-open-catalog"
-                        onClick={() => {
-                          setIsSettingsOpen(false);
-                          onOpenCatalog();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
-                      >
-                        <ShoppingBag className="w-4 h-4 text-slate-400" />
-                        Course pool
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      id="btn-open-catalog"
+                      onClick={() => {
+                        setIsSettingsOpen(false);
+                        onOpenCatalog();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                    >
+                      <ShoppingBag className="w-4 h-4 text-slate-400" />
+                      Course pool
+                    </button>
                     <button
                       type="button"
                       role="menuitem"

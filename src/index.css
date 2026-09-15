@@ -12,7 +12,6 @@
   --dur-close: 150ms;
   --dur-open: 250ms;
   --dur-ui: 240ms;
-  --dur-panel: 400ms;
   --dur-emphasis: 500ms;
   --stagger: 40ms;
   --shift-micro: 4px;
@@ -971,6 +970,17 @@ body[data-up-pool-open] .up-fab-cluster {
   border-color: color-mix(in srgb, var(--up-ink) 22%, var(--up-line));
 }
 
+@media (hover: hover) {
+  .up-pool-row-actions {
+    opacity: 0;
+  }
+
+  .up-pool-row:hover .up-pool-row-actions,
+  .up-pool-row:focus-within .up-pool-row-actions {
+    opacity: 1;
+  }
+}
+
 .up-pool-swatch {
   width: 8px;
   height: 8px;
@@ -1128,7 +1138,9 @@ body[data-up-pool-open] .up-fab-cluster {
     height: 44px;
   }
 
-  .up-pool-icon-hit {
+  .up-pool-icon-hit,
+  .up-pool-handle-hit,
+  .up-pool-search-clear {
     min-width: 44px;
     min-height: 44px;
   }
