@@ -495,20 +495,17 @@ html.dark {
   width: 100%;
   max-width: 100%;
   z-index: 40;
-  min-height: 56px;
-  padding: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--up-raised);
-  border-top: 1px solid var(--up-line);
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  border: 0;
   border-radius: 0;
-  gap: 0;
-  align-items: stretch;
-  grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 8px;
+  align-items: center;
 }
 
 @media (max-width: 639px) {
   .up-fab-cluster {
-    display: grid;
+    display: flex;
   }
 }
 
@@ -526,11 +523,10 @@ body[data-up-pool-open] .up-fab-cluster {
   justify-content: center;
   gap: 8px;
   min-width: 0;
-  min-height: 56px;
+  height: 48px;
+  min-height: 48px;
   margin: 0;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 0;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
@@ -538,28 +534,39 @@ body[data-up-pool-open] .up-fab-cluster {
   touch-action: manipulation;
 }
 
-.up-fab-more,
-.up-fab-secondary {
-  background: transparent;
-  color: var(--up-ink);
-  box-shadow: inset -1px 0 0 var(--up-line);
-}
-
 .up-fab-more {
+  flex: 0 0 48px;
+  width: 48px;
   padding: 0;
+  background: var(--up-raised);
   color: var(--up-muted);
+  border: 1px solid var(--up-line);
 }
 
-.up-fab-more.is-open,
-.up-fab-more:hover,
-.up-fab-secondary:hover {
-  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
+.up-fab-secondary {
+  flex: 1 1 0;
+  padding: 0 14px;
+  background: var(--up-raised);
   color: var(--up-ink);
+  border: 1px solid var(--up-line);
 }
 
 .up-fab-primary {
+  flex: 1.15 1 0;
+  padding: 0 14px;
   background: var(--up-accent);
   color: var(--up-accent-ink);
+  border: 0;
+}
+
+.up-fab-more.is-open,
+.up-fab-more:hover {
+  color: var(--up-ink);
+  background: color-mix(in srgb, var(--up-ink) 6%, var(--up-raised));
+}
+
+.up-fab-secondary:hover {
+  background: color-mix(in srgb, var(--up-ink) 5%, var(--up-raised));
 }
 
 .up-fab-primary:hover {
@@ -569,27 +576,12 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-fab-more.up-chrome-btn:active,
 .up-fab-secondary.up-chrome-btn:active,
 .up-fab-primary.up-chrome-btn:active {
-  transform: none;
-}
-
-.up-fab-more.up-chrome-btn:active,
-.up-fab-secondary.up-chrome-btn:active {
-  background: color-mix(in srgb, var(--up-ink) 10%, transparent);
-}
-
-.up-fab-primary.up-chrome-btn:active {
-  background: color-mix(in srgb, var(--up-accent) 80%, #0b1020);
-}
-
-.up-fab-more.up-chrome-btn:focus-visible,
-.up-fab-secondary.up-chrome-btn:focus-visible,
-.up-fab-primary.up-chrome-btn:focus-visible {
-  outline-offset: -3px;
+  transform: scale(0.97);
 }
 
 .up-dock-copy {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
@@ -604,15 +596,15 @@ body[data-up-pool-open] .up-fab-cluster {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  height: auto;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--up-muted);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--up-accent) 16%, transparent);
+  color: var(--up-accent);
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }

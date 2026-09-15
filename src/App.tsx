@@ -14,7 +14,7 @@ import { ExportModal } from './components/ExportModal';
 import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { DayOfWeek } from './types/schedule';
-import { Sparkles, RotateCcw, HelpCircle, Plus, MoreVertical } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
@@ -338,6 +338,7 @@ export default function App() {
           title="Open course pool"
         >
           <span className="up-dock-copy">
+            <ShoppingBag className="w-3.5 h-3.5" />
             <span className="up-dock-label">Pool</span>
             <AnimatePresence initial={false} mode="popLayout">
               {catalogCourses.length > 0 && (
