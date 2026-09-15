@@ -14,7 +14,7 @@ import { ExportModal } from './components/ExportModal';
 import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { DayOfWeek } from './types/schedule';
-import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, Plus, MoreVertical } from 'lucide-react';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
@@ -337,26 +337,27 @@ export default function App() {
           className="up-fab-secondary up-chrome-btn"
           title="Open course pool"
         >
-          <ShoppingBag className="w-3.5 h-3.5" />
-          <span>Pool</span>
-          <AnimatePresence initial={false} mode="popLayout">
-            {catalogCourses.length > 0 && (
-              <motion.span
-                key={catalogCourses.length}
-                className="up-fab-count"
-                initial={reduceMotion ? false : { y: 8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={
-                  reduceMotion
-                    ? { opacity: 0, transition: { duration: 0 } }
-                    : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
-                }
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
-              >
-                {catalogCourses.length}
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <span className="up-dock-copy">
+            <span className="up-dock-label">Pool</span>
+            <AnimatePresence initial={false} mode="popLayout">
+              {catalogCourses.length > 0 && (
+                <motion.span
+                  key={catalogCourses.length}
+                  className="up-fab-count"
+                  initial={reduceMotion ? false : { y: 8, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={
+                    reduceMotion
+                      ? { opacity: 0, transition: { duration: 0 } }
+                      : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+                  }
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+                >
+                  {catalogCourses.length}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
         </button>
 
         <button
