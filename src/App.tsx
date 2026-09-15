@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/Header';
 import { CalendarGrid } from './components/CalendarGrid';
@@ -13,6 +14,9 @@ import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { DayOfWeek } from './types/schedule';
 import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus } from 'lucide-react';
+
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
 
 export default function App() {
   const {
@@ -38,6 +42,7 @@ export default function App() {
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   // Dynamic butter-smooth GPU-accelerated docking for mobile floating action pill
   const pillRef = useRef<HTMLDivElement>(null);
@@ -215,6 +220,7 @@ export default function App() {
         setIsCourseModalOpen(false);
         setIsExportOpen(false);
         setIsShortcutsOpen(false);
+        setIsPoolCollapsed(true);
         return;
       }
 
@@ -284,19 +290,21 @@ export default function App() {
   ]);
 
   return (
-    <div className="min-h-screen xl:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-hidden xl:overflow-hidden w-full max-w-full min-w-0">
-      <main className="flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-hidden">
+    <>
+    <div className="min-h-screen lg:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-clip lg:overflow-hidden w-full max-w-full min-w-0">
+      <main className="flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
           onOpenExport={() => setIsExportOpen(true)}
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
+          onOpenCatalog={() => setIsPoolCollapsed((prev) => !prev)}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
-        <div className="flex-1 flex flex-col xl:flex-row gap-3 min-h-0 min-w-0 items-stretch">
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0 relative overflow-x-auto">
+          <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-[550px] sm:min-h-[600px] lg:min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
@@ -311,39 +319,6 @@ export default function App() {
             onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
             onEditCourse={handleEditCourse}
           />
-        </div>
-
-        {/* Mobile Floating Action Pill (Floats dynamically with viewport on phone, GPU-docks smoothly above footer) */}
-        <div
-          ref={pillRef}
-          className="up-fab-cluster sm:hidden will-change-transform"
-        >
-          <button
-            type="button"
-            id="btn-mobile-pool-pill"
-            onClick={() => setIsPoolCollapsed((prev) => !prev)}
-            className="up-fab-secondary up-chrome-btn"
-            title="Open Course Pool"
-          >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            <span>Pool</span>
-            {catalogCourses.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--up-accent,#5b6cf0)] text-[var(--up-accent-ink,#f4f5ff)]">
-                {catalogCourses.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            id="btn-mobile-add-course-pill"
-            onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
-            className="up-fab-primary up-chrome-btn"
-            title="Add New Course"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add course</span>
-          </button>
         </div>
 
         {/* Bottom Utility Bar */}
@@ -437,5 +412,51 @@ export default function App() {
         onClose={() => setIsShortcutsOpen(false)}
       />
     </div>
+
+    <div
+      ref={pillRef}
+      className="up-fab-cluster sm:hidden will-change-transform"
+    >
+      <button
+        type="button"
+        id="btn-mobile-pool-pill"
+        onClick={() => setIsPoolCollapsed((prev) => !prev)}
+        className="up-fab-secondary up-chrome-btn"
+        title="Open course pool"
+      >
+        <ShoppingBag className="w-3.5 h-3.5" />
+        <span>Pool</span>
+        <AnimatePresence initial={false} mode="popLayout">
+          {catalogCourses.length > 0 && (
+            <motion.span
+              key={catalogCourses.length}
+              className="up-fab-count"
+              initial={reduceMotion ? false : { y: 8, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={
+                reduceMotion
+                  ? { opacity: 0, transition: { duration: 0 } }
+                  : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+              }
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+            >
+              {catalogCourses.length}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </button>
+
+      <button
+        type="button"
+        id="btn-mobile-add-course-pill"
+        onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
+        className="up-fab-primary up-chrome-btn"
+        title="Add course"
+      >
+        <Plus className="w-4 h-4" />
+        <span>Add course</span>
+      </button>
+    </div>
+    </>
   );
 }
