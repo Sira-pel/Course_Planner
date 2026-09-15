@@ -518,7 +518,8 @@ html.dark {
 
 body.up-sheet-open .up-fab-cluster,
 body[data-up-pool-open] .up-fab-cluster {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .up-fab-secondary,
@@ -540,7 +541,7 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-fab-secondary {
-  background: var(--up-raised);
+  background: color-mix(in srgb, var(--up-ink) 5%, var(--up-raised));
   color: var(--up-ink);
   border: 1px solid var(--up-line);
 }
