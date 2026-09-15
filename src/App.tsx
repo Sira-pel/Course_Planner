@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/Header';
@@ -43,134 +43,6 @@ export default function App() {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const reduceMotion = useReducedMotion();
-
-  // Dynamic butter-smooth GPU-accelerated docking for mobile floating action pill
-  const pillRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    let rafId: number | null = null;
-
-    const updatePosition = () => {
-      if (!pillRef.current || !footerRef.current) return;
-
-      // Only active on phone mode (< 640px); tablet mode uses a stationary anchored pill
-      if (window.innerWidth >= 640) {
-        pillRef.current.style.transform = '';
-        return;
-      }
-
-      // On mobile browsers (Safari/Chrome), dynamic address and navigation toolbars expand and collapse during scroll.
-      // window.visualViewport.height provides the true, instantaneous visible height on screen in real time,
-      // preventing coordinate drift where the pill drifted past the stopping position during touch gestures
-      // or jumped when fast-scrolling back up due to toolbar state changes.
-      const viewportHeight =
-        typeof window !== 'undefined' && window.visualViewport
-          ? window.visualViewport.height
-          : window.innerHeight;
-
-      const maxFooterHeight = footerRef.current.offsetHeight;
-      const targetLift = maxFooterHeight + 12;
-
-      // Calculate the exact distance from the bottom of the page content to the bottom of the visual viewport.
-      const mainEl = footerRef.current.closest('main');
-      const mainRect = mainEl?.getBoundingClientRect();
-
-      const scrollEl = document.scrollingElement || document.documentElement;
-      const maxScroll = Math.max(0, scrollEl.scrollHeight - viewportHeight);
-      const currentScroll = window.scrollY || window.pageYOffset || scrollEl.scrollTop || 0;
-
-      const remainingScroll = mainRect
-        ? Math.max(0, mainRect.bottom - viewportHeight)
-        : Math.max(0, maxScroll - currentScroll);
-
-      // Smooth 1-to-1 upward lift that progresses seamlessly until reaching the end of the page,
-      // resting at the exact final stopping position (targetLift) when reaching the bottom.
-      // Strictly clamped so it can never exceed targetLift even during overscroll / rubber-banding.
-      const lift = Math.max(0, Math.min(targetLift, targetLift - remainingScroll));
-
-      // Apply 1-to-1 GPU hardware-accelerated translation upward
-      pillRef.current.style.transform = `translate3d(0, ${-lift}px, 0)`;
-    };
-
-    const handleScrollOrResize = () => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        updatePosition();
-        rafId = null;
-      });
-    };
-
-    const handleImmediateUpdate = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      updatePosition();
-    };
-
-    window.addEventListener('scroll', handleScrollOrResize, { passive: true });
-    document.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true });
-    window.addEventListener('touchstart', handleScrollOrResize, { passive: true });
-    window.addEventListener('touchmove', handleScrollOrResize, { passive: true });
-    window.addEventListener('touchend', handleImmediateUpdate, { passive: true });
-    window.addEventListener('resize', handleScrollOrResize, { passive: true });
-
-    // Synchronize directly with mobile visual viewport events (address bar collapse/expand)
-    const visualViewport = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (visualViewport) {
-      visualViewport.addEventListener('resize', handleScrollOrResize, { passive: true });
-      visualViewport.addEventListener('scroll', handleScrollOrResize, { passive: true });
-    }
-
-    // Observe footer intersection thresholds for instant trigger when scrolling into view
-    const observer = new IntersectionObserver(
-      () => {
-        handleScrollOrResize();
-      },
-      { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0] }
-    );
-
-    if (footerRef.current) {
-      observer.observe(footerRef.current);
-    }
-
-    // Observe layout changes so dynamically added/removed content updates the pill smoothly
-    let resizeObserver: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        handleScrollOrResize();
-      });
-      if (footerRef.current) {
-        resizeObserver.observe(footerRef.current);
-      }
-      if (document.body) {
-        resizeObserver.observe(document.body);
-      }
-    }
-
-    updatePosition();
-
-    return () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-      window.removeEventListener('scroll', handleScrollOrResize);
-      document.removeEventListener('scroll', handleScrollOrResize, { capture: true });
-      window.removeEventListener('touchstart', handleScrollOrResize);
-      window.removeEventListener('touchmove', handleScrollOrResize);
-      window.removeEventListener('touchend', handleImmediateUpdate);
-      window.removeEventListener('resize', handleScrollOrResize);
-      if (visualViewport) {
-        visualViewport.removeEventListener('resize', handleScrollOrResize);
-        visualViewport.removeEventListener('scroll', handleScrollOrResize);
-      }
-      observer.disconnect();
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, []);
 
   // Sync theme with DOM documentElement and colorScheme
   useEffect(() => {
@@ -312,9 +184,8 @@ export default function App() {
   ]);
 
   return (
-    <>
-    <div className="min-h-screen lg:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-clip lg:overflow-hidden w-full max-w-full min-w-0">
-      <main className="flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
+    <div className="up-app min-h-screen lg:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-clip lg:overflow-hidden w-full max-w-full min-w-0">
+      <main className="up-workspace flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
@@ -324,9 +195,9 @@ export default function App() {
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch lg:overflow-visible">
+        <div className="up-workspace-body flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch lg:overflow-visible">
           {/* Main Weekly Calendar Grid */}
-          <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-[550px] sm:min-h-[600px] lg:min-h-0 relative overflow-x-auto">
+          <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 sm:min-h-[600px] lg:min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
@@ -344,11 +215,8 @@ export default function App() {
         </div>
 
         {/* Bottom Utility Bar */}
-        <footer
-          ref={footerRef}
-          className="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300 py-2 border-t border-slate-200/80 dark:border-slate-800/80 flex-wrap"
-        >
-          <div className="flex items-center gap-3">
+        <footer className="up-footer flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300 py-2 border-t border-slate-200/80 dark:border-slate-800/80 flex-wrap">
+          <div className="up-footer-tip flex items-center gap-3">
             <span className="flex items-center gap-1.5 font-medium">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
               Tip: Double-click any time slot on the calendar to instantly add a class.
@@ -414,6 +282,48 @@ export default function App() {
         </footer>
       </main>
 
+      <div className="up-fab-cluster">
+        <button
+          type="button"
+          id="btn-mobile-pool-pill"
+          onClick={() => setIsPoolCollapsed((prev) => !prev)}
+          className="up-fab-secondary up-chrome-btn"
+          title="Open course pool"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          <span>Pool</span>
+          <AnimatePresence initial={false} mode="popLayout">
+            {catalogCourses.length > 0 && (
+              <motion.span
+                key={catalogCourses.length}
+                className="up-fab-count"
+                initial={reduceMotion ? false : { y: 8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={
+                  reduceMotion
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+                }
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+              >
+                {catalogCourses.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
+        <button
+          type="button"
+          id="btn-mobile-add-course-pill"
+          onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
+          className="up-fab-primary up-chrome-btn"
+          title="Add course"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add course</span>
+        </button>
+      </div>
+
       {/* Modal Dialogs */}
       <CourseModal
         isOpen={isCourseModalOpen}
@@ -434,51 +344,5 @@ export default function App() {
         onClose={() => setIsShortcutsOpen(false)}
       />
     </div>
-
-    <div
-      ref={pillRef}
-      className="up-fab-cluster sm:hidden will-change-transform"
-    >
-      <button
-        type="button"
-        id="btn-mobile-pool-pill"
-        onClick={() => setIsPoolCollapsed((prev) => !prev)}
-        className="up-fab-secondary up-chrome-btn"
-        title="Open course pool"
-      >
-        <ShoppingBag className="w-3.5 h-3.5" />
-        <span>Pool</span>
-        <AnimatePresence initial={false} mode="popLayout">
-          {catalogCourses.length > 0 && (
-            <motion.span
-              key={catalogCourses.length}
-              className="up-fab-count"
-              initial={reduceMotion ? false : { y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={
-                reduceMotion
-                  ? { opacity: 0, transition: { duration: 0 } }
-                  : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
-              }
-              transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
-            >
-              {catalogCourses.length}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </button>
-
-      <button
-        type="button"
-        id="btn-mobile-add-course-pill"
-        onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
-        className="up-fab-primary up-chrome-btn"
-        title="Add course"
-      >
-        <Plus className="w-4 h-4" />
-        <span>Add course</span>
-      </button>
-    </div>
-    </>
   );
 }

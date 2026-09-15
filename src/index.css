@@ -33,7 +33,6 @@
 html,
 body,
 #root {
-  /* clip (not hidden) so position:fixed FABs are not contained */
   overflow-x: clip;
   max-width: 100%;
   width: 100%;
@@ -456,19 +455,64 @@ html.dark {
   background: rgb(8 12 20 / 0.72);
 }
 
-.up-fab-cluster {
-  position: fixed;
-  right: 16px;
-  bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* Phone faceplate: document does not scroll; calendar is the scrolling region. */
+@media (max-width: 639px) {
+  .up-app {
+    min-height: 100dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .up-workspace {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .up-workspace-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .up-calendar-slot {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .up-footer {
+    flex-shrink: 0;
+    justify-content: flex-end;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .up-footer-tip {
+    display: none;
+  }
 }
 
-@media (min-width: 640px) {
+.up-fab-cluster {
+  display: none;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  z-index: 40;
+  padding: 8px 12px max(8px, env(safe-area-inset-bottom, 0px));
+  background: var(--up-raised);
+  border-top: 1px solid var(--up-line);
+  border-radius: 8px 8px 0 0;
+  gap: 8px;
+  align-items: stretch;
+}
+
+@media (max-width: 639px) {
   .up-fab-cluster {
-    display: none;
+    display: flex;
   }
 }
 
@@ -483,9 +527,11 @@ body[data-up-pool-open] .up-fab-cluster {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 44px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -494,20 +540,15 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-fab-secondary {
-  background: var(--up-raised, #121826);
-  color: var(--up-ink, #e8edf4);
-  border: 1px solid var(--up-line, #2a3342);
+  background: var(--up-raised);
+  color: var(--up-ink);
+  border: 1px solid var(--up-line);
 }
 
 .up-fab-primary {
-  background: var(--up-accent, #5b6cf0);
-  color: var(--up-accent-ink, #f4f5ff);
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
   border: 0;
-}
-
-.up-fab-primary:active,
-.up-fab-secondary:active {
-  transform: scale(0.97);
 }
 
 @media (max-width: 639px) {
