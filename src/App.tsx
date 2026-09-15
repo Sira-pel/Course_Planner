@@ -284,27 +284,23 @@ export default function App() {
   ]);
 
   return (
-    <div className="min-h-screen xl:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-hidden xl:overflow-hidden w-full max-w-full">
-      <main className="flex-1 max-w-[1720px] w-full mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-hidden">
-        {/* Header with brand, plan tabs, ghost overlay switcher, credits, conflict pill */}
+    <div className="min-h-screen xl:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-150 overflow-x-hidden xl:overflow-hidden w-full max-w-full min-w-0">
+      <main className="flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-hidden">
+        {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
           onOpenExport={() => setIsExportOpen(true)}
-          onOpenCatalog={() => setIsPoolCollapsed((prev) => !prev)}
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
-          isPoolOpen={!isPoolCollapsed}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
-        <div className="flex-1 flex flex-col xl:flex-row gap-3 min-h-0 items-stretch">
+        <div className="flex-1 flex flex-col xl:flex-row gap-3 min-h-0 min-w-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0 relative">
+          <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-[550px] sm:min-h-[600px] xl:min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
               onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-              onOpenCatalog={() => setIsPoolCollapsed(false)}
-              isPoolOpen={!isPoolCollapsed}
             />
           </div>
 
@@ -320,19 +316,19 @@ export default function App() {
         {/* Mobile Floating Action Pill (Floats dynamically with viewport on phone, GPU-docks smoothly above footer) */}
         <div
           ref={pillRef}
-          className="sm:hidden fixed right-4 bottom-4 z-40 flex items-center gap-2 drop-shadow-xl will-change-transform"
+          className="up-fab-cluster sm:hidden will-change-transform"
         >
           <button
             type="button"
             id="btn-mobile-pool-pill"
             onClick={() => setIsPoolCollapsed((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300/80 dark:border-slate-700 shadow-md active:scale-95 transition-transform"
+            className="up-fab-secondary up-chrome-btn"
             title="Open Course Pool"
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <ShoppingBag className="w-3.5 h-3.5" />
             <span>Pool</span>
             {catalogCourses.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-600 text-white">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--up-accent,#5b6cf0)] text-[var(--up-accent-ink,#f4f5ff)]">
                 {catalogCourses.length}
               </span>
             )}
@@ -342,11 +338,11 @@ export default function App() {
             type="button"
             id="btn-mobile-add-course-pill"
             onClick={() => handleOpenNewCourse('monday', '09:00', 'form')}
-            className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-bold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md active:scale-95 transition-transform"
+            className="up-fab-primary up-chrome-btn"
             title="Add New Course"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Course</span>
+            <span>Add course</span>
           </button>
         </div>
 

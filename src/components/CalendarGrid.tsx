@@ -9,16 +9,12 @@ interface CalendarGridProps {
   onEditCourse: (courseId: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
   onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
-  onOpenCatalog?: () => void;
-  isPoolOpen?: boolean;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
   onEditCourse,
   onAddCourseAtTime,
   onOpenNewCourse,
-  onOpenCatalog,
-  isPoolOpen = false,
 }) => {
   const plans = useScheduleStore((state) => state.plans);
   const activePlanId = useScheduleStore((state) => state.activePlanId);
@@ -229,10 +225,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     <div
       ref={containerRef}
       id="calendar-grid-container"
-      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/90 dark:border-slate-800 overflow-hidden"
+      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/90 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col w-full max-w-full touch-pan-y">
+      <div className="flex-1 overflow-auto relative flex flex-col w-full max-w-full">
         {/* Day Headers (Sticky at top of scroll area) */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs sticky top-0 z-30 shadow-2xs w-full max-w-full">
           {/* Top-left corner time label */}
@@ -246,7 +242,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           {/* Days header columns */}
           <div
             className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 min-w-0"
-            style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+            style={{
+              gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+            }}
           >
             {days.map((day) => {
               const isToday = day.id === currentDayOfWeek;
@@ -395,7 +393,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                   {/* Current Time Indicator on today's column */}
                   {isToday && showNowLine && (
                     <div
-                      className="absolute left-0 right-0 z-40 flex items-center pointer-events-none"
+                      className="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
                       style={{ top: `${nowPercent}%` }}
                     >
                       <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs" />
