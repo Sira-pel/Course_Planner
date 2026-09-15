@@ -565,10 +565,12 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
             tabIndex={isCollapsed ? 0 : -1}
             aria-hidden={!isCollapsed}
           >
-            <span className="relative flex items-center justify-center">
+            <span className="up-pool-rail-mark">
               <ShoppingBag className="w-4 h-4" />
-              <span className="absolute -top-2 -right-3">{countBadge}</span>
             </span>
+            {catalogCourses.length > 0 && (
+              <span className="up-pool-rail-count">{catalogCourses.length}</span>
+            )}
             <span className="up-pool-rail-label">Course pool</span>
           </button>
           <AnimatePresence presenceAffectsLayout={false}>

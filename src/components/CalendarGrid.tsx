@@ -228,7 +228,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/90 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
-      <div className="flex-1 overflow-auto relative flex flex-col w-full max-w-full">
+      <div className="up-scroll flex-1 overflow-auto relative flex flex-col w-full max-w-full">
         {/* Day Headers (Sticky at top of scroll area) */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs sticky top-0 z-30 shadow-2xs w-full max-w-full">
           {/* Top-left corner time label */}
