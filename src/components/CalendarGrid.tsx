@@ -3,6 +3,7 @@ import { useScheduleStore } from '../store/useScheduleStore';
 import { CourseBlock } from './CourseBlock';
 import { DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
 import { computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
+import { collectDaySessions } from '../utils/collectDaySessions';
 import { Plus, Clock } from 'lucide-react';
 
 interface CalendarGridProps {
@@ -132,54 +133,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const map = new Map<DayOfWeek, LayoutSession[]>();
 
     days.forEach(dayObj => {
-      const itemsToLayout: {
-        session: (typeof activePlan.courses)[0]['sessions'][0];
-        course: (typeof activePlan.courses)[0];
-        planId: string;
-        planName: string;
-        isGhost: boolean;
-        ghostIndex?: number;
-        hasConflict: boolean;
-      }[] = [];
-
-      // 1. Active plan sessions
-      if (activePlan) {
-        activePlan.courses.forEach(course => {
-          course.sessions
-            .filter(s => s.day === dayObj.id)
-            .forEach(session => {
-              itemsToLayout.push({
-                session,
-                course,
-                planId: activePlan.id,
-                planName: activePlan.name,
-                isGhost: false,
-                hasConflict: conflictingCourseIds.has(course.id),
-              });
-            });
-        });
-      }
-
-      // 2. Ghost plans sessions
-      ghostPlans.forEach((ghostPlan, gIdx) => {
-        ghostPlan.courses.forEach(course => {
-          course.sessions
-            .filter(s => s.day === dayObj.id)
-            .forEach(session => {
-              itemsToLayout.push({
-                session,
-                course,
-                planId: ghostPlan.id,
-                planName: ghostPlan.name,
-                isGhost: true,
-                ghostIndex: gIdx,
-                hasConflict: false,
-              });
-            });
-        });
-      });
-
-      const layout = computeDayLayout(itemsToLayout);
+      const layout = computeDayLayout(
+        collectDaySessions(dayObj.id, activePlan, ghostPlans, conflictingCourseIds)
+      );
       map.set(dayObj.id, layout);
     });
 

@@ -3,8 +3,7 @@ import { motion } from 'motion/react';
 import type { Course } from '../../types/schedule';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
 import { Check, Trash2, Edit2, AlertTriangle, X, Plus } from 'lucide-react';
-
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+import { EASE_OUT } from '../../utils/motion';
 
 export interface PoolRowProps {
   item: Course;
