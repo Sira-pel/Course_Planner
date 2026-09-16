@@ -13,6 +13,7 @@
   --dur-open: 250ms;
   --dur-ui: 240ms;
   --dur-emphasis: 500ms;
+  --dur-scene: 620ms;
   --stagger: 40ms;
   --shift-micro: 4px;
   --shift-base: 8px;
@@ -340,6 +341,7 @@ html.dark {
     min-width: 44px;
   }
 
+  #btn-theme,
   #btn-settings,
   #btn-ghost-overlay {
     width: 44px;
@@ -1320,6 +1322,81 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
+/* Theme reveal: circular clip from the toggle. Default VT fade is disabled. */
+html.is-theme-revealing::view-transition-image-pair(root) {
+  isolation: auto;
+}
+
+html.is-theme-revealing::view-transition-old(root),
+html.is-theme-revealing::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  isolation: isolate;
+  display: block;
+}
+
+html.is-theme-to-dark::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.is-theme-to-dark::view-transition-new(root) {
+  z-index: 2;
+}
+
+html.is-theme-to-light::view-transition-old(root) {
+  z-index: 2;
+}
+
+html.is-theme-to-light::view-transition-new(root) {
+  z-index: 1;
+}
+
+html.is-theme-revealing,
+html.is-theme-revealing * {
+  transition-duration: 0s !important;
+}
+
+.up-theme-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1em;
+  height: 1em;
+}
+
+.up-theme-glyph svg {
+  grid-area: 1 / 1;
+  width: 1em;
+  height: 1em;
+}
+
+.up-theme-sun,
+.up-theme-moon {
+  transform-origin: 50% 50%;
+}
+
+.up-theme-glyph[data-mode='light'] .up-theme-sun,
+.up-theme-glyph[data-mode='dark'] .up-theme-moon {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+
+.up-theme-glyph[data-mode='light'] .up-theme-moon,
+.up-theme-glyph[data-mode='dark'] .up-theme-sun {
+  opacity: 0;
+  filter: blur(var(--blur-ink));
+  transform: scale(0.25);
+  pointer-events: none;
+}
+
+html:not(.is-theme-revealing) .up-theme-sun,
+html:not(.is-theme-revealing) .up-theme-moon {
+  transition-property: opacity, filter, transform;
+  transition-duration: var(--dur-open);
+  transition-timing-function: var(--ease-in-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .up-chrome-btn {
     transition-duration: 0ms;
@@ -1379,6 +1456,30 @@ body[data-up-pool-open] .up-fab-cluster {
   .up-pool-add:active,
   .up-pool-create:active {
     transform: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+    clip-path: none !important;
+    filter: none !important;
+  }
+
+  .up-theme-sun,
+  .up-theme-moon {
+    transition: none;
+    filter: none;
+    transform: none;
+  }
+
+  .up-theme-glyph[data-mode='light'] .up-theme-moon,
+  .up-theme-glyph[data-mode='dark'] .up-theme-sun {
+    opacity: 0;
+  }
+
+  .up-theme-glyph[data-mode='light'] .up-theme-sun,
+  .up-theme-glyph[data-mode='dark'] .up-theme-moon {
+    opacity: 1;
   }
 }
 

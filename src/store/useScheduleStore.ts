@@ -194,6 +194,22 @@ interface ScheduleState {
 
 const MAX_HISTORY = 25;
 
+function isTheme(value: unknown): value is 'light' | 'dark' {
+  return value === 'light' || value === 'dark';
+}
+
+/** Same order as the index.html bootstrap: saved toggle, then OS preference. */
+function readInitialTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const stored = localStorage.getItem('uniplan_theme');
+    if (isTheme(stored)) return stored;
+  } catch {
+    // localStorage can throw in private mode
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export const DEFAULT_INITIAL_PLANS: SchedulePlan[] = [
   {
     id: 'plan_1',
@@ -212,7 +228,7 @@ export const useScheduleStore = create<ScheduleState>()(
       showWeekends: false,
       startHour: 7,
       endHour: 17,
-      theme: typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+      theme: readInitialTheme(),
       past: [],
       future: [],
 
@@ -643,8 +659,10 @@ export const useScheduleStore = create<ScheduleState>()(
         if (typeof document !== 'undefined') {
           if (theme === 'dark') {
             document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
           } else {
             document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
           }
           localStorage.setItem('uniplan_theme', theme);
         }
@@ -775,11 +793,18 @@ export const useScheduleStore = create<ScheduleState>()(
         }
 
         // Synchronize DOM theme on hydration
-        if (typeof document !== 'undefined' && state.theme) {
+        if (typeof document !== 'undefined' && isTheme(state.theme)) {
           if (state.theme === 'dark') {
             document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
           } else {
             document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+          try {
+            localStorage.setItem('uniplan_theme', state.theme);
+          } catch {
+            // private mode
           }
         }
       },
