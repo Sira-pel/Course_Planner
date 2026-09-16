@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { SchedulePlan, Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
 import { SAMPLE_PLANS, SAMPLE_CATALOG } from '../data/sampleSemester';
+import { applyDomTheme, isThemeName, persistTheme, readStoredTheme, resolveInitialTheme } from '../utils/theme';
 
 const VALID_DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -194,21 +195,29 @@ interface ScheduleState {
 
 const MAX_HISTORY = 25;
 
-function isTheme(value: unknown): value is 'light' | 'dark' {
-  return value === 'light' || value === 'dark';
-}
-
-/** Same order as the index.html bootstrap: saved toggle, then OS preference. */
-function readInitialTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light';
-  try {
-    const stored = localStorage.getItem('uniplan_theme');
-    if (isTheme(stored)) return stored;
-  } catch {
-    // localStorage can throw in private mode
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
+const safeLocalStorage = {
+  getItem: (name: string) => {
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name: string, value: string) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch {
+      // Quota / private mode must not throw into React.
+    }
+  },
+  removeItem: (name: string) => {
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      // ignore
+    }
+  },
+};
 
 export const DEFAULT_INITIAL_PLANS: SchedulePlan[] = [
   {
@@ -228,7 +237,7 @@ export const useScheduleStore = create<ScheduleState>()(
       showWeekends: false,
       startHour: 7,
       endHour: 17,
-      theme: readInitialTheme(),
+      theme: resolveInitialTheme(),
       past: [],
       future: [],
 
@@ -656,16 +665,10 @@ export const useScheduleStore = create<ScheduleState>()(
       canRedo: () => get().future.length > 0,
 
       setTheme: (theme: 'light' | 'dark') => {
-        if (typeof document !== 'undefined') {
-          if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.style.colorScheme = 'dark';
-          } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.colorScheme = 'light';
-          }
-          localStorage.setItem('uniplan_theme', theme);
-        }
+        if (!isThemeName(theme)) return;
+        applyDomTheme(theme);
+        persistTheme(theme);
+        if (get().theme === theme) return;
         set({ theme });
       },
 
@@ -746,6 +749,7 @@ export const useScheduleStore = create<ScheduleState>()(
     }),
     {
       name: 'uniplan_schedule_storage_v2',
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({
         plans: state.plans,
         activePlanId: state.activePlanId,
@@ -792,20 +796,11 @@ export const useScheduleStore = create<ScheduleState>()(
           state.catalogCourses = sanitizeCatalog(state.catalogCourses);
         }
 
-        // Synchronize DOM theme on hydration
-        if (typeof document !== 'undefined' && isTheme(state.theme)) {
-          if (state.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.style.colorScheme = 'dark';
-          } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.colorScheme = 'light';
-          }
-          try {
-            localStorage.setItem('uniplan_theme', state.theme);
-          } catch {
-            // private mode
-          }
+        const preferred = readStoredTheme() ?? (isThemeName(state.theme) ? state.theme : null);
+        if (preferred) {
+          state.theme = preferred;
+          applyDomTheme(preferred);
+          persistTheme(preferred);
         }
       },
     }

@@ -28,6 +28,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { parseIcsContent } from '../utils/icsImport';
+import { useIsPhone } from '../utils/usePoolLayout';
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
@@ -38,22 +39,6 @@ interface HeaderProps {
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
-
-function useIsPhone() {
-  const [isPhone, setIsPhone] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)').matches : false
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 639px)');
-    const onChange = () => setIsPhone(media.matches);
-    onChange();
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, []);
-
-  return isPhone;
-}
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenNewCourse,
@@ -519,7 +504,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       type="button"
                       role="menuitem"
-                      onClick={(event) => handleToggleTheme(event, true)}
+                      onClick={(event) => handleToggleTheme(event, false)}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
                     >
                       {theme === 'dark' ? (
