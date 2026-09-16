@@ -1616,6 +1616,14 @@ html.dark .course-input:focus-visible {
     transition: none !important;
     animation: none !important;
     filter: none !important;
+  }
+
+  .course-modal-sheet,
+  .course-acc-body,
+  .course-row,
+  .course-field,
+  .course-day,
+  .course-swatch {
     transform: none !important;
   }
 

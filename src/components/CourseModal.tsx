@@ -87,6 +87,39 @@ function formatDaysShort(days: DayOfWeek[]): string {
   return sorted.map((d) => DAYS_LIST.find((x) => x.id === d)?.label ?? d).join(' ');
 }
 
+const FALLBACK_DAYS: DayOfWeek[] = ['monday'];
+const LAST_MINUTE = 23 * 60 + 59;
+
+function toInputTime(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  const hm = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(trimmed);
+  if (hm) {
+    const hour = Number(hm[1]);
+    const minute = Number(hm[2]);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    }
+  }
+  if (!trimmed) return fallback;
+  const as24 = minutesToTime(timeToMinutes(trimmed), false);
+  return as24 === '24:00' ? '23:59' : as24;
+}
+
+function endAfterStart(startTime: string, durationMinutes: number): string {
+  const startM = timeToMinutes(startTime || '09:00');
+  const endM = Math.min(LAST_MINUTE, startM + durationMinutes);
+  if (endM <= startM) {
+    return minutesToTime(LAST_MINUTE, false);
+  }
+  return minutesToTime(endM, false);
+}
+
+function isTabbable(el: HTMLElement): boolean {
+  if (el.closest('[inert]')) return false;
+  if (el.getAttribute('aria-hidden') === 'true') return false;
+  return el.getClientRects().length > 0;
+}
+
 function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
   if (sessions.length === 0) {
     return [
@@ -104,7 +137,9 @@ function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
   const indexByKey = new Map<string, number>();
 
   for (const session of sessions) {
-    const key = `${session.startTime}|${session.endTime}|${session.room || ''}`;
+    const startTime = toInputTime(session.startTime, '09:00');
+    const endTime = toInputTime(session.endTime, '10:15');
+    const key = `${startTime}|${endTime}|${session.room || ''}`;
     const existing = indexByKey.get(key);
     if (existing !== undefined) {
       const group = groups[existing];
@@ -114,8 +149,8 @@ function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
       groups.push({
         id: session.id || `p_${groups.length}`,
         days: [session.day],
-        startTime: session.startTime,
-        endTime: session.endTime,
+        startTime,
+        endTime,
         room: session.room || '',
       });
     }
@@ -126,12 +161,14 @@ function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
 
 function patternsToSessions(patterns: MeetingPattern[]): ClassSession[] {
   return patterns.flatMap((pattern) => {
-    const days = pattern.days.length > 0 ? sortDays(pattern.days) : (['monday'] as DayOfWeek[]);
+    const days = pattern.days.length > 0 ? sortDays(pattern.days) : FALLBACK_DAYS;
+    const startTime = toInputTime(pattern.startTime, '09:00');
+    const endTime = toInputTime(pattern.endTime, '10:15');
     return days.map((day) => ({
       id: `${pattern.id}_${day}`,
       day,
-      startTime: pattern.startTime,
-      endTime: pattern.endTime,
+      startTime,
+      endTime,
       ...(pattern.room.trim() ? { room: pattern.room.trim() } : {}),
     }));
   });
@@ -190,6 +227,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const incomingRef = useRef<HTMLDivElement>(null);
   const morphingRef = useRef(false);
   const fromHeightRef = useRef(0);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [tabPill, setTabPill] = useState({ x: 0, w: 0, snap: true });
 
   const [code, setCode] = useState('');
@@ -232,10 +270,14 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) returnFocusRef.current = active;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
+      const restore = returnFocusRef.current;
+      if (restore && document.contains(restore)) restore.focus();
     };
   }, [isOpen]);
 
@@ -369,12 +411,13 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setInstructor('');
       setCredits(3);
       setColor(getNextColor(activePlanId));
+      const startTime = toInputTime(initialStartTime, '09:00');
       setPatterns([
         {
           id: `p_${Date.now()}`,
           days: [initialDay],
-          startTime: initialStartTime,
-          endTime: minutesToTime(timeToMinutes(initialStartTime) + 75, false),
+          startTime,
+          endTime: endAfterStart(startTime, 75),
           room: '',
         },
       ]);
@@ -480,7 +523,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           endTime: '10:15',
           room: '',
         };
-        const newDays = days.length > 0 ? days : (['monday'] as DayOfWeek[]);
+        const newDays = days.length > 0 ? days : FALLBACK_DAYS;
         const newSessions: ClassSession[] = newDays.map((d, idx) => ({
           id: `s_${item.id}_${idx}`,
           day: d,
@@ -505,12 +548,13 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         return {
           ...item,
           hasError: false,
+          selected: true,
           course: {
             ...item.course,
             sessions: item.course.sessions.map((s) => ({
               ...s,
-              startTime: startTime || s.startTime,
-              endTime: endTime || s.endTime,
+              startTime: toInputTime(startTime || s.startTime, s.startTime),
+              endTime: toInputTime(endTime || s.endTime, s.endTime),
             })),
           },
         };
@@ -567,8 +611,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     setPatterns((prev) =>
       prev.map((pattern, i) => {
         if (i !== index) return pattern;
-        const startM = timeToMinutes(pattern.startTime || '09:00');
-        return { ...pattern, endTime: minutesToTime(startM + durationMinutes, false) };
+        return { ...pattern, endTime: endAfterStart(pattern.startTime || '09:00', durationMinutes) };
       })
     );
   };
@@ -600,7 +643,14 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
     for (let i = 0; i < patterns.length; i++) {
       const pattern = patterns[i];
-      if (timeToMinutes(pattern.startTime) >= timeToMinutes(pattern.endTime)) {
+      const startTime = toInputTime(pattern.startTime, '');
+      const endTime = toInputTime(pattern.endTime, '');
+      if (!startTime || !endTime) {
+        setError(`Meeting ${i + 1}: start and end times are required.`);
+        replayShake('times');
+        return;
+      }
+      if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
         setError(`Meeting ${i + 1}: start must be before end.`);
         replayShake('times');
         return;
@@ -668,10 +718,35 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          onClose();
+          return;
+        }
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
           e.preventDefault();
           if (mode === 'form') handleFormSubmit();
           else handleQuickAddSubmit();
+          return;
+        }
+        if (e.key !== 'Tab') return;
+        const root = sheetRef.current;
+        if (!root) return;
+        const nodes = Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter(isTabbable);
+        if (nodes.length === 0) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || !root.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+          e.preventDefault();
+          first.focus();
         }
       }}
     >
@@ -932,38 +1007,46 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
                         <div className="grid grid-cols-12 gap-2">
                           <div className="col-span-4 min-w-0">
-                            <label className="sr-only" htmlFor={index === 0 ? 'course-start' : undefined}>
+                            <label className="sr-only" htmlFor={index === 0 ? 'course-start' : `meeting-start-${pattern.id}`}>
                               Start time
                             </label>
                             <input
-                              id={index === 0 ? 'course-start' : undefined}
+                              id={index === 0 ? 'course-start' : `meeting-start-${pattern.id}`}
                               ref={index === 0 ? startTimeInputRef : undefined}
                               type="time"
+                              required
                               value={pattern.startTime}
                               onChange={(e) => {
                                 const startTime = e.target.value;
-                                const startM = timeToMinutes(startTime);
                                 const endM = timeToMinutes(pattern.endTime);
+                                const startM = timeToMinutes(startTime);
                                 updatePattern(index, {
                                   startTime,
-                                  endTime: endM <= startM ? minutesToTime(startM + 75, false) : pattern.endTime,
+                                  endTime: endM <= startM ? endAfterStart(startTime, 75) : pattern.endTime,
                                 });
                               }}
                               className={`${inputClass} font-mono`}
                             />
                           </div>
                           <div className="col-span-4 min-w-0">
-                            <label className="sr-only">End time</label>
+                            <label className="sr-only" htmlFor={`meeting-end-${pattern.id}`}>
+                              End time
+                            </label>
                             <input
+                              id={`meeting-end-${pattern.id}`}
                               type="time"
+                              required
                               value={pattern.endTime}
                               onChange={(e) => updatePattern(index, { endTime: e.target.value })}
                               className={`${inputClass} font-mono`}
                             />
                           </div>
                           <div className="col-span-4 min-w-0">
-                            <label className="sr-only">Room</label>
+                            <label className="sr-only" htmlFor={`meeting-room-${pattern.id}`}>
+                              Room
+                            </label>
                             <input
+                              id={`meeting-room-${pattern.id}`}
                               type="text"
                               value={pattern.room}
                               onChange={(e) => updatePattern(index, { room: e.target.value })}
@@ -1021,7 +1104,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                     <ChevronDown className="course-acc-chevron w-4 h-4 text-slate-400" />
                   </span>
                 </button>
-                <div className={`course-acc ${detailsOpen ? 'is-open' : ''}`}>
+                <div className={`course-acc ${detailsOpen ? 'is-open' : ''}`} inert={!detailsOpen}>
                   <div className="course-acc-inner">
                     <div className="course-acc-body pt-2 pb-2 space-y-3">
                       <div className="grid grid-cols-12 gap-2.5">
@@ -1281,7 +1364,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                             </div>
                           </div>
 
-                          <div className={`course-acc ${item.isEditing ? 'is-open' : ''}`}>
+                          <div className={`course-acc ${item.isEditing ? 'is-open' : ''}`} inert={!item.isEditing}>
                             <div className="course-acc-inner">
                               <div className="course-acc-body px-2.5 pb-2.5 space-y-2.5 border-t border-slate-200/80 dark:border-slate-700 pt-2.5">
                                 <div className="grid grid-cols-2 gap-2">
@@ -1377,11 +1460,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                                         key={chip.label}
                                         type="button"
                                         onClick={() => {
-                                          const startM = timeToMinutes(session0.startTime || '09:00');
                                           handleUpdateItemTimes(
                                             item.id,
                                             session0.startTime,
-                                            minutesToTime(startM + chip.minutes, false)
+                                            endAfterStart(session0.startTime || '09:00', chip.minutes)
                                           );
                                         }}
                                         className={`px-2 py-0.5 text-[11px] font-mono rounded-md ${
