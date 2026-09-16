@@ -7,9 +7,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
-
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
+import { EASE_OUT, EASE_POP } from '../../utils/motion';
 
 export interface MobileDockProps {
   isMoreOpen: boolean;

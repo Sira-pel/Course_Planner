@@ -2,8 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Conflict } from '../../types/schedule';
-
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+import { EASE_OUT } from '../../utils/motion';
 
 interface ConflictModalProps {
   open: boolean;

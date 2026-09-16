@@ -18,6 +18,7 @@ import {
   sortDays,
   toInputTime,
 } from './meetingPatterns';
+import { EASE_OUT } from '../../utils/motion';
 
 interface CourseModalProps {
   isOpen: boolean;
@@ -30,7 +31,6 @@ interface CourseModalProps {
 
 const CLOSE_MS = 150;
 const MORPH_MS = 250;
-const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 function isTabbable(el: HTMLElement): boolean {
   if (el.closest('[inert]')) return false;

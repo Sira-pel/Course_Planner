@@ -19,6 +19,7 @@ import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { ConflictModal } from './ConflictModal';
+import { EASE_OUT, EASE_POP } from '../../utils/motion';
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
@@ -26,9 +27,6 @@ interface HeaderProps {
   onOpenShortcuts: () => void;
   onOpenCatalog: () => void;
 }
-
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenNewCourse,
