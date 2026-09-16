@@ -1321,11 +1321,16 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 /* Theme reveal: circular clip from the toggle. Default VT fade is disabled. */
+html.is-theme-revealing::view-transition-image-pair(root) {
+  isolation: auto;
+}
+
 html.is-theme-revealing::view-transition-old(root),
 html.is-theme-revealing::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
   isolation: isolate;
+  display: block;
 }
 
 html.is-theme-to-dark::view-transition-old(root) {

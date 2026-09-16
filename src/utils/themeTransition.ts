@@ -48,15 +48,24 @@ function clearRevealClasses(): void {
   );
 }
 
+type ThemeViewTransition = {
+  ready: Promise<void>;
+  finished: Promise<void>;
+  waitUntil?: (promise: Promise<unknown>) => void;
+};
+
 function canStartViewTransition(
   doc: Document
 ): doc is Document & {
-  startViewTransition: (update: () => void) => {
-    ready: Promise<void>;
-    finished: Promise<void>;
-  };
+  startViewTransition: (update: () => void) => ThemeViewTransition;
 } {
   return typeof doc.startViewTransition === 'function';
+}
+
+function extendTransition(transition: ThemeViewTransition, promise: Promise<unknown>): void {
+  if (typeof transition.waitUntil === 'function') {
+    transition.waitUntil(promise);
+  }
 }
 
 /**
@@ -109,7 +118,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
         const endRadius = farthestCornerRadius(x, y);
         const clip = [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`];
 
-        root.animate(
+        const animation = root.animate(
           { clipPath: goingToDark ? clip : [clip[1], clip[0]] },
           {
             duration: goingToDark
@@ -120,6 +129,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
             pseudoElement: goingToDark ? '::view-transition-new(root)' : '::view-transition-old(root)',
           }
         );
+        extendTransition(transition, animation.finished);
       })
       .catch(() => {
         runApply();

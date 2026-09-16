@@ -409,7 +409,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={(event) => handleToggleTheme(event, false)}
             className="up-icon-btn up-chrome-btn"
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Dark mode"
             aria-pressed={theme === 'dark'}
           >
             <span className="up-theme-glyph" data-mode={theme} aria-hidden="true">
