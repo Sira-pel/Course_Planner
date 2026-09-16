@@ -643,8 +643,10 @@ export const useScheduleStore = create<ScheduleState>()(
         if (typeof document !== 'undefined') {
           if (theme === 'dark') {
             document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
           } else {
             document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
           }
           localStorage.setItem('uniplan_theme', theme);
         }
@@ -778,8 +780,10 @@ export const useScheduleStore = create<ScheduleState>()(
         if (typeof document !== 'undefined' && state.theme) {
           if (state.theme === 'dark') {
             document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
           } else {
             document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
           }
         }
       },

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../store/useScheduleStore';
+import { isPointerClick, originFromPointer, runThemeReveal } from '../utils/themeTransition';
 import { detectPlanConflicts } from '../utils/timeUtils';
 import { GHOST_PLAN_COLORS } from '../types/schedule';
 import {
@@ -228,6 +230,27 @@ export const Header: React.FC<HeaderProps> = ({
     e.target.value = '';
   };
 
+  const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
+    const goingToDark = theme !== 'dark';
+    const apply = () => {
+      flushSync(() => {
+        if (closeSettings) setIsSettingsOpen(false);
+        toggleTheme();
+      });
+    };
+
+    if (!isPointerClick(event) || reduceMotion) {
+      apply();
+      return;
+    }
+
+    runThemeReveal({
+      origin: originFromPointer(event),
+      goingToDark,
+      apply,
+    });
+  };
+
   const handleCreatePlan = (nameToUse?: string) => {
     const finalName = (nameToUse || newPlanInputName).trim() || nextSuggestedName;
     createPlan(finalName);
@@ -380,6 +403,21 @@ export const Header: React.FC<HeaderProps> = ({
             className="hidden"
           />
 
+          <button
+            type="button"
+            id="btn-theme"
+            onClick={(event) => handleToggleTheme(event, false)}
+            className="up-icon-btn up-chrome-btn"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={theme === 'dark'}
+          >
+            <span className="up-theme-glyph" data-mode={theme} aria-hidden="true">
+              <Sun className="up-theme-sun w-4 h-4" />
+              <Moon className="up-theme-moon w-4 h-4" />
+            </span>
+          </button>
+
           <div className="relative" ref={settingsRef}>
             <button
               type="button"
@@ -481,10 +519,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       type="button"
                       role="menuitem"
-                      onClick={() => {
-                        setIsSettingsOpen(false);
-                        toggleTheme();
-                      }}
+                      onClick={(event) => handleToggleTheme(event, true)}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
                     >
                       {theme === 'dark' ? (
