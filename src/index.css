@@ -33,16 +33,24 @@
   --up-focus: #3d4fd8;
 }
 
+html {
+  height: 100%;
+  color-scheme: light;
+  scrollbar-gutter: stable;
+}
+
 html,
 body,
 #root {
   overflow-x: clip;
+  overflow-y: hidden;
   max-width: 100%;
   width: 100%;
 }
 
-html {
-  color-scheme: light;
+body,
+#root {
+  height: 100%;
 }
 
 html.dark {
@@ -459,32 +467,37 @@ html.dark {
   background: rgb(8 12 20 / 0.72);
 }
 
-/* Phone faceplate: document does not scroll; calendar is the scrolling region. */
+/* Faceplate: document does not scroll at any breakpoint. Calendar is the
+   scrolling region. Locking this only on phone left 640–1023 as a hole where
+   a classic scrollbar could add/remove ~15px and oscillate matchMedia. */
+.up-app {
+  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.up-workspace {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.up-workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.up-calendar-slot {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 @media (max-width: 639px) {
-  .up-app {
-    min-height: 100dvh;
-    height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
-  }
-
   .up-workspace {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
     padding-bottom: 0;
-  }
-
-  .up-workspace-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .up-calendar-slot {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
   }
 
   .up-footer {

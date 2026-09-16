@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { Course } from '../types/schedule';
 import { minutesToTime, timeToMinutes, checkSessionCollision } from '../utils/timeUtils';
+import { usePoolLayout } from '../utils/usePoolLayout';
 import {
   ChevronRight,
   ShoppingBag,
@@ -23,39 +24,10 @@ interface CoursePoolSidebarProps {
   onEditCourse: (courseId: string) => void;
 }
 
-type PoolLayout = 'phone' | 'tablet' | 'desktop';
 type FilterMode = 'all' | 'in_plan' | 'not_in_plan';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
-
-function usePoolLayout(): PoolLayout {
-  const [layout, setLayout] = useState<PoolLayout>(() => {
-    if (typeof window === 'undefined') return 'desktop';
-    if (window.matchMedia('(max-width: 639px)').matches) return 'phone';
-    if (window.matchMedia('(max-width: 1023px)').matches) return 'tablet';
-    return 'desktop';
-  });
-
-  useEffect(() => {
-    const phone = window.matchMedia('(max-width: 639px)');
-    const tablet = window.matchMedia('(min-width: 640px) and (max-width: 1023px)');
-    const onChange = () => {
-      if (phone.matches) setLayout('phone');
-      else if (tablet.matches) setLayout('tablet');
-      else setLayout('desktop');
-    };
-    onChange();
-    phone.addEventListener('change', onChange);
-    tablet.addEventListener('change', onChange);
-    return () => {
-      phone.removeEventListener('change', onChange);
-      tablet.removeEventListener('change', onChange);
-    };
-  }, []);
-
-  return layout;
-}
 
 export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   isCollapsed,
@@ -81,6 +53,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const tabsRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
   const pillPaintedRef = useRef(false);
+  const pillMetricsRef = useRef({ x: -1, w: -1 });
   const searchRef = useRef<HTMLInputElement>(null);
   const wasOverlayOpenRef = useRef(false);
 
@@ -157,6 +130,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
   useEffect(() => {
     pillPaintedRef.current = false;
+    pillMetricsRef.current = { x: -1, w: -1 };
   }, [isCollapsed, layout]);
 
   const updatePill = useCallback(() => {
@@ -167,6 +141,9 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     if (!(active instanceof HTMLElement)) return;
     const x = active.offsetLeft;
     const w = active.offsetWidth;
+    const prev = pillMetricsRef.current;
+    if (pillPaintedRef.current && prev.x === x && prev.w === w) return;
+    pillMetricsRef.current = { x, w };
     const jump = !pillPaintedRef.current || !!reduceMotion;
     pill.style.transition = jump
       ? 'none'
@@ -187,9 +164,16 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     updatePill();
     const root = tabsRef.current;
     if (!root || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => updatePill());
+    let raf = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(updatePill);
+    });
     observer.observe(root);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, [updatePill, isCollapsed, layout]);
 
   useEffect(() => {

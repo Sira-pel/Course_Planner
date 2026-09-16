@@ -14,6 +14,7 @@ import { ExportModal } from './components/ExportModal';
 import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { DayOfWeek } from './types/schedule';
+import { applyDomTheme } from './utils/theme';
 import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
@@ -58,17 +59,8 @@ export default function App() {
     setIsConfirmingClear(false);
   }, []);
 
-  // Sync theme with DOM documentElement and colorScheme
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-        document.documentElement.style.colorScheme = 'dark';
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.style.colorScheme = 'light';
-      }
-    }
+    applyDomTheme(theme);
   }, [theme]);
 
   // Handler for opening new course modal
@@ -216,7 +208,7 @@ export default function App() {
   }, [isMoreOpen]);
 
   return (
-    <div className="up-app min-h-screen lg:h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-clip lg:overflow-hidden w-full max-w-full min-w-0">
+    <div className="up-app bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col w-full max-w-full min-w-0">
       <main className="up-workspace flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
@@ -227,9 +219,9 @@ export default function App() {
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
-        <div className="up-workspace-body flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch lg:overflow-visible">
+        <div className="up-workspace-body flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 sm:min-h-[600px] lg:min-h-0 relative overflow-x-auto">
+          <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}

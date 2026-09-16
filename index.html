@@ -16,6 +16,14 @@
       (function() {
         try {
           var theme = localStorage.getItem('uniplan_theme');
+          if (theme !== 'dark' && theme !== 'light') {
+            var raw = localStorage.getItem('uniplan_schedule_storage_v2');
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              var persisted = parsed && parsed.state && parsed.state.theme;
+              if (persisted === 'dark' || persisted === 'light') theme = persisted;
+            }
+          }
           if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
             document.documentElement.style.colorScheme = 'dark';
