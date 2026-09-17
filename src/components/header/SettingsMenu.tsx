@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   Download,
-  Sun,
-  Moon,
   Keyboard,
+  Moon,
+  RotateCcw,
   Settings,
-  Upload,
   ShoppingBag,
+  Sparkles,
+  Sun,
+  Upload,
 } from 'lucide-react';
 
 interface SettingsMenuProps {
   isPhone: boolean;
-  reduceMotion: boolean | null;
   menuEnter: TargetAndTransition;
   menuShown: TargetAndTransition;
   menuLeave: TargetAndTransition;
@@ -32,11 +33,12 @@ interface SettingsMenuProps {
   onImportIcsClick: () => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
+  onLoadDemo: () => void;
+  onClearAll: () => void;
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   isPhone,
-  reduceMotion,
   menuEnter,
   menuShown,
   menuLeave,
@@ -55,9 +57,17 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onImportIcsClick,
   onOpenExport,
   onOpenShortcuts,
+  onLoadDemo,
+  onClearAll,
 }) => {
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+
+  useEffect(() => {
+    if (!isSettingsOpen) setIsConfirmingClear(false);
+  }, [isSettingsOpen]);
+
   return (
-    <div className="relative" ref={settingsRef}>
+    <div className="up-settings-anchor" ref={settingsRef}>
       <button
         type="button"
         id="btn-settings"
@@ -65,7 +75,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
         className={`up-icon-btn up-chrome-btn ${isSettingsOpen ? 'is-open' : ''}`}
         title="Settings"
         aria-label="Settings"
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={isSettingsOpen}
       >
         <Settings className="w-4 h-4" />
@@ -74,35 +84,39 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       <AnimatePresence>
         {isSettingsOpen && (
           <motion.div
-            role="menu"
+            role="dialog"
             aria-label="Settings"
             initial={menuEnter}
             animate={menuShown}
             exit={menuLeave}
             transition={menuOpenTransition}
             style={{ transformOrigin: isPhone ? 'bottom center' : 'top right' }}
-            className="up-menu absolute right-0 top-full mt-1.5 w-[calc(100vw-2.5rem)] max-w-xs sm:w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-[0_4px_12px_rgb(15_23_42/0.12)] z-50 overflow-hidden"
+            className="up-menu up-settings up-scroll"
           >
-            <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+            <div className="up-settings-controls">
               <div>
-                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">
+                <label className="up-settings-field-label" htmlFor="settings-start-hour">
                   Time range
                 </label>
-                <div className="flex items-center justify-between border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 bg-slate-50 dark:bg-slate-800/50">
+                <div className="up-settings-range">
                   <select
+                    id="settings-start-hour"
                     value={startHour}
                     onChange={(e) => onSetTimeRange(Number(e.target.value), endHour)}
-                    className="bg-transparent text-xs font-mono font-medium text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                    className="up-settings-select"
+                    aria-label="Calendar start hour"
                   >
                     {Array.from({ length: 8 }, (_, i) => i + 5).map((h) => (
                       <option key={`start-${h}`} value={h}>{h}:00</option>
                     ))}
                   </select>
-                  <span className="text-slate-400 text-xs">to</span>
+                  <span className="up-settings-range-sep">to</span>
                   <select
+                    id="settings-end-hour"
                     value={endHour}
                     onChange={(e) => onSetTimeRange(startHour, Number(e.target.value))}
-                    className="bg-transparent text-xs font-mono font-medium text-slate-700 dark:text-slate-300 cursor-pointer text-right focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                    className="up-settings-select up-settings-select-end"
+                    aria-label="Calendar end hour"
                   >
                     {Array.from({ length: 9 }, (_, i) => i + 16).map((h) => (
                       <option key={`end-${h}`} value={h}>{h}:00</option>
@@ -111,89 +125,111 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Show weekends</span>
+              <div className="up-settings-toggle-row">
+                <span className="up-settings-toggle-label">Show weekends</span>
                 <button
                   type="button"
                   onClick={() => onSetShowWeekends(!showWeekends)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full up-chrome-btn ${
-                    showWeekends ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
-                  }`}
+                  className={`up-settings-switch up-chrome-btn ${showWeekends ? 'is-on' : ''}`}
                   aria-pressed={showWeekends}
                   aria-label="Show weekends"
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ${
-                      showWeekends ? 'translate-x-2' : '-translate-x-2'
-                    }`}
-                    style={{
-                      transitionProperty: 'transform',
-                      transitionDuration: reduceMotion ? '0ms' : '160ms',
-                      transitionTimingFunction: 'var(--ease-out)',
-                    }}
-                  />
+                  <span aria-hidden="true" className="up-settings-switch-knob" />
                 </button>
               </div>
             </div>
 
-            <div className="py-1">
+            <div className="up-settings-group">
               <button
                 type="button"
-                role="menuitem"
                 id="btn-open-catalog"
                 onClick={onOpenCatalog}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                className="up-settings-item up-chrome-btn"
               >
-                <ShoppingBag className="w-4 h-4 text-slate-400" />
+                <ShoppingBag />
                 Course pool
               </button>
               <button
                 type="button"
-                role="menuitem"
                 onClick={onToggleTheme}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                className="up-settings-item up-chrome-btn"
               >
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="w-4 h-4 text-slate-500" />
-                    Light mode
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-4 h-4 text-slate-400" />
-                    Dark mode
-                  </>
-                )}
+                {theme === 'dark' ? <Sun /> : <Moon />}
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </button>
               <button
                 type="button"
-                role="menuitem"
                 onClick={onImportIcsClick}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                className="up-settings-item up-chrome-btn"
               >
-                <Upload className="w-4 h-4 text-slate-400" />
+                <Upload />
                 Import calendar (.ics)
               </button>
               <button
                 type="button"
-                role="menuitem"
                 onClick={onOpenExport}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                className="up-settings-item up-chrome-btn"
               >
-                <Download className="w-4 h-4 text-slate-400" />
+                <Download />
                 Export schedule
               </button>
               <button
                 type="button"
-                role="menuitem"
                 onClick={onOpenShortcuts}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 up-chrome-btn"
+                className="up-settings-item up-chrome-btn"
               >
-                <Keyboard className="w-4 h-4 text-slate-400" />
+                <Keyboard />
                 Keyboard shortcuts
               </button>
             </div>
+
+            <div className="up-settings-group">
+              <button
+                type="button"
+                id="btn-load-demo"
+                onClick={onLoadDemo}
+                className="up-settings-item up-chrome-btn"
+              >
+                <Sparkles />
+                Load demo
+              </button>
+              {isConfirmingClear ? (
+                <div className="up-settings-confirm" role="group" aria-label="Confirm clear all">
+                  <p>Clear all plans and the course pool?</p>
+                  <div className="up-settings-confirm-actions">
+                    <button
+                      type="button"
+                      id="btn-clear-all-confirm"
+                      className="up-settings-confirm-yes up-chrome-btn"
+                      onClick={onClearAll}
+                    >
+                      Yes, clear all
+                    </button>
+                    <button
+                      type="button"
+                      className="up-settings-confirm-no up-chrome-btn"
+                      onClick={() => setIsConfirmingClear(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  id="btn-clear-all"
+                  onClick={() => setIsConfirmingClear(true)}
+                  className="up-settings-item is-danger up-chrome-btn"
+                >
+                  <RotateCcw />
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <p className="up-settings-tip">
+              Double-click a time slot on the week to add a class.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

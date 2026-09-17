@@ -12,7 +12,6 @@ import { CourseModal } from './components/CourseModal';
 import { ExportModal } from './components/ExportModal';
 import { CoursePoolSidebar } from './components/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { AppFooter } from './components/app/AppFooter';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
 import { DayOfWeek } from './types/schedule';
@@ -103,11 +102,6 @@ export default function App() {
     setIsConfirmingClear(false);
   }, []);
 
-  const handleConfirmClearFooter = useCallback(() => {
-    resetToBlank();
-    setIsConfirmingClear(false);
-  }, [resetToBlank]);
-
   const handleConfirmClearDock = useCallback(() => {
     resetToBlank();
     closeMoreMenu();
@@ -167,15 +161,6 @@ export default function App() {
             onEditCourse={handleEditCourse}
           />
         </div>
-
-        <AppFooter
-          isConfirmingClear={isConfirmingClear}
-          onRequestClear={handleRequestClear}
-          onConfirmClear={handleConfirmClearFooter}
-          onCancelClear={handleCancelClear}
-          onLoadDemo={handleLoadDemo}
-          onOpenShortcuts={handleOpenShortcuts}
-        />
       </main>
 
       <MobileDock

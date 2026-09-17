@@ -109,16 +109,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Total grid minutes and dimensions
   const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);
   
-  // Calculate a responsive hour height. 
-  // We subtract ~44px for the header from the container height.
-  // We use a high max-cap (150px) so the table can stretch to fill tall screens (making it longer),
-  // but a healthy minimum (55px) so it doesn't get unreadably squished on tiny screens.
-  const availableGridHeight = Math.max(600, containerHeight - 44);
-  const idealHourHeight = Math.floor(availableGridHeight / numHours);
-  const HOUR_HEIGHT = Math.max(55, Math.min(150, idealHourHeight)); 
-  
+  const HOUR_MIN_PX = 55;
   const totalMinutes = numHours * 60;
-  const totalGridHeight = numHours * HOUR_HEIGHT;
+  const hourPct = 100 / numHours;
 
   const hourMarks = useMemo(() => {
     const arr: number[] = [];
@@ -181,7 +174,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     <div
       ref={containerRef}
       id="calendar-grid-container"
-      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/90 dark:border-slate-800 overflow-hidden relative z-0 isolate"
+      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200/90 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
       <div className="up-scroll flex-1 overflow-auto relative flex flex-col w-full max-w-full">
@@ -257,33 +250,33 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
         {/* Main Grid Area (Time rows & Day columns) */}
         <div
-          className="flex w-full max-w-full relative flex-1"
-          style={{ height: `${totalGridHeight}px`, minHeight: `${totalGridHeight}px` }}
+          className="flex w-full max-w-full relative flex-1 min-h-0"
+          style={{ minHeight: `${numHours * HOUR_MIN_PX}px` }}
         >
           {/* Time Gutter (Left Column) */}
           <div
-            style={{ width: `${gutterWidth}px`, height: `${totalGridHeight}px` }}
-            className="shrink-0 select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/60 relative"
+            style={{ width: `${gutterWidth}px` }}
+            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/60 relative"
           >
             {hourMarks.map((hour, idx) => {
               const timeStr = containerWidth < 380
                 ? (hour === 0 || hour === 24 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`)
                 : minutesToTime(hour * 60, true);
-              const topPx = idx * HOUR_HEIGHT;
+              const topPct = (idx / numHours) * 100;
               const isFirst = idx === 0;
               const isLast = idx === numHours;
 
               return (
                 <div
                   key={hour}
-                  style={{ top: `${topPx}px` }}
+                  style={{ top: `${topPct}%` }}
                   className={`absolute right-1 sm:right-2 font-mono text-slate-600 dark:text-slate-400 select-none pointer-events-none whitespace-nowrap leading-none font-semibold ${
                     colWidth < 68 ? 'text-[9px] sm:text-[9.5px]' : 'text-[10px]'
                   } ${
                     isFirst
                       ? 'top-1.5 translate-y-0'
                       : isLast
-                      ? '-translate-y-full -mt-1.5'
+                      ? '-translate-y-full'
                       : '-translate-y-1/2'
                   }`}
                 >
@@ -295,10 +288,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
           {/* Days Columns Grid */}
           <div
-            className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 relative"
+            className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 relative self-stretch"
             style={{
               gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
-              height: `${totalGridHeight}px`,
             }}
           >
             {/* Horizontal Hour Lines Background */}
@@ -307,10 +299,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <div
                   key={`hour-slot-${slotIdx}`}
                   style={{
-                    top: `${slotIdx * HOUR_HEIGHT}px`,
-                    height: `${HOUR_HEIGHT}px`,
+                    top: `${slotIdx * hourPct}%`,
+                    height: `${hourPct}%`,
                   }}
-                  className="absolute left-0 right-0 border-b border-slate-200/90 dark:border-slate-800/80"
+                  className={`absolute left-0 right-0 ${
+                    slotIdx === numHours - 1
+                      ? ''
+                      : 'border-b border-slate-200/90 dark:border-slate-800/80'
+                  }`}
                 >
                   {/* Subtle 30-minute dashed half-hour line */}
                   <div className="w-full h-1/2 border-b border-dashed border-slate-200/50 dark:border-slate-800/40" />
