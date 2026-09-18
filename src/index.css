@@ -1558,9 +1558,13 @@ body[data-up-pool-open] .up-fab-cluster {
 /* Theme reveal: freeze the outgoing UI. Motion is transform / clip-path on that layer. */
 .up-theme-reveal-veil {
   position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: auto;
+  left: 0;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
   margin: 0;
