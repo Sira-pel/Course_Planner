@@ -1335,38 +1335,22 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: circular clip from the toggle. Default VT fade is disabled. */
-html.is-theme-revealing::view-transition-image-pair(root) {
-  isolation: auto;
+/* Theme reveal: solid night overlay from the toggle. Not a document snapshot. */
+.up-theme-reveal-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: #121826;
 }
 
-html.is-theme-revealing::view-transition-old(root),
-html.is-theme-revealing::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-  isolation: isolate;
-  display: block;
-}
-
-html.is-theme-to-dark::view-transition-old(root) {
-  z-index: 1;
-}
-
-html.is-theme-to-dark::view-transition-new(root) {
-  z-index: 2;
-}
-
-html.is-theme-to-light::view-transition-old(root) {
-  z-index: 2;
-}
-
-html.is-theme-to-light::view-transition-new(root) {
-  z-index: 1;
-}
-
-html.is-theme-revealing,
-html.is-theme-revealing * {
-  transition-duration: 0s !important;
+html.is-theme-revealing .up-chrome-btn,
+html.is-theme-revealing .up-pool-tab,
+html.is-theme-revealing .up-pool-row,
+html.is-theme-revealing .transition-colors,
+html.is-theme-revealing .transition-all,
+html.is-theme-revealing .transition-opacity {
+  transition: none !important;
 }
 
 .up-theme-glyph {
