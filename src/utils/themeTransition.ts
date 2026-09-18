@@ -4,7 +4,11 @@ export type ThemeRevealOrigin = {
 };
 
 export type ThemeRevealOptions = {
-  origin: ThemeRevealOrigin;
+  event: {
+    clientX: number;
+    clientY: number;
+    currentTarget: EventTarget | null;
+  };
   goingToDark: boolean;
   apply: () => void;
 };
@@ -68,8 +72,7 @@ function viewMetrics(): { width: number; height: number } {
   return { width: g.innerWidth ?? 0, height: g.innerHeight ?? 0 };
 }
 
-function farthestCornerRadius(x: number, y: number): number {
-  const { width, height } = viewMetrics();
+function farthestCornerRadius(x: number, y: number, width: number, height: number): number {
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
@@ -197,16 +200,14 @@ function afterPaint(fn: () => void): void {
 }
 
 function paintFrozenUi(
-  origin: ThemeRevealOrigin,
   oldIsDark: boolean
-): { veil: HTMLElement; freezeRoot: HTMLElement } | null {
+): { veil: HTMLElement; freezeRoot: HTMLElement; viewW: number; viewH: number } | null {
   const app = document.getElementById('root');
   if (app == null || document.body == null) return null;
 
   dropVeils();
 
   const { width: viewW, height: viewH } = viewMetrics();
-  const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y));
   const veil = document.createElement('div');
   veil.className = `${VEIL_CLASS} ${oldIsDark ? 'is-theme-to-light' : 'is-theme-to-dark'}`;
   veil.setAttribute('aria-hidden', 'true');
@@ -258,12 +259,6 @@ function paintFrozenUi(
   freezeBody.appendChild(shot);
   freezeRoot.appendChild(layoutStyle);
   freezeRoot.appendChild(freezeBody);
-
-  if (oldIsDark) {
-    freezeRoot.style.clipPath = diskClip(endRadius, origin.x, origin.y);
-  } else {
-    freezeRoot.style.clipPath = holeClip(1, origin.x, origin.y, viewW, viewH);
-  }
   freezeRoot.style.willChange = 'clip-path';
   shadow.appendChild(freezeRoot);
   veil.setAttribute('popover', 'manual');
@@ -277,7 +272,7 @@ function paintFrozenUi(
     }
   }
   copyScroll(app, shot);
-  return { veil, freezeRoot };
+  return { veil, freezeRoot, viewW, viewH };
 }
 
 /**
@@ -286,7 +281,7 @@ function paintFrozenUi(
  * A second click reverses the circle from the current radius.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
-  const { origin, goingToDark, apply } = options;
+  const { event, goingToDark, apply } = options;
 
   if (prefersReducedMotion()) {
     apply();
@@ -308,12 +303,20 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   const root = document.documentElement;
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
 
-  const painted = paintFrozenUi(origin, !goingToDark);
+  const painted = paintFrozenUi(!goingToDark);
   if (painted == null) {
     apply();
     dropVeils();
     clearRevealClasses();
     return;
+  }
+
+  const origin = originRelativeTo(painted.veil, event);
+  const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y, painted.viewW, painted.viewH));
+  if (goingToDark) {
+    painted.freezeRoot.style.clipPath = holeClip(1, origin.x, origin.y, painted.viewW, painted.viewH);
+  } else {
+    painted.freezeRoot.style.clipPath = diskClip(endRadius, origin.x, origin.y);
   }
 
   let released = false;
@@ -344,12 +347,12 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     const header = document.querySelector('.up-header');
     if (header) void getComputedStyle(header).backgroundColor;
 
-    const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y));
     const duration = goingToDark
       ? readDurationMs('--dur-scene', 620)
       : readDurationMs('--dur-emphasis', 500);
     const easing = readEase('--ease-out');
-    const { width: viewW, height: viewH } = viewMetrics();
+    const viewW = painted.viewW;
+    const viewH = painted.viewH;
 
     try {
       const motionEl = painted.freezeRoot;
@@ -385,11 +388,11 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   });
 }
 
-export function originFromPointer(event: {
-  clientX: number;
-  clientY: number;
-  currentTarget: EventTarget | null;
-}): ThemeRevealOrigin {
+export function originRelativeTo(
+  container: { getBoundingClientRect: () => { left: number; top: number; width: number; height: number } },
+  event: { clientX: number; clientY: number; currentTarget: EventTarget | null }
+): ThemeRevealOrigin {
+  const frame = container.getBoundingClientRect();
   const target = event.currentTarget;
   if (
     typeof target === 'object' &&
@@ -398,15 +401,29 @@ export function originFromPointer(event: {
     typeof target.getBoundingClientRect === 'function'
   ) {
     const box = target.getBoundingClientRect();
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    return {
+      x: box.left + box.width / 2 - frame.left,
+      y: box.top + box.height / 2 - frame.top,
+    };
   }
 
   if (event.clientX !== 0 || event.clientY !== 0) {
-    return { x: event.clientX, y: event.clientY };
+    return { x: event.clientX - frame.left, y: event.clientY - frame.top };
   }
 
+  return { x: frame.width / 2, y: frame.height / 2 };
+}
+
+export function originFromPointer(event: {
+  clientX: number;
+  clientY: number;
+  currentTarget: EventTarget | null;
+}): ThemeRevealOrigin {
   const { width, height } = viewMetrics();
-  return { x: width / 2, y: height / 2 };
+  return originRelativeTo(
+    { getBoundingClientRect: () => ({ left: 0, top: 0, width, height }) },
+    event
+  );
 }
 
 export function isPointerClick(event: { detail: number }): boolean {
