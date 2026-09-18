@@ -42,11 +42,13 @@ assert(!transitionSrc.includes('startViewTransition'), 'theme reveal does not us
 assert(!transitionSrc.includes('::view-transition-old'), 'theme reveal does not clip the old root snapshot');
 assert(!transitionSrc.includes('::view-transition-new'), 'theme reveal does not clip the new root snapshot');
 assert(!transitionSrc.includes('pseudoElement'), 'theme reveal does not animate view-transition pseudos');
-assert(!transitionSrc.includes('clipPath'), 'theme reveal does not clip-path the overlay');
+assert(!transitionSrc.includes('mask-image'), 'theme reveal does not animate mask-image');
+assert(!transitionSrc.includes('--up-reveal-r'), 'theme reveal does not animate a mask radius variable');
+assert(transitionSrc.includes('clipPath') || transitionSrc.includes('clip-path'), 'the freeze layer is clipped, not masked');
+assert(transitionSrc.includes('evenodd'), 'light-to-dark opens a hole with an evenodd clip');
 assert(transitionSrc.includes('cloneNode'), 'theme reveal freezes the outgoing UI');
 assert(transitionSrc.includes('attachShadow'), 'frozen UI is isolated from html.dark');
 assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a dedicated overlay');
-assert(transitionSrc.includes('--up-reveal-r'), 'circle radius is a registered custom property');
 assert(transitionSrc.includes('updatePlaybackRate'), 'in-flight toggle reverses playback from the current time');
 assert(!transitionSrc.includes('.then(finish, finish)'), 'reverse must not treat a rejected finished promise as done');
 assert(transitionSrc.includes('playingForward'), 'reverse keeps the freeze until the circle returns');
@@ -63,7 +65,7 @@ const css = readFileSync(join(here, '../index.css'), 'utf8');
 assert(!css.includes('html.is-theme-revealing *'), 'no universal revealing selector');
 assert(!css.includes('html.is-theme-revealing::view-transition'), 'no root view-transition reveal rules');
 assert(css.includes('.up-theme-reveal-veil'), 'overlay class is present');
-assert(css.includes('mask-image'), 'overlay is masked, not a solid disk');
+assert(!css.includes('mask-image'), 'page CSS does not mask the freeze overlay');
 assert(!css.includes('.up-theme-reveal-disk'), 'solid night disk is gone');
 assert(css.includes('html.is-theme-revealing #root'), 'app stacking stays under the overlay during reveal');
 assert(
