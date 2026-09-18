@@ -1,3 +1,5 @@
+import { PHONE_MAX_PX } from './layoutBreakpoint';
+
 export type ThemeRevealOrigin = {
   x: number;
   y: number;
@@ -41,6 +43,13 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function isPhoneViewport(): boolean {
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia(`(max-width: ${PHONE_MAX_PX}px)`).matches;
+  }
+  return viewMetrics().width <= PHONE_MAX_PX;
+}
+
 function readDurationMs(token: string, fallback: number): number {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
   if (raw.endsWith('ms')) {
@@ -52,11 +61,6 @@ function readDurationMs(token: string, fallback: number): number {
     return Number.isFinite(value) ? value : fallback;
   }
   return fallback;
-}
-
-function readEase(token: string): string {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-  return raw || 'cubic-bezier(0.22, 1, 0.36, 1)';
 }
 
 function viewMetrics(): { width: number; height: number } {
@@ -133,10 +137,27 @@ const FREEZE_FLATTEN_CSS = `
   }
 `;
 
-function copySheets(shadow: ShadowRoot): void {
+const FREEZE_PHONE_CSS = `
+  #btn-add-course,
+  #btn-undo,
+  #btn-redo {
+    display: none !important;
+  }
+  .up-fab-cluster {
+    display: flex !important;
+  }
+  .up-footer {
+    display: none !important;
+  }
+`;
+
+const REVEAL_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+function copySheets(shadow: ShadowRoot, phoneLayout: boolean): void {
+  const freezeCss = FREEZE_FLATTEN_CSS + (phoneLayout ? FREEZE_PHONE_CSS : '');
   try {
     const flatten = new CSSStyleSheet();
-    flatten.replaceSync(FREEZE_FLATTEN_CSS);
+    flatten.replaceSync(freezeCss);
     const base = document.adoptedStyleSheets.length > 0 ? [...document.adoptedStyleSheets] : [];
     shadow.adoptedStyleSheets = [...base, flatten];
   } catch {
@@ -152,7 +173,7 @@ function copySheets(shadow: ShadowRoot): void {
     shadow.appendChild(node.cloneNode(true));
   });
   const extra = document.createElement('style');
-  extra.textContent = FREEZE_FLATTEN_CSS;
+  extra.textContent = freezeCss;
   shadow.appendChild(extra);
 }
 
@@ -207,13 +228,15 @@ function paintFrozenUi(
 
   dropVeils();
 
-  const { width: viewW, height: viewH } = viewMetrics();
+  const frame = document.documentElement.getBoundingClientRect();
+  const viewW = frame.width || viewMetrics().width;
+  const viewH = frame.height || viewMetrics().height;
   const veil = document.createElement('div');
   veil.className = `${VEIL_CLASS} ${oldIsDark ? 'is-theme-to-light' : 'is-theme-to-dark'}`;
   veil.setAttribute('aria-hidden', 'true');
   veil.style.inset = 'auto';
-  veil.style.left = '0px';
-  veil.style.top = '0px';
+  veil.style.left = `${frame.left}px`;
+  veil.style.top = `${frame.top}px`;
   veil.style.width = `${viewW}px`;
   veil.style.height = `${viewH}px`;
   veil.style.margin = '0';
@@ -221,7 +244,7 @@ function paintFrozenUi(
   veil.style.maxHeight = 'none';
 
   const shadow = veil.attachShadow({ mode: 'open' });
-  copySheets(shadow);
+  copySheets(shadow, viewW < 640);
 
   const freezeRoot = document.createElement('html');
   freezeRoot.className = oldIsDark ? 'dark' : '';
@@ -242,15 +265,17 @@ function paintFrozenUi(
   freezeBody.style.margin = '0';
   freezeBody.style.width = `${viewW}px`;
   freezeBody.style.height = `${viewH}px`;
+  const appSurface = document.querySelector('.up-app');
+  freezeBody.style.background =
+    (appSurface ? getComputedStyle(appSurface).backgroundColor : '') ||
+    getComputedStyle(document.body).backgroundColor;
 
   const shot = app.cloneNode(true) as HTMLElement;
-  shot.removeAttribute('id');
   shot.classList.add(SHOT_CLASS);
-  shot.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
   const rect = app.getBoundingClientRect();
   shot.style.position = 'absolute';
-  shot.style.left = `${rect.left}px`;
-  shot.style.top = `${rect.top}px`;
+  shot.style.left = `${rect.left - frame.left}px`;
+  shot.style.top = `${rect.top - frame.top}px`;
   shot.style.width = `${rect.width}px`;
   shot.style.height = `${rect.height}px`;
   shot.style.margin = '0';
@@ -261,16 +286,7 @@ function paintFrozenUi(
   freezeRoot.appendChild(freezeBody);
   freezeRoot.style.willChange = 'clip-path';
   shadow.appendChild(freezeRoot);
-  veil.setAttribute('popover', 'manual');
-  veil.setAttribute('inert', '');
   document.body.appendChild(veil);
-  if ('showPopover' in veil && typeof veil.showPopover === 'function') {
-    try {
-      veil.showPopover();
-    } catch {
-      // Unsupported or already open; fixed positioning still applies.
-    }
-  }
   copyScroll(app, shot);
   return { veil, freezeRoot, viewW, viewH };
 }
@@ -283,7 +299,7 @@ function paintFrozenUi(
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { event, goingToDark, apply } = options;
 
-  if (prefersReducedMotion()) {
+  if (prefersReducedMotion() || isPhoneViewport()) {
     apply();
     return;
   }
@@ -349,8 +365,8 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
 
     const duration = goingToDark
       ? readDurationMs('--dur-scene', 620)
-      : readDurationMs('--dur-emphasis', 500);
-    const easing = readEase('--ease-out');
+      : readDurationMs('--dur-scene', 620);
+    const easing = REVEAL_EASE;
     const viewW = painted.viewW;
     const viewH = painted.viewH;
 
