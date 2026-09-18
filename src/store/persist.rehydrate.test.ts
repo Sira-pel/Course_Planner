@@ -13,7 +13,7 @@ function installMemoryLocalStorage(): void {
 
 installMemoryLocalStorage();
 
-const { STORAGE_NAME, partialize, rehydratePersistedState } = await import('./persist');
+const { STORAGE_NAME, partialize, rehydratePersistedState, safeLocalStorage } = await import('./persist');
 import type { ScheduleState } from './types';
 
 function assert(condition: boolean, message: string): void {
@@ -87,5 +87,16 @@ const themed = {
 rehydratePersistedState(themed);
 assert(themed.theme === 'dark', 'preferred uniplan_theme wins over persisted theme');
 assert(localStorage.getItem('uniplan_theme') === 'dark', 'preferred theme is written back');
+
+const boom = {
+  getItem() { throw new Error('blocked'); },
+  setItem() { throw new Error('blocked'); },
+  removeItem() { throw new Error('blocked'); },
+};
+Object.defineProperty(globalThis, 'localStorage', { value: boom, configurable: true });
+assert(safeLocalStorage.getItem('x') === null, 'throwing getItem returns null');
+safeLocalStorage.setItem('x', 'y');
+safeLocalStorage.removeItem('x');
+installMemoryLocalStorage();
 
 console.log('persist.rehydrate tests passed');
