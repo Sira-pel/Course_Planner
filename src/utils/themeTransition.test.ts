@@ -46,6 +46,8 @@ assert(!transitionSrc.includes('mask-image'), 'theme reveal does not animate mas
 assert(!transitionSrc.includes('--up-reveal-r'), 'theme reveal does not animate a mask radius variable');
 assert(transitionSrc.includes('clipPath') || transitionSrc.includes('clip-path'), 'the freeze layer is clipped, not masked');
 assert(transitionSrc.includes('evenodd'), 'light-to-dark opens a hole with an evenodd clip');
+assert(transitionSrc.includes('diskClip'), 'dark-to-light clips a path disk with a locked center');
+assert(!transitionSrc.includes('circle('), 'Chromium circle() clip origin is not used');
 assert(transitionSrc.includes('cloneNode'), 'theme reveal freezes the outgoing UI');
 assert(transitionSrc.includes('attachShadow'), 'frozen UI is isolated from html.dark');
 assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a dedicated overlay');
