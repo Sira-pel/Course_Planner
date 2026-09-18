@@ -42,12 +42,17 @@ assert(!transitionSrc.includes('startViewTransition'), 'theme reveal does not us
 assert(!transitionSrc.includes('::view-transition-old'), 'theme reveal does not clip the old root snapshot');
 assert(!transitionSrc.includes('::view-transition-new'), 'theme reveal does not clip the new root snapshot');
 assert(!transitionSrc.includes('pseudoElement'), 'theme reveal does not animate view-transition pseudos');
+assert(!transitionSrc.includes('clipPath'), 'theme reveal does not clip-path the overlay');
+assert(!transitionSrc.includes('clip-path'), 'theme reveal does not clip-path the overlay in CSS strings');
 assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a dedicated overlay');
+assert(transitionSrc.includes('up-theme-reveal-disk'), 'theme reveal scales a disk from the pointer');
+assert(transitionSrc.includes('scale(0)'), 'collapsed night is a zero scale, not a zero-radius clip');
 
 const css = readFileSync(join(here, '../index.css'), 'utf8');
 assert(!css.includes('html.is-theme-revealing *'), 'no universal revealing selector');
 assert(!css.includes('html.is-theme-revealing::view-transition'), 'no root view-transition reveal rules');
 assert(css.includes('.up-theme-reveal-veil'), 'overlay class is present');
+assert(css.includes('.up-theme-reveal-disk'), 'disk class is present');
 assert(css.includes('html.is-theme-revealing .up-chrome-btn'), 'chrome buttons skip color transitions during reveal');
 assert(css.includes('html.is-theme-revealing .up-pool-tab'), 'pool tabs skip color transitions during reveal');
 assert(css.includes('html.is-theme-revealing .up-pool-row'), 'pool rows skip color transitions during reveal');

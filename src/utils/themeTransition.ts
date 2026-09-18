@@ -10,7 +10,10 @@ export type ThemeRevealOptions = {
 };
 
 const VEIL_CLASS = 'up-theme-reveal-veil';
+const DISK_CLASS = 'up-theme-reveal-disk';
 const FAILSAFE_MS = 2000;
+const DISK_TRANSFORM_HIDDEN = 'translate(-50%, -50%) scale(0)';
+const DISK_TRANSFORM_SHOWN = 'translate(-50%, -50%) scale(1)';
 
 let revealBusy = false;
 
@@ -43,10 +46,6 @@ function farthestCornerRadius(x: number, y: number): number {
   );
 }
 
-function circleClip(radiusPx: number, x: number, y: number): string {
-  return `circle(${radiusPx}px at ${x}px ${y}px)`;
-}
-
 function clearRevealClasses(): void {
   document.documentElement.classList.remove(
     'is-theme-revealing',
@@ -59,20 +58,33 @@ function dropVeils(): void {
   document.querySelectorAll(`.${VEIL_CLASS}`).forEach((node) => node.remove());
 }
 
-function paintVeil(): HTMLElement | null {
+function paintDisk(origin: ThemeRevealOrigin, shown: boolean): HTMLElement | null {
   if (typeof document === 'undefined' || document.body == null) return null;
   dropVeils();
+
   const veil = document.createElement('div');
   veil.className = VEIL_CLASS;
   veil.setAttribute('aria-hidden', 'true');
+
+  const disk = document.createElement('div');
+  disk.className = DISK_CLASS;
+  const radius = farthestCornerRadius(origin.x, origin.y);
+  const diameter = Math.max(2, radius * 2);
+  disk.style.width = `${diameter}px`;
+  disk.style.height = `${diameter}px`;
+  disk.style.left = `${origin.x}px`;
+  disk.style.top = `${origin.y}px`;
+  disk.style.transform = shown ? DISK_TRANSFORM_SHOWN : DISK_TRANSFORM_HIDDEN;
+
+  veil.appendChild(disk);
   document.body.appendChild(veil);
-  return veil;
+  return disk;
 }
 
 /**
  * Pointer-origin circular night for a light/dark swap.
  * Keyboard and reduced-motion callers must skip this and just apply().
- * The veil is a solid overlay, not a document snapshot.
+ * The disk is a solid overlay scaled from the pointer, not a document snapshot.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { origin, goingToDark, apply } = options;
@@ -97,8 +109,8 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     apply();
   };
 
-  const veil = paintVeil();
-  if (veil == null || typeof veil.animate !== 'function') {
+  const disk = paintDisk(origin, !goingToDark);
+  if (disk == null || typeof disk.animate !== 'function') {
     runApply();
     dropVeils();
     clearRevealClasses();
@@ -106,13 +118,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     return;
   }
 
-  const x = origin.x;
-  const y = origin.y;
-  const endRadius = farthestCornerRadius(x, y);
-  const collapsed = circleClip(0, x, y);
-  const covered = circleClip(endRadius, x, y);
-  veil.style.clipPath = goingToDark ? collapsed : covered;
-  void veil.getBoundingClientRect();
+  void disk.getBoundingClientRect();
 
   if (!goingToDark) {
     runApply();
@@ -135,8 +141,12 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   const failsafe = window.setTimeout(release, FAILSAFE_MS);
 
   try {
-    const animation = veil.animate(
-      { clipPath: goingToDark ? [collapsed, covered] : [covered, collapsed] },
+    const animation = disk.animate(
+      {
+        transform: goingToDark
+          ? [DISK_TRANSFORM_HIDDEN, DISK_TRANSFORM_SHOWN]
+          : [DISK_TRANSFORM_SHOWN, DISK_TRANSFORM_HIDDEN],
+      },
       {
         duration: goingToDark
           ? readDurationMs('--dur-scene', 620)
