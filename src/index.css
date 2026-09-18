@@ -1297,13 +1297,7 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: freeze the outgoing UI and open a hole / shrink a disk from the toggle. */
-@property --up-reveal-r {
-  syntax: '<length>';
-  inherits: true;
-  initial-value: 1px;
-}
-
+/* Theme reveal: freeze the outgoing UI. Motion is transform / clip-path on that layer. */
 .up-theme-reveal-veil {
   position: fixed;
   inset: 0;
@@ -1318,9 +1312,6 @@ body[data-up-pool-open] .up-fab-cluster {
   z-index: 2147483646;
   pointer-events: none;
   overflow: hidden;
-  --up-reveal-cx: 0px;
-  --up-reveal-cy: 0px;
-  --up-reveal-r: 1px;
 }
 
 html.is-theme-revealing #root {
@@ -1339,32 +1330,6 @@ html.is-theme-revealing .backdrop-blur-xs {
   top: auto !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-}
-
-.up-theme-reveal-veil.is-theme-to-dark {
-  mask-image: radial-gradient(
-    circle at var(--up-reveal-cx) var(--up-reveal-cy),
-    transparent var(--up-reveal-r),
-    #000 var(--up-reveal-r)
-  );
-  -webkit-mask-image: radial-gradient(
-    circle at var(--up-reveal-cx) var(--up-reveal-cy),
-    transparent var(--up-reveal-r),
-    #000 var(--up-reveal-r)
-  );
-}
-
-.up-theme-reveal-veil.is-theme-to-light {
-  mask-image: radial-gradient(
-    circle at var(--up-reveal-cx) var(--up-reveal-cy),
-    #000 var(--up-reveal-r),
-    transparent var(--up-reveal-r)
-  );
-  -webkit-mask-image: radial-gradient(
-    circle at var(--up-reveal-cx) var(--up-reveal-cy),
-    #000 var(--up-reveal-r),
-    transparent var(--up-reveal-r)
-  );
 }
 
 html.is-theme-revealing .up-chrome-btn,

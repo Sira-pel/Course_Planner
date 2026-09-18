@@ -23,9 +23,10 @@ const UP_VARS = [
 ] as const;
 
 type ActiveReveal = {
-  animation: Animation;
+  animation: Animation | null;
   undo: () => void;
   playingForward: boolean;
+  started: boolean;
   finish: () => void;
 };
 
@@ -59,6 +60,20 @@ function farthestCornerRadius(x: number, y: number): number {
     Math.max(x, window.innerWidth - x),
     Math.max(y, window.innerHeight - y)
   );
+}
+
+function circleClip(radiusPx: number, x: number, y: number): string {
+  return `circle(${radiusPx}px at ${x}px ${y}px)`;
+}
+
+function holeClip(radiusPx: number, x: number, y: number, width: number, height: number): string {
+  const r = Math.max(1, radiusPx).toFixed(2);
+  const d = (Math.max(1, radiusPx) * 2).toFixed(2);
+  const cx = x.toFixed(2);
+  const cy = y.toFixed(2);
+  const w = width.toFixed(2);
+  const h = height.toFixed(2);
+  return `path(evenodd, "M0 0H${w}V${h}H0Z M${cx} ${cy}m-${r} 0a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 -${d} 0")`;
 }
 
 function clearRevealClasses(): void {
@@ -156,6 +171,12 @@ function armFailsafe(finish: () => void): void {
   failsafe = window.setTimeout(finish, FAILSAFE_MS);
 }
 
+function afterPaint(fn: () => void): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(fn);
+  });
+}
+
 function paintFrozenUi(
   origin: ThemeRevealOrigin,
   oldIsDark: boolean
@@ -169,55 +190,22 @@ function paintFrozenUi(
   const veil = document.createElement('div');
   veil.className = `${VEIL_CLASS} ${oldIsDark ? 'is-theme-to-light' : 'is-theme-to-dark'}`;
   veil.setAttribute('aria-hidden', 'true');
-  veil.style.setProperty('--up-reveal-cx', `${origin.x}px`);
-  veil.style.setProperty('--up-reveal-cy', `${origin.y}px`);
-  veil.style.setProperty('--up-reveal-r', oldIsDark ? `${endRadius}px` : '1px');
 
   const shadow = veil.attachShadow({ mode: 'open' });
   copySheets(shadow);
 
   const freezeRoot = document.createElement('html');
-  freezeRoot.className = oldIsDark ? 'dark is-theme-to-light' : 'is-theme-to-dark';
+  freezeRoot.className = oldIsDark ? 'dark' : '';
   freezeRoot.style.display = 'block';
   freezeRoot.style.width = '100%';
   freezeRoot.style.height = '100%';
   freezeRoot.style.colorScheme = oldIsDark ? 'dark' : 'light';
   copyUpVars(document.documentElement, freezeRoot);
-  freezeRoot.style.setProperty('--up-reveal-cx', `${origin.x}px`);
-  freezeRoot.style.setProperty('--up-reveal-cy', `${origin.y}px`);
-  freezeRoot.style.setProperty('--up-reveal-r', oldIsDark ? `${endRadius}px` : '1px');
 
-  const maskStyle = document.createElement('style');
-  maskStyle.textContent = `
-    html {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    html, html * {
-      z-index: 0 !important;
-      isolation: auto !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      filter: none !important;
-    }
-    .sticky {
-      position: relative !important;
-      top: 0 !important;
-    }
-    html.is-theme-to-dark {
-      mask-image: radial-gradient(circle at var(--up-reveal-cx) var(--up-reveal-cy), transparent var(--up-reveal-r), #000 var(--up-reveal-r));
-      -webkit-mask-image: radial-gradient(circle at var(--up-reveal-cx) var(--up-reveal-cy), transparent var(--up-reveal-r), #000 var(--up-reveal-r));
-    }
-    html.is-theme-to-light {
-      mask-image: radial-gradient(circle at var(--up-reveal-cx) var(--up-reveal-cy), #000 var(--up-reveal-r), transparent var(--up-reveal-r));
-      -webkit-mask-image: radial-gradient(circle at var(--up-reveal-cx) var(--up-reveal-cy), #000 var(--up-reveal-r), transparent var(--up-reveal-r));
-    }
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-    }
+  const layoutStyle = document.createElement('style');
+  layoutStyle.textContent = `
+    html { display: block; width: 100%; height: 100%; }
+    body { margin: 0; width: 100%; height: 100%; }
   `;
 
   const freezeBody = document.createElement('body');
@@ -240,8 +228,17 @@ function paintFrozenUi(
   shot.style.overflow = 'hidden';
 
   freezeBody.appendChild(shot);
-  freezeRoot.appendChild(maskStyle);
+  freezeRoot.appendChild(layoutStyle);
   freezeRoot.appendChild(freezeBody);
+
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
+  if (oldIsDark) {
+    freezeRoot.style.clipPath = circleClip(endRadius, origin.x, origin.y);
+  } else {
+    freezeRoot.style.clipPath = holeClip(1, origin.x, origin.y, viewW, viewH);
+  }
+  freezeRoot.style.willChange = 'clip-path';
   shadow.appendChild(freezeRoot);
   veil.setAttribute('popover', 'manual');
   veil.setAttribute('inert', '');
@@ -259,7 +256,8 @@ function paintFrozenUi(
 
 /**
  * Pointer-origin circular swap that keeps both UIs on screen.
- * A second click reverses the in-flight circle instead of queuing a new reveal.
+ * Chromium animates transform / clip-path on one overlay layer.
+ * A second click reverses the circle from the current radius.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { origin, goingToDark, apply } = options;
@@ -270,7 +268,11 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   }
 
   if (activeReveal) {
-    // Only turn the circle around from here. Do not restyle the live tree yet.
+    if (!activeReveal.started || activeReveal.animation == null) {
+      activeReveal.playingForward = false;
+      activeReveal.finish();
+      return;
+    }
     activeReveal.playingForward = !activeReveal.playingForward;
     flipPlayback(activeReveal.animation);
     armFailsafe(activeReveal.finish);
@@ -281,17 +283,12 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
 
   const painted = paintFrozenUi(origin, !goingToDark);
-  if (painted == null || typeof painted.freezeRoot.animate !== 'function') {
+  if (painted == null) {
     apply();
     dropVeils();
     clearRevealClasses();
     return;
   }
-
-  void painted.freezeRoot.getBoundingClientRect();
-  apply();
-  const header = document.querySelector('.up-header');
-  if (header) void getComputedStyle(header).backgroundColor;
 
   let released = false;
   const finish = () => {
@@ -299,7 +296,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     released = true;
     window.clearTimeout(failsafe);
     const shouldUndo = activeReveal != null && !activeReveal.playingForward;
-    if (shouldUndo) {
+    if (shouldUndo && activeReveal.started) {
       apply();
     }
     dropVeils();
@@ -307,27 +304,60 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     activeReveal = null;
   };
 
-  const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y));
-  const startR = goingToDark ? '1px' : `${endRadius}px`;
-  const endR = goingToDark ? `${endRadius}px` : '1px';
+  activeReveal = { animation: null, undo: apply, playingForward: true, started: false, finish };
+  armFailsafe(finish);
 
-  try {
-    const animation = painted.freezeRoot.animate(
-      [{ ['--up-reveal-r']: startR }, { ['--up-reveal-r']: endR }],
-      {
-        duration: goingToDark
-          ? readDurationMs('--dur-scene', 620)
-          : readDurationMs('--dur-emphasis', 500),
-        easing: readEase('--ease-out'),
-        fill: 'both',
+  afterPaint(() => {
+    if (released || activeReveal == null) return;
+    if (!activeReveal.playingForward) {
+      finish();
+      return;
+    }
+
+    apply();
+    const header = document.querySelector('.up-header');
+    if (header) void getComputedStyle(header).backgroundColor;
+
+    const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y));
+    const duration = goingToDark
+      ? readDurationMs('--dur-scene', 620)
+      : readDurationMs('--dur-emphasis', 500);
+    const easing = readEase('--ease-out');
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    try {
+      const motionEl = painted.freezeRoot;
+      if (typeof motionEl.animate !== 'function') {
+        finish();
+        return;
       }
-    );
-    activeReveal = { animation, undo: apply, playingForward: true, finish };
-    armFailsafe(finish);
-    animation.addEventListener('finish', finish);
-  } catch {
-    finish();
-  }
+      const animation = goingToDark
+        ? motionEl.animate(
+            {
+              clipPath: [
+                holeClip(1, origin.x, origin.y, viewW, viewH),
+                holeClip(endRadius, origin.x, origin.y, viewW, viewH),
+              ],
+            },
+            { duration, easing, fill: 'both' }
+          )
+        : motionEl.animate(
+            {
+              clipPath: [
+                circleClip(endRadius, origin.x, origin.y),
+                circleClip(1, origin.x, origin.y),
+              ],
+            },
+            { duration, easing, fill: 'both' }
+          );
+      activeReveal.animation = animation;
+      activeReveal.started = true;
+      animation.addEventListener('finish', finish);
+    } catch {
+      finish();
+    }
+  });
 }
 
 export function originFromPointer(event: {
