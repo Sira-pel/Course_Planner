@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isPointerClick, originFromPointer } from './themeTransition';
+import { isPointerClick, originFromPointer, originRelativeTo } from './themeTransition';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -27,6 +27,18 @@ const fromBox = originFromPointer({
 });
 assert(fromBox.x === 30 && fromBox.y === 35, 'toggle box center wins over the raw click point');
 
+const fromOverlay = originRelativeTo(
+  { getBoundingClientRect: () => ({ left: 80, top: 10, width: 400, height: 609 }) },
+  {
+    clientX: 0,
+    clientY: 0,
+    currentTarget: {
+      getBoundingClientRect: () => ({ left: 340, top: 20, width: 40, height: 40 }),
+    } as unknown as EventTarget,
+  }
+);
+assert(fromOverlay.x === 280 && fromOverlay.y === 30, 'origin is relative to the overlay frame, not the page');
+
 Object.defineProperty(globalThis, 'innerWidth', { value: 1000, configurable: true });
 Object.defineProperty(globalThis, 'innerHeight', { value: 800, configurable: true });
 const fromViewport = originFromPointer({
@@ -46,6 +58,7 @@ assert(!transitionSrc.includes('mask-image'), 'theme reveal does not animate mas
 assert(!transitionSrc.includes('--up-reveal-r'), 'theme reveal does not animate a mask radius variable');
 assert(transitionSrc.includes('clipPath') || transitionSrc.includes('clip-path'), 'the freeze layer is clipped, not masked');
 assert(transitionSrc.includes('evenodd'), 'light-to-dark opens a hole with an evenodd clip');
+assert(transitionSrc.includes('originRelativeTo'), 'circle origin is measured against the overlay frame');
 assert(transitionSrc.includes('diskClip'), 'dark-to-light clips a path disk with a locked center');
 assert(!transitionSrc.includes('circle('), 'Chromium circle() clip origin is not used');
 assert(transitionSrc.includes('cloneNode'), 'theme reveal freezes the outgoing UI');

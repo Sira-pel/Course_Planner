@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { isPointerClick, originFromPointer, runThemeReveal } from '../../utils/themeTransition';
+import { isPointerClick, runThemeReveal } from '../../utils/themeTransition';
 import { detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
@@ -219,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
 
     runThemeReveal({
-      origin: originFromPointer(event),
+      event,
       goingToDark,
       apply,
     });
