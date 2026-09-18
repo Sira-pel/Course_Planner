@@ -1335,13 +1335,20 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: solid night overlay from the toggle. Not a document snapshot. */
+/* Theme reveal: solid night disk scaled from the toggle. Not a document snapshot. */
 .up-theme-reveal-veil {
   position: fixed;
   inset: 0;
   z-index: 100;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.up-theme-reveal-disk {
+  position: absolute;
+  border-radius: 50%;
   background: #121826;
+  transform-origin: 50% 50%;
 }
 
 html.is-theme-revealing .up-chrome-btn,
