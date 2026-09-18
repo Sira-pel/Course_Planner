@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   LAYOUT_HYSTERESIS_PX,
   PHONE_MAX_PX,
@@ -47,5 +50,20 @@ assert(layout === 'tablet', `stay tablet on 1040 jitter, got ${layout}`);
 
 layout = stabilizePoolLayout(TABLET_MAX_PX + 1 + LAYOUT_HYSTERESIS_PX, 'tablet', 'desktop');
 assert(layout === 'desktop', 'commit desktop past hysteresis');
+
+assert(LAYOUT_HYSTERESIS_PX === 24, 'hysteresis stays wider than a classic scrollbar');
+
+const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../index.css'), 'utf8');
+assert(css.includes('scrollbar-gutter: stable'), 'html keeps a stable scrollbar gutter');
+assert(/html,\s*body,\s*#root \{[^}]*overflow-x: clip/s.test(css), 'document locks overflow-x at every breakpoint');
+assert(/html,\s*body,\s*#root \{[^}]*overflow-y: hidden/s.test(css), 'document locks overflow-y at every breakpoint');
+const appIdx = css.indexOf('.up-app {');
+assert(appIdx !== -1, '.up-app rule exists');
+const beforeApp = css.slice(0, appIdx);
+const lastMedia = beforeApp.lastIndexOf('@media');
+const lastBrace = beforeApp.lastIndexOf('}');
+assert(lastBrace > lastMedia, '.up-app overflow lock is not inside a max-width query');
+const appBlock = css.slice(appIdx, css.indexOf('}', appIdx) + 1);
+assert(appBlock.includes('overflow: hidden'), '.up-app overflow is locked at every breakpoint');
 
 console.log('layoutBreakpoint tests passed');

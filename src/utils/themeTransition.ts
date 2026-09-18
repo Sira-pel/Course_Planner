@@ -9,6 +9,9 @@ export type ThemeRevealOptions = {
   apply: () => void;
 };
 
+const VEIL_CLASS = 'up-theme-reveal-veil';
+const FAILSAFE_MS = 2000;
+
 let revealBusy = false;
 
 function prefersReducedMotion(): boolean {
@@ -40,6 +43,10 @@ function farthestCornerRadius(x: number, y: number): number {
   );
 }
 
+function circleClip(radiusPx: number, x: number, y: number): string {
+  return `circle(${radiusPx}px at ${x}px ${y}px)`;
+}
+
 function clearRevealClasses(): void {
   document.documentElement.classList.remove(
     'is-theme-revealing',
@@ -48,29 +55,24 @@ function clearRevealClasses(): void {
   );
 }
 
-type ThemeViewTransition = {
-  ready: Promise<void>;
-  finished: Promise<void>;
-  waitUntil?: (promise: Promise<unknown>) => void;
-};
-
-function canStartViewTransition(
-  doc: Document
-): doc is Document & {
-  startViewTransition: (update: () => void) => ThemeViewTransition;
-} {
-  return typeof doc.startViewTransition === 'function';
+function dropVeils(): void {
+  document.querySelectorAll(`.${VEIL_CLASS}`).forEach((node) => node.remove());
 }
 
-function extendTransition(transition: ThemeViewTransition, promise: Promise<unknown>): void {
-  if (typeof transition.waitUntil === 'function') {
-    transition.waitUntil(promise);
-  }
+function paintVeil(): HTMLElement | null {
+  if (typeof document === 'undefined' || document.body == null) return null;
+  dropVeils();
+  const veil = document.createElement('div');
+  veil.className = VEIL_CLASS;
+  veil.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(veil);
+  return veil;
 }
 
 /**
- * Pointer-origin circular mask for a light/dark swap.
+ * Pointer-origin circular night for a light/dark swap.
  * Keyboard and reduced-motion callers must skip this and just apply().
+ * The veil is a solid overlay, not a document snapshot.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { origin, goingToDark, apply } = options;
@@ -79,7 +81,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     return;
   }
 
-  if (prefersReducedMotion() || !canStartViewTransition(document)) {
+  if (prefersReducedMotion()) {
     apply();
     return;
   }
@@ -95,49 +97,56 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     apply();
   };
 
+  const veil = paintVeil();
+  if (veil == null || typeof veil.animate !== 'function') {
+    runApply();
+    dropVeils();
+    clearRevealClasses();
+    revealBusy = false;
+    return;
+  }
+
+  const x = origin.x;
+  const y = origin.y;
+  const endRadius = farthestCornerRadius(x, y);
+  const collapsed = circleClip(0, x, y);
+  const covered = circleClip(endRadius, x, y);
+  veil.style.clipPath = goingToDark ? collapsed : covered;
+  void veil.getBoundingClientRect();
+
+  if (!goingToDark) {
+    runApply();
+  }
+
   let released = false;
   const release = () => {
     if (released) return;
     released = true;
     window.clearTimeout(failsafe);
-    clearRevealClasses();
-    revealBusy = false;
+    try {
+      runApply();
+    } finally {
+      dropVeils();
+      clearRevealClasses();
+      revealBusy = false;
+    }
   };
 
-  const failsafe = window.setTimeout(release, 2000);
+  const failsafe = window.setTimeout(release, FAILSAFE_MS);
 
   try {
-    const transition = document.startViewTransition(() => {
-      runApply();
-    });
-
-    void transition.ready
-      .then(() => {
-        const x = origin.x;
-        const y = origin.y;
-        const endRadius = farthestCornerRadius(x, y);
-        const clip = [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`];
-
-        const animation = root.animate(
-          { clipPath: goingToDark ? clip : [clip[1], clip[0]] },
-          {
-            duration: goingToDark
-              ? readDurationMs('--dur-scene', 620)
-              : readDurationMs('--dur-emphasis', 500),
-            easing: readEase('--ease-out'),
-            fill: 'both',
-            pseudoElement: goingToDark ? '::view-transition-new(root)' : '::view-transition-old(root)',
-          }
-        );
-        extendTransition(transition, animation.finished);
-      })
-      .catch(() => {
-        runApply();
-      });
-
-    void transition.finished.then(release, release);
+    const animation = veil.animate(
+      { clipPath: goingToDark ? [collapsed, covered] : [covered, collapsed] },
+      {
+        duration: goingToDark
+          ? readDurationMs('--dur-scene', 620)
+          : readDurationMs('--dur-emphasis', 500),
+        easing: readEase('--ease-out'),
+        fill: 'forwards',
+      }
+    );
+    void animation.finished.then(release, release);
   } catch {
-    runApply();
     release();
   }
 }
@@ -151,12 +160,19 @@ export function originFromPointer(event: {
     return { x: event.clientX, y: event.clientY };
   }
 
-  if (event.currentTarget instanceof Element) {
-    const box = event.currentTarget.getBoundingClientRect();
+  const target = event.currentTarget;
+  if (
+    typeof target === 'object' &&
+    target !== null &&
+    'getBoundingClientRect' in target &&
+    typeof target.getBoundingClientRect === 'function'
+  ) {
+    const box = target.getBoundingClientRect();
     return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
   }
 
-  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  const view = globalThis as typeof globalThis & { innerWidth?: number; innerHeight?: number };
+  return { x: (view.innerWidth ?? 0) / 2, y: (view.innerHeight ?? 0) / 2 };
 }
 
 export function isPointerClick(event: { detail: number }): boolean {
