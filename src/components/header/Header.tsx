@@ -56,6 +56,8 @@ export const Header: React.FC<HeaderProps> = ({
     redo,
     canUndo,
     canRedo,
+    resetToBlank,
+    resetToSample,
   } = useScheduleStore();
 
   const reduceMotion = useReducedMotion();
@@ -394,7 +396,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           <SettingsMenu
             isPhone={isPhone}
-            reduceMotion={reduceMotion}
             menuEnter={menuEnter}
             menuShown={menuShown}
             menuLeave={menuLeave}
@@ -428,6 +429,16 @@ export const Header: React.FC<HeaderProps> = ({
             onOpenShortcuts={() => {
               setIsSettingsOpen(false);
               onOpenShortcuts();
+            }}
+            onLoadDemo={() => {
+              resetToSample();
+              showToast('Loaded the demo semester.', 'success');
+              setIsSettingsOpen(false);
+            }}
+            onClearAll={() => {
+              resetToBlank();
+              showToast('Cleared plans and the course pool.', 'info');
+              setIsSettingsOpen(false);
             }}
           />
         </div>
@@ -534,7 +545,7 @@ export const Header: React.FC<HeaderProps> = ({
         {toastMessage && (
           <motion.div
             key="header-toast"
-            className="fixed top-4 right-4 z-50"
+            className="fixed top-[7.25rem] right-5 z-50"
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={
