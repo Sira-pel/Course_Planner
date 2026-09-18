@@ -67,13 +67,19 @@ assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a de
 assert(transitionSrc.includes('updatePlaybackRate'), 'in-flight toggle reverses playback from the current time');
 assert(!transitionSrc.includes('.then(finish, finish)'), 'reverse must not treat a rejected finished promise as done');
 assert(transitionSrc.includes('playingForward'), 'reverse keeps the freeze until the circle returns');
+assert(transitionSrc.includes('isPhoneViewport'), 'phone viewports skip the circular reveal');
+assert(transitionSrc.includes('PHONE_MAX_PX'), 'phone skip uses the 639px layout breakpoint');
 const busyStart = transitionSrc.indexOf('if (activeReveal)');
 const busyEnd = transitionSrc.indexOf('const root = document.documentElement');
 const busyBlock = busyStart >= 0 && busyEnd > busyStart ? transitionSrc.slice(busyStart, busyEnd) : '';
 assert(busyBlock.includes('flipPlayback'), 'busy click flips the in-flight circle');
 assert(!busyBlock.includes('apply()'), 'busy click does not snap the live theme');
 assert(transitionSrc.includes("createElement('html')"), 'freeze layer is a document-shaped shadow');
-assert(transitionSrc.includes('showPopover'), 'overlay uses the top layer so Firefox chrome cannot paint above it');
+assert(transitionSrc.includes('#btn-add-course'), 'phone freeze keeps add-course hidden by id');
+assert(transitionSrc.includes('#btn-undo'), 'phone freeze keeps undo hidden by id');
+assert(transitionSrc.includes('.up-fab-cluster'), 'phone freeze keeps the dock in the circle');
+assert(transitionSrc.includes('0.4, 0, 0.2, 1'), 'reveal easing is not a snap ease-out');
+assert(!transitionSrc.includes("removeAttribute('id')"), 'clone keeps ids so phone header CSS still matches');
 assert(transitionSrc.includes('backdrop-filter: none !important'), 'freeze layer drops backdrop-filter so Firefox masks sticky chrome');
 
 const css = readFileSync(join(here, '../index.css'), 'utf8');
