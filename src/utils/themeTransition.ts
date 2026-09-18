@@ -62,15 +62,23 @@ function farthestCornerRadius(x: number, y: number): number {
   );
 }
 
-function circleClip(radiusPx: number, x: number, y: number): string {
-  return `circle(${radiusPx}px at ${x}px ${y}px)`;
+function arcPair(radiusPx: number, x: number, y: number): { r: string; d: string; cx: string; cy: string } {
+  const radius = Math.max(1, radiusPx);
+  return {
+    r: radius.toFixed(2),
+    d: (radius * 2).toFixed(2),
+    cx: x.toFixed(2),
+    cy: y.toFixed(2),
+  };
+}
+
+function diskClip(radiusPx: number, x: number, y: number): string {
+  const { r, d, cx, cy } = arcPair(radiusPx, x, y);
+  return `path("M${cx} ${cy}m-${r} 0a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 -${d} 0")`;
 }
 
 function holeClip(radiusPx: number, x: number, y: number, width: number, height: number): string {
-  const r = Math.max(1, radiusPx).toFixed(2);
-  const d = (Math.max(1, radiusPx) * 2).toFixed(2);
-  const cx = x.toFixed(2);
-  const cy = y.toFixed(2);
+  const { r, d, cx, cy } = arcPair(radiusPx, x, y);
   const w = width.toFixed(2);
   const h = height.toFixed(2);
   return `path(evenodd, "M0 0H${w}V${h}H0Z M${cx} ${cy}m-${r} 0a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 -${d} 0")`;
@@ -194,25 +202,27 @@ function paintFrozenUi(
   const shadow = veil.attachShadow({ mode: 'open' });
   copySheets(shadow);
 
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
   const freezeRoot = document.createElement('html');
   freezeRoot.className = oldIsDark ? 'dark' : '';
   freezeRoot.style.display = 'block';
-  freezeRoot.style.width = '100%';
-  freezeRoot.style.height = '100%';
+  freezeRoot.style.width = `${viewW}px`;
+  freezeRoot.style.height = `${viewH}px`;
   freezeRoot.style.colorScheme = oldIsDark ? 'dark' : 'light';
   copyUpVars(document.documentElement, freezeRoot);
 
   const layoutStyle = document.createElement('style');
   layoutStyle.textContent = `
-    html { display: block; width: 100%; height: 100%; }
-    body { margin: 0; width: 100%; height: 100%; }
+    html { display: block; width: ${viewW}px; height: ${viewH}px; }
+    body { margin: 0; width: ${viewW}px; height: ${viewH}px; }
   `;
 
   const freezeBody = document.createElement('body');
   freezeBody.className = document.body.className;
   freezeBody.style.margin = '0';
-  freezeBody.style.width = '100%';
-  freezeBody.style.height = '100%';
+  freezeBody.style.width = `${viewW}px`;
+  freezeBody.style.height = `${viewH}px`;
 
   const shot = app.cloneNode(true) as HTMLElement;
   shot.removeAttribute('id');
@@ -231,10 +241,8 @@ function paintFrozenUi(
   freezeRoot.appendChild(layoutStyle);
   freezeRoot.appendChild(freezeBody);
 
-  const viewW = window.innerWidth;
-  const viewH = window.innerHeight;
   if (oldIsDark) {
-    freezeRoot.style.clipPath = circleClip(endRadius, origin.x, origin.y);
+    freezeRoot.style.clipPath = diskClip(endRadius, origin.x, origin.y);
   } else {
     freezeRoot.style.clipPath = holeClip(1, origin.x, origin.y, viewW, viewH);
   }
@@ -345,8 +353,8 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
         : motionEl.animate(
             {
               clipPath: [
-                circleClip(endRadius, origin.x, origin.y),
-                circleClip(1, origin.x, origin.y),
+                diskClip(endRadius, origin.x, origin.y),
+                diskClip(1, origin.x, origin.y),
               ],
             },
             { duration, easing, fill: 'both' }
