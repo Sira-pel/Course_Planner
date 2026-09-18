@@ -16,16 +16,16 @@ const fromClient = originFromPointer({
   clientY: 80,
   currentTarget: null,
 });
-assert(fromClient.x === 24 && fromClient.y === 80, 'non-zero client point wins');
+assert(fromClient.x === 24 && fromClient.y === 80, 'client point is used when there is no target box');
 
 const fromBox = originFromPointer({
-  clientX: 0,
-  clientY: 0,
+  clientX: 24,
+  clientY: 80,
   currentTarget: {
     getBoundingClientRect: () => ({ left: 10, top: 20, width: 40, height: 30 }),
   } as unknown as EventTarget,
 });
-assert(fromBox.x === 30 && fromBox.y === 35, 'zero client point uses target box center');
+assert(fromBox.x === 30 && fromBox.y === 35, 'toggle box center wins over the raw click point');
 
 Object.defineProperty(globalThis, 'innerWidth', { value: 1000, configurable: true });
 Object.defineProperty(globalThis, 'innerHeight', { value: 800, configurable: true });

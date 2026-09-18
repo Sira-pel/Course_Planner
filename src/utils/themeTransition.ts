@@ -55,11 +55,22 @@ function readEase(token: string): string {
   return raw || 'cubic-bezier(0.22, 1, 0.36, 1)';
 }
 
+function viewMetrics(): { width: number; height: number } {
+  const g = globalThis as typeof globalThis & {
+    visualViewport?: { width: number; height: number };
+    innerWidth?: number;
+    innerHeight?: number;
+  };
+  const vv = g.visualViewport;
+  if (vv && vv.width > 0 && vv.height > 0) {
+    return { width: vv.width, height: vv.height };
+  }
+  return { width: g.innerWidth ?? 0, height: g.innerHeight ?? 0 };
+}
+
 function farthestCornerRadius(x: number, y: number): number {
-  return Math.hypot(
-    Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y)
-  );
+  const { width, height } = viewMetrics();
+  return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
 function arcPair(radiusPx: number, x: number, y: number): { r: string; d: string; cx: string; cy: string } {
@@ -194,16 +205,23 @@ function paintFrozenUi(
 
   dropVeils();
 
+  const { width: viewW, height: viewH } = viewMetrics();
   const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y));
   const veil = document.createElement('div');
   veil.className = `${VEIL_CLASS} ${oldIsDark ? 'is-theme-to-light' : 'is-theme-to-dark'}`;
   veil.setAttribute('aria-hidden', 'true');
+  veil.style.inset = 'auto';
+  veil.style.left = '0px';
+  veil.style.top = '0px';
+  veil.style.width = `${viewW}px`;
+  veil.style.height = `${viewH}px`;
+  veil.style.margin = '0';
+  veil.style.maxWidth = 'none';
+  veil.style.maxHeight = 'none';
 
   const shadow = veil.attachShadow({ mode: 'open' });
   copySheets(shadow);
 
-  const viewW = window.innerWidth;
-  const viewH = window.innerHeight;
   const freezeRoot = document.createElement('html');
   freezeRoot.className = oldIsDark ? 'dark' : '';
   freezeRoot.style.display = 'block';
@@ -331,8 +349,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
       ? readDurationMs('--dur-scene', 620)
       : readDurationMs('--dur-emphasis', 500);
     const easing = readEase('--ease-out');
-    const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
+    const { width: viewW, height: viewH } = viewMetrics();
 
     try {
       const motionEl = painted.freezeRoot;
@@ -373,10 +390,6 @@ export function originFromPointer(event: {
   clientY: number;
   currentTarget: EventTarget | null;
 }): ThemeRevealOrigin {
-  if (event.clientX !== 0 || event.clientY !== 0) {
-    return { x: event.clientX, y: event.clientY };
-  }
-
   const target = event.currentTarget;
   if (
     typeof target === 'object' &&
@@ -388,8 +401,12 @@ export function originFromPointer(event: {
     return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
   }
 
-  const view = globalThis as typeof globalThis & { innerWidth?: number; innerHeight?: number };
-  return { x: (view.innerWidth ?? 0) / 2, y: (view.innerHeight ?? 0) / 2 };
+  if (event.clientX !== 0 || event.clientY !== 0) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  const { width, height } = viewMetrics();
+  return { x: width / 2, y: height / 2 };
 }
 
 export function isPointerClick(event: { detail: number }): boolean {
