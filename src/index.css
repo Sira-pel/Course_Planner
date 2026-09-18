@@ -114,13 +114,6 @@ html.dark {
 
 /* Header: ledger instrument strip */
 .up-header {
-  --up-raised: #f7f8fb;
-  --up-ink: #1b2430;
-  --up-muted: #5c6774;
-  --up-line: #d5dbe3;
-  --up-accent: #3d4fd8;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #3d4fd8;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -145,16 +138,6 @@ html.dark {
     opacity: 1;
     background: color-mix(in srgb, var(--up-ink) 8%, transparent);
   }
-}
-
-.dark .up-header {
-  --up-raised: #121826;
-  --up-ink: #e8edf4;
-  --up-muted: #8b959e;
-  --up-line: #2a3342;
-  --up-accent: #5b6cf0;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #8b96ff;
 }
 
 .up-header-row {
@@ -1023,31 +1006,10 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-pool-dock,
 .up-pool-drawer,
 .up-pool-sheet {
-  --up-raised: #f7f8fb;
-  --up-ink: #1b2430;
-  --up-muted: #5c6774;
-  --up-line: #d5dbe3;
-  --up-accent: #3d4fd8;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #3d4fd8;
   box-sizing: border-box;
   background: var(--up-raised);
   color: var(--up-ink);
   border-color: var(--up-line);
-}
-
-.dark .up-pool-rail,
-.dark .up-pool-panel,
-.dark .up-pool-dock,
-.dark .up-pool-drawer,
-.dark .up-pool-sheet {
-  --up-raised: #121826;
-  --up-ink: #e8edf4;
-  --up-muted: #8b959e;
-  --up-line: #2a3342;
-  --up-accent: #5b6cf0;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #8b96ff;
 }
 
 .up-pool-desktop {
@@ -1593,25 +1555,89 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: solid night disk scaled from the toggle. Not a document snapshot. */
+/* Theme reveal: freeze the outgoing UI and open a hole / shrink a disk from the toggle. */
+@property --up-reveal-r {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 1px;
+}
+
 .up-theme-reveal-veil {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  z-index: 2147483646;
   pointer-events: none;
   overflow: hidden;
+  --up-reveal-cx: 0px;
+  --up-reveal-cy: 0px;
+  --up-reveal-r: 1px;
 }
 
-.up-theme-reveal-disk {
-  position: absolute;
-  border-radius: 50%;
-  background: #121826;
-  transform-origin: 50% 50%;
+html.is-theme-revealing #root {
+  isolation: isolate;
+  z-index: 0;
+}
+
+html.is-theme-revealing .up-header,
+html.is-theme-revealing .up-pool-desktop,
+html.is-theme-revealing .up-pool-rail,
+html.is-theme-revealing .sticky,
+html.is-theme-revealing .backdrop-blur-xs {
+  z-index: 0 !important;
+  isolation: auto !important;
+  position: relative !important;
+  top: auto !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.up-theme-reveal-veil.is-theme-to-dark {
+  mask-image: radial-gradient(
+    circle at var(--up-reveal-cx) var(--up-reveal-cy),
+    transparent var(--up-reveal-r),
+    #000 var(--up-reveal-r)
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at var(--up-reveal-cx) var(--up-reveal-cy),
+    transparent var(--up-reveal-r),
+    #000 var(--up-reveal-r)
+  );
+}
+
+.up-theme-reveal-veil.is-theme-to-light {
+  mask-image: radial-gradient(
+    circle at var(--up-reveal-cx) var(--up-reveal-cy),
+    #000 var(--up-reveal-r),
+    transparent var(--up-reveal-r)
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at var(--up-reveal-cx) var(--up-reveal-cy),
+    #000 var(--up-reveal-r),
+    transparent var(--up-reveal-r)
+  );
 }
 
 html.is-theme-revealing .up-chrome-btn,
 html.is-theme-revealing .up-pool-tab,
 html.is-theme-revealing .up-pool-row,
+html.is-theme-revealing .up-header,
+html.is-theme-revealing .up-app,
+html.is-theme-revealing .up-footer,
+html.is-theme-revealing .up-pool-rail,
+html.is-theme-revealing .up-pool-panel,
+html.is-theme-revealing .up-pool-dock,
+html.is-theme-revealing .up-pool-drawer,
+html.is-theme-revealing .up-pool-sheet,
+html.is-theme-revealing #calendar-grid-container,
+html.is-theme-revealing .up-scroll,
 html.is-theme-revealing .transition-colors,
 html.is-theme-revealing .transition-all,
 html.is-theme-revealing .transition-opacity {

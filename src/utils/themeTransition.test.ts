@@ -43,16 +43,38 @@ assert(!transitionSrc.includes('::view-transition-old'), 'theme reveal does not 
 assert(!transitionSrc.includes('::view-transition-new'), 'theme reveal does not clip the new root snapshot');
 assert(!transitionSrc.includes('pseudoElement'), 'theme reveal does not animate view-transition pseudos');
 assert(!transitionSrc.includes('clipPath'), 'theme reveal does not clip-path the overlay');
-assert(!transitionSrc.includes('clip-path'), 'theme reveal does not clip-path the overlay in CSS strings');
+assert(transitionSrc.includes('cloneNode'), 'theme reveal freezes the outgoing UI');
+assert(transitionSrc.includes('attachShadow'), 'frozen UI is isolated from html.dark');
 assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a dedicated overlay');
-assert(transitionSrc.includes('up-theme-reveal-disk'), 'theme reveal scales a disk from the pointer');
-assert(transitionSrc.includes('scale(0)'), 'collapsed night is a zero scale, not a zero-radius clip');
+assert(transitionSrc.includes('--up-reveal-r'), 'circle radius is a registered custom property');
+assert(transitionSrc.includes('updatePlaybackRate'), 'in-flight toggle reverses playback from the current time');
+assert(!transitionSrc.includes('.then(finish, finish)'), 'reverse must not treat a rejected finished promise as done');
+assert(transitionSrc.includes('playingForward'), 'reverse keeps the freeze until the circle returns');
+const busyStart = transitionSrc.indexOf('if (activeReveal)');
+const busyEnd = transitionSrc.indexOf('const root = document.documentElement');
+const busyBlock = busyStart >= 0 && busyEnd > busyStart ? transitionSrc.slice(busyStart, busyEnd) : '';
+assert(busyBlock.includes('flipPlayback'), 'busy click flips the in-flight circle');
+assert(!busyBlock.includes('apply()'), 'busy click does not snap the live theme');
+assert(transitionSrc.includes("createElement('html')"), 'freeze layer is a document-shaped shadow');
+assert(transitionSrc.includes('showPopover'), 'overlay uses the top layer so Firefox chrome cannot paint above it');
+assert(transitionSrc.includes('backdrop-filter: none !important'), 'freeze layer drops backdrop-filter so Firefox masks sticky chrome');
 
 const css = readFileSync(join(here, '../index.css'), 'utf8');
 assert(!css.includes('html.is-theme-revealing *'), 'no universal revealing selector');
 assert(!css.includes('html.is-theme-revealing::view-transition'), 'no root view-transition reveal rules');
 assert(css.includes('.up-theme-reveal-veil'), 'overlay class is present');
-assert(css.includes('.up-theme-reveal-disk'), 'disk class is present');
+assert(css.includes('mask-image'), 'overlay is masked, not a solid disk');
+assert(!css.includes('.up-theme-reveal-disk'), 'solid night disk is gone');
+assert(css.includes('html.is-theme-revealing #root'), 'app stacking stays under the overlay during reveal');
+assert(
+  (css.match(/--up-raised:/g) || []).length === 2,
+  'header and pool inherit --up-raised from html instead of restating it'
+);
+assert(css.includes('html.is-theme-revealing .sticky'), 'live sticky day headers stay under the overlay');
+assert(css.includes('html.is-theme-revealing .backdrop-blur-xs'), 'live blur layers stay under the overlay');
+assert(css.includes('html.is-theme-revealing .up-header'), 'header bar skips color transitions during reveal');
+assert(css.includes('html.is-theme-revealing .up-pool-rail'), 'pool rail skips color transitions during reveal');
+assert(css.includes('html.is-theme-revealing .up-app'), 'app shell skips color transitions during reveal');
 assert(css.includes('html.is-theme-revealing .up-chrome-btn'), 'chrome buttons skip color transitions during reveal');
 assert(css.includes('html.is-theme-revealing .up-pool-tab'), 'pool tabs skip color transitions during reveal');
 assert(css.includes('html.is-theme-revealing .up-pool-row'), 'pool rows skip color transitions during reveal');
