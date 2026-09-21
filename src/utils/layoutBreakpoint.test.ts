@@ -54,7 +54,7 @@ assert(layout === 'desktop', 'commit desktop past hysteresis');
 assert(LAYOUT_HYSTERESIS_PX === 24, 'hysteresis stays wider than a classic scrollbar');
 
 const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../index.css'), 'utf8');
-assert(css.includes('scrollbar-gutter: stable'), 'html keeps a stable scrollbar gutter');
+assert(!css.includes('scrollbar-gutter'), 'html does not reserve a classic scrollbar gutter');
 assert(/html,\s*body,\s*#root \{[^}]*overflow-x: clip/s.test(css), 'document locks overflow-x at every breakpoint');
 assert(/html,\s*body,\s*#root \{[^}]*overflow-y: hidden/s.test(css), 'document locks overflow-y at every breakpoint');
 const appIdx = css.indexOf('.up-app {');

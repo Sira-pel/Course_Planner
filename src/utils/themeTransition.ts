@@ -14,9 +14,19 @@ export type ThemeRevealOptions = {
   commit: () => void;
 };
 
+export const SCALE_STEP_RATIO = 1.03;
 const FAILSAFE_MS = 2000;
-const KEYFRAME_COUNT = 60;
-const DEFAULT_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+const EASE_INVERSE_ITERS = 40;
+const GROUP_SIZE_SLOP_PX = 0.5;
+const FALLBACK_START_RADIUS_PX = 8;
+const MIN_START_RADIUS_PX = 0.5;
+const DEFAULT_EASE: [number, number, number, number] = [0.3, 0.55, 0.3, 1];
+const DEFAULT_EASE_CSS = 'cubic-bezier(0.3, 0.55, 0.3, 1)';
+
+export type ScaleLadderFrame = {
+  offset: number;
+  scale: number;
+};
 
 type ThemeViewTransition = {
   ready: Promise<void>;
@@ -33,6 +43,7 @@ type ActiveReveal = {
 let activeReveal: ActiveReveal | null = null;
 let failsafe = 0;
 let pendingFrame = 0;
+let groupSizeWarned = false;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -53,7 +64,7 @@ function readDurationMs(token: string, fallback: number): number {
 
 function readEase(token: string): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-  return raw || 'cubic-bezier(0.22, 1, 0.36, 1)';
+  return raw || DEFAULT_EASE_CSS;
 }
 
 function parseCubicBezier(ease: string): [number, number, number, number] {
@@ -79,7 +90,7 @@ function cubicDerivative(t: number, a: number, b: number): number {
   return 3 * mt * mt * a + 6 * mt * t * (b - a) + 3 * t * t * (1 - b);
 }
 
-function unitBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
+export function unitBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
   return (x: number) => {
     if (x <= 0) return 0;
     if (x >= 1) return 1;
@@ -96,25 +107,79 @@ function unitBezier(x1: number, y1: number, x2: number, y2: number): (x: number)
   };
 }
 
+function easeInverse(ease: (progress: number) => number, progress: number): number {
+  if (progress <= 0) return 0;
+  if (progress >= 1) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < EASE_INVERSE_ITERS; i++) {
+    const mid = (lo + hi) / 2;
+    if (ease(mid) < progress) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function geometricScales(startScale: number): number[] {
+  const scales: number[] = [];
+  let scale = startScale;
+  while (scale < 1) {
+    scales.push(scale);
+    scale *= SCALE_STEP_RATIO;
+  }
+  scales.push(1);
+  return scales;
+}
+
+/**
+ * Geometric scale ladder with easing in keyframe offsets, not in the scale steps.
+ * Adjacent scale ratio is bounded by SCALE_STEP_RATIO so piecewise-linear
+ * interpolation keeps outer×inner ≈ 1 between keyframes.
+ */
+export function geometricScaleLadder(
+  startScale: number,
+  ease: (progress: number) => number,
+  shrink: boolean
+): ScaleLadderFrame[] {
+  const s0 = Math.min(1, Math.max(Number.EPSILON, startScale));
+  if (s0 >= 1) {
+    return [
+      { offset: 0, scale: 1 },
+      { offset: 1, scale: 1 },
+    ];
+  }
+
+  const span = 1 - s0;
+  const frames: ScaleLadderFrame[] = geometricScales(s0).map((scale) => {
+    const growProgress = (scale - s0) / span;
+    const easedProgress = shrink ? 1 - growProgress : growProgress;
+    return { offset: easeInverse(ease, easedProgress), scale };
+  });
+
+  frames.sort((a, b) => a.offset - b.offset);
+  frames[0].offset = 0;
+  frames[frames.length - 1].offset = 1;
+  if (shrink) {
+    frames[0].scale = 1;
+    frames[frames.length - 1].scale = s0;
+  } else {
+    frames[0].scale = s0;
+    frames[frames.length - 1].scale = 1;
+  }
+  return frames;
+}
+
 function bakeScaleKeyframes(
   startScale: number,
   ease: (progress: number) => number,
-  reverse: boolean
+  shrink: boolean
 ): { outer: Keyframe[]; inner: Keyframe[] } {
-  const scales: number[] = [];
-  for (let i = 0; i <= KEYFRAME_COUNT; i++) {
-    const eased = ease(i / KEYFRAME_COUNT);
-    scales.push(startScale + (1 - startScale) * eased);
-  }
-  if (reverse) scales.reverse();
-
+  const frames = geometricScaleLadder(startScale, ease, shrink);
   const outer: Keyframe[] = [];
   const inner: Keyframe[] = [];
-  for (let i = 0; i < scales.length; i++) {
-    const scale = scales[i];
-    const offset = i / KEYFRAME_COUNT;
-    outer.push({ offset, transform: `scale(${scale})` });
-    inner.push({ offset, transform: `scale(${1 / scale})` });
+  for (const frame of frames) {
+    outer.push({ offset: frame.offset, transform: `scale(${frame.scale})` });
+    inner.push({ offset: frame.offset, transform: `scale(${1 / frame.scale})` });
   }
   return { outer, inner };
 }
@@ -139,6 +204,20 @@ function viewMetrics(): { width: number; height: number; left: number; top: numb
 
 function farthestCornerRadius(x: number, y: number, width: number, height: number): number {
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+}
+
+function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
+  const target = event.currentTarget;
+  if (
+    typeof target === 'object' &&
+    target !== null &&
+    'getBoundingClientRect' in target &&
+    typeof target.getBoundingClientRect === 'function'
+  ) {
+    const box = target.getBoundingClientRect();
+    return Math.max(box.width, box.height) / 2;
+  }
+  return FALLBACK_START_RADIUS_PX;
 }
 
 function setRevealGeometry(
@@ -168,7 +247,7 @@ function clearRevealGeometry(): void {
   root.style.removeProperty('--up-reveal-s0');
 }
 
-function publishRevealGeometry(event: ThemeRevealOptions['event']): number {
+function publishRevealGeometry(event: ThemeRevealOptions['event'], startRadiusPx: number): number {
   const bodyRect = document.body.getBoundingClientRect();
   const origin = originRelativeTo(document.body, event);
   const viewport = viewMetrics();
@@ -178,7 +257,7 @@ function publishRevealGeometry(event: ThemeRevealOptions['event']): number {
     1,
     farthestCornerRadius(origin.x, origin.y, coverWidth, coverHeight)
   );
-  const startScale = Math.min(1, 0.5 / radius);
+  const startScale = Math.min(1, Math.max(MIN_START_RADIUS_PX, startRadiusPx) / radius);
   setRevealGeometry(origin.x, origin.y, radius, bodyRect.width, bodyRect.height, startScale);
   return startScale;
 }
@@ -247,8 +326,9 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   }
 
   const root = document.documentElement;
+  const startRadiusPx = startRadiusPxFromEvent(event);
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
-  publishRevealGeometry(event);
+  publishRevealGeometry(event, startRadiusPx);
 
   let applied = false;
   let committed = false;
@@ -276,9 +356,18 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     pendingFrame = 0;
     clearRevealClasses();
     cancelAnimations(animations);
-    runCommit();
     clearRevealGeometry();
-    activeReveal = null;
+    const idle = window.requestIdleCallback;
+    const deferCommit =
+      typeof idle === 'function'
+        ? (task: () => void) => idle(task, { timeout: 250 })
+        : (task: () => void) => window.setTimeout(task, 0);
+    deferCommit(() => {
+      runCommit();
+      if (activeReveal?.finish === finish) {
+        activeReveal = null;
+      }
+    });
   };
 
   activeReveal = {
@@ -301,9 +390,24 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
       void transition.ready
         .then(() => {
           if (released) return;
-          const startScale = publishRevealGeometry(event);
+          const startScale = publishRevealGeometry(event, startRadiusPx);
+          if (!groupSizeWarned) {
+            const groupWidth = parseFloat(
+              getComputedStyle(root, '::view-transition-group(theme-dark)').width
+            );
+            const bodyWidth = document.body.getBoundingClientRect().width;
+            if (
+              Number.isFinite(groupWidth) &&
+              Math.abs(groupWidth - bodyWidth) > GROUP_SIZE_SLOP_PX
+            ) {
+              groupSizeWarned = true;
+              console.warn(
+                `[uniplan] theme reveal: ::view-transition-group(theme-dark) width ${groupWidth}px ≠ body ${bodyWidth}px`
+              );
+            }
+          }
 
-          const ease = unitBezier(...parseCubicBezier(readEase('--ease-out')));
+          const ease = unitBezier(...parseCubicBezier(readEase('--ease-reveal')));
           const { outer, inner } = bakeScaleKeyframes(startScale, ease, !goingToDark);
           const duration = goingToDark
             ? readDurationMs('--dur-scene', 620)

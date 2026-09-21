@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isPointerClick, originFromPointer, originRelativeTo } from './themeTransition';
+import {
+  geometricScaleLadder,
+  isPointerClick,
+  originFromPointer,
+  originRelativeTo,
+  SCALE_STEP_RATIO,
+  unitBezier,
+} from './themeTransition';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -67,7 +74,14 @@ assert(transitionSrc.includes("pseudoElement: goingToDark"), 'inner inverse-scal
 assert(transitionSrc.includes('::view-transition-new(theme-dark)'), 'to-dark inverse-scales the new dark snapshot');
 assert(transitionSrc.includes('::view-transition-old(theme-dark)'), 'to-light inverse-scales the old dark snapshot');
 assert(transitionSrc.includes("easing: 'linear'"), 'baked scale keyframes use linear segment easing');
-assert(transitionSrc.includes('KEYFRAME_COUNT = 60'), 'ease-out is sampled across ~60 keyframes');
+assert(transitionSrc.includes('SCALE_STEP_RATIO'), 'inverse scales use a geometric step ratio');
+assert(transitionSrc.includes('geometricScaleLadder'), 'easing lives in geometric ladder offsets');
+assert(transitionSrc.includes('easeInverse'), 'keyframe times are the inverse of the reveal ease');
+assert(transitionSrc.includes('EASE_INVERSE_ITERS'), 'ease inverse uses a fixed bisection budget');
+assert(!transitionSrc.includes('KEYFRAME_COUNT'), 'uniform-time inverse scales are gone');
+assert(transitionSrc.includes("readEase('--ease-reveal')"), 'reveal easing comes from --ease-reveal');
+assert(transitionSrc.includes('Math.max(MIN_START_RADIUS_PX, startRadiusPx) / radius'), 'circle starts from the toggle radius');
+assert(transitionSrc.includes('Math.max(box.width, box.height) / 2'), 'start radius is half the toggle’s larger side');
 assert(transitionSrc.includes('document.body'), 'origin and radius are measured from body');
 assert(transitionSrc.includes('visualViewport'), 'radius uses visualViewport as a max() cover guard');
 assert(transitionSrc.includes('--up-reveal-x'), 'origin x is published as a CSS var');
@@ -76,7 +90,6 @@ assert(transitionSrc.includes('--up-reveal-r'), 'circle radius is published as a
 assert(transitionSrc.includes('--up-reveal-w'), 'snapshot width is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-h'), 'snapshot height is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-s0'), 'start scale is published as a CSS var');
-assert(transitionSrc.includes('readEase'), 'reveal easing comes from --ease-out');
 assert(transitionSrc.includes('--dur-scene'), 'to-dark uses scene duration');
 assert(transitionSrc.includes('--dur-emphasis'), 'to-light uses emphasis duration');
 assert(transitionSrc.includes('skipTransition'), 'in-flight toggle jumps to finished');
@@ -105,6 +118,7 @@ const captureCall = transitionSrc.indexOf('document.startViewTransition');
 assert(captureCall >= 0, 'capture call exists');
 const beforeCapture = transitionSrc.slice(0, captureCall);
 assert(beforeCapture.includes('publishRevealGeometry'), 'geometry is published before startViewTransition');
+assert(beforeCapture.includes('startRadiusPxFromEvent'), 'toggle radius is measured while currentTarget is live');
 assert(
   beforeCapture.includes("root.classList.add('is-theme-revealing'"),
   'revealing class is on before capture'
@@ -114,6 +128,11 @@ const readyEnd = transitionSrc.indexOf('transition.finished');
 const readyBlock =
   readyStart >= 0 && readyEnd > readyStart ? transitionSrc.slice(readyStart, readyEnd) : '';
 assert(readyBlock.includes('publishRevealGeometry'), 'geometry is refreshed on transition.ready');
+assert(
+  readyBlock.includes("getComputedStyle(root, '::view-transition-group(theme-dark)')"),
+  'ready asserts the UA-sized dark group against the body box'
+);
+assert(readyBlock.includes('console.warn'), 'group-size mismatch warns once instead of throwing');
 
 const finishStart = transitionSrc.indexOf('const finish = () =>');
 const finishEnd = transitionSrc.indexOf('activeReveal = {');
@@ -122,12 +141,21 @@ const finishBlock =
 const classClearIdx = finishBlock.indexOf('clearRevealClasses()');
 const cancelIdx = finishBlock.indexOf('cancelAnimations(');
 const geometryClearIdx = finishBlock.indexOf('clearRevealGeometry()');
+const idleIdx = finishBlock.indexOf('requestIdleCallback');
+const timeoutIdx = finishBlock.indexOf('setTimeout');
+const commitIdx = finishBlock.indexOf('runCommit()');
+const releaseIdx = finishBlock.indexOf('activeReveal = null');
 assert(classClearIdx >= 0, 'finish() clears reveal classes');
 assert(cancelIdx > classClearIdx, 'finish() removes classes before cancelling fill:both animations');
 assert(
   geometryClearIdx > cancelIdx,
   'finish() clears geometry after cancelling fill:both animations'
 );
+assert(idleIdx > geometryClearIdx, 'finish() defers commit via requestIdleCallback when available');
+assert(finishBlock.includes('{ timeout: 250 }'), 'idle commit has a 250ms timeout');
+assert(timeoutIdx > geometryClearIdx, 'finish() falls back to setTimeout(0)');
+assert(commitIdx > idleIdx, 'Zustand commit runs after the last-frame deferral');
+assert(releaseIdx > commitIdx, 'activeReveal stays set until the deferred commit finishes');
 
 const busyStart = transitionSrc.indexOf('if (activeReveal)');
 const busyEnd = transitionSrc.indexOf("root.classList.add('is-theme-revealing'");
@@ -142,9 +170,11 @@ assert(css.includes('view-transition-name: theme-dark'), 'dark body snapshot is 
 assert(css.includes('html.is-theme-revealing::view-transition-group(root)'), 'root group animations are silenced');
 assert(css.includes('html.is-theme-revealing::view-transition-image-pair(theme-dark)'), 'theme-dark image pair is the circle wrapper');
 assert(css.includes('border-radius: 50%'), 'circle wrapper uses a round clip');
-assert(css.includes('overflow: clip'), 'circle wrapper clips with overflow: clip');
-assert(css.includes('overflow: hidden'), 'circle wrapper also uses overflow: hidden');
-assert(css.includes('clip-path: circle(50%)'), 'wrapper uses a static circular clip');
+assert(css.includes('overflow: hidden'), 'circle wrapper clips with overflow: hidden');
+assert(!css.includes('overflow: clip'), 'circle wrapper does not also set overflow: clip');
+assert(!css.includes('clip-path: circle('), 'wrapper does not use clip-path: circle()');
+assert(!css.includes('scrollbar-gutter'), 'html does not reserve a classic scrollbar gutter');
+assert(css.includes('--ease-reveal:'), 'reveal uses a dedicated ease token');
 assert(css.includes('html.is-theme-revealing::view-transition-group(theme-light)'), 'light group sits under the circle');
 assert(css.includes('z-index: 1'), 'theme-light stays underneath');
 assert(css.includes('z-index: 2'), 'theme-dark circle stays on top');
@@ -167,13 +197,14 @@ assert(
     revealCss.includes('html.is-theme-revealing::view-transition-group(theme-dark)'),
   'theme groups are silenced'
 );
-assert(revealCss.includes('transform: none'), 'theme groups pin transform none');
-assert(
-  /::view-transition-group\(theme-light\),\s*html\.is-theme-revealing::view-transition-group\(theme-dark\) \{[^}]*width: 100%;[^}]*height: 100%;[^}]*transform: none;/s.test(
-    revealCss
-  ),
-  'theme groups are full-size with inset and no morph'
-);
+const groupRules = revealCss.match(/::view-transition-group\(theme-(?:light|dark)\)[^{]*\{[^}]*\}/g) ?? [];
+assert(groupRules.length >= 2, 'theme-light and theme-dark groups have revealing rules');
+for (const rule of groupRules) {
+  assert(!rule.includes('width: 100%'), 'theme groups must not force width: 100%');
+  assert(!rule.includes('height: 100%'), 'theme groups must not force height: 100%');
+  assert(!rule.includes('inset: 0'), 'theme groups must not force inset: 0');
+  assert(!/transform:\s*none/.test(rule), 'theme groups must not pin transform: none');
+}
 assert(
   revealCss.includes('html.is-theme-to-dark::view-transition-image-pair(theme-dark)'),
   'to-dark first paint scales the circle wrapper'
@@ -225,5 +256,52 @@ assert(setThemeBlock.includes('set({ theme })'), 'instant setTheme still commits
 assert(!commitBlock.includes('applyDomTheme'), 'commitTheme does not paint mid-circle');
 assert(!commitBlock.includes('persistTheme'), 'commitTheme does not rewrite uniplan_theme');
 assert(commitBlock.includes('set({ theme })'), 'commitTheme only writes Zustand after the reveal');
+
+assert(SCALE_STEP_RATIO === 1.03, 'per-segment scale ratio is 1.03');
+
+function interpolateScale(frames: { offset: number; scale: number }[], t: number): number {
+  if (t <= frames[0].offset) return frames[0].scale;
+  for (let i = 1; i < frames.length; i++) {
+    if (t <= frames[i].offset) {
+      const from = frames[i - 1];
+      const to = frames[i];
+      const span = to.offset - from.offset;
+      const u = span <= 0 ? 1 : (t - from.offset) / span;
+      return from.scale + (to.scale - from.scale) * u;
+    }
+  }
+  return frames[frames.length - 1].scale;
+}
+
+function assertLadder(label: string, startScale: number, shrink: boolean): void {
+  const ease = unitBezier(0.3, 0.55, 0.3, 1);
+  const frames = geometricScaleLadder(startScale, ease, shrink);
+  assert(frames.length >= 2, `${label}: ladder has endpoints`);
+  assert(frames[0].offset === 0, `${label}: first offset is 0`);
+  assert(frames[frames.length - 1].offset === 1, `${label}: last offset is 1`);
+  for (let i = 1; i < frames.length; i++) {
+    assert(frames[i].offset >= frames[i - 1].offset, `${label}: offsets are monotonic`);
+  }
+
+  const inner = frames.map((frame) => ({ offset: frame.offset, scale: 1 / frame.scale }));
+  let maxError = 0;
+  const samples = [0, 1 / 165, 1 / 60, 1];
+  for (let t = 0; t <= 1 + 1e-12; t += 1e-3) samples.push(t);
+  for (const t of samples) {
+    const product = interpolateScale(frames, t) * interpolateScale(inner, t);
+    const error = Math.abs(product - 1);
+    if (error > maxError) maxError = error;
+  }
+  assert(maxError <= 5e-4, `${label}: max |outer·inner − 1| is ${maxError}, want ≤ 5e-4`);
+}
+
+assertLadder('grow from toggle', 18 / 1550, false);
+assertLadder('shrink from toggle', 18 / 1550, true);
+assertLadder('grow from tiny start', 3.2e-4, false);
+
+const grow = geometricScaleLadder(18 / 1550, unitBezier(0.3, 0.55, 0.3, 1), false);
+const shrink = geometricScaleLadder(18 / 1550, unitBezier(0.3, 0.55, 0.3, 1), true);
+assert(interpolateScale(grow, 1 / 60) < 0.08, 'to-dark first 60 Hz frame stays ≤ ~5–8% of cover');
+assert(interpolateScale(shrink, 1 / 60) > 0.9, 'to-light is ease-out shrink, not a reversed grow ladder');
 
 console.log('themeTransition tests passed');
