@@ -292,6 +292,29 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
             <p className="flex-1">{syncError}</p>
           </div>
         )}
+
+        <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+          <span>Google Calendar Integration</span>
+          <div className="flex gap-2">
+            <a
+              href="/privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Privacy Policy
+            </a>
+            <span>•</span>
+            <a
+              href="/terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Terms
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -60,23 +60,26 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     [activeCourseKeys]
   );
 
-  const findConflictInActivePlan = (catalogItem: Course): Course | null => {
-    if (!activePlan) return null;
-    const activeNonSelfCourses = activePlan.courses.filter(
-      (c) => !sameCourseIdentity(c, catalogItem)
-    );
+  const findConflictInActivePlan = useCallback(
+    (catalogItem: Course): Course | null => {
+      if (!activePlan) return null;
+      const activeNonSelfCourses = activePlan.courses.filter(
+        (c) => !sameCourseIdentity(c, catalogItem)
+      );
 
-    for (const poolSession of catalogItem.sessions) {
-      for (const enrolled of activeNonSelfCourses) {
-        for (const enrSession of enrolled.sessions) {
-          if (checkSessionCollision(poolSession, enrSession)) {
-            return enrolled;
+      for (const poolSession of catalogItem.sessions) {
+        for (const enrolled of activeNonSelfCourses) {
+          for (const enrSession of enrolled.sessions) {
+            if (checkSessionCollision(poolSession, enrSession)) {
+              return enrolled;
+            }
           }
         }
       }
-    }
-    return null;
-  };
+      return null;
+    },
+    [activePlan]
+  );
 
   const filteredCourses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -195,10 +198,28 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     setSearchQuery('');
   };
 
-  const handleConfirmDelete = (id: string) => {
+  const handleConfirmDelete = useCallback((id: string) => {
     removeFromCatalog(id);
     setConfirmDeleteCourseId(null);
-  };
+  }, [removeFromCatalog]);
+
+  const handleCancelDelete = useCallback(() => {
+    setConfirmDeleteCourseId(null);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  const handleAddToPlan = useCallback(
+    (catalogId: string) => addCourseFromPool(catalogId, activePlanId),
+    [addCourseFromPool, activePlanId]
+  );
+
+  const handleRemoveFromPlan = useCallback(
+    (catalogId: string) => removeCourseFromPlanByCatalog(catalogId, activePlanId),
+    [removeCourseFromPlanByCatalog, activePlanId]
+  );
 
   const countBadge = (
     <AnimatePresence initial={false} mode="popLayout">
@@ -238,18 +259,18 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       reduceMotion={reduceMotion}
       onSearchChange={setSearchQuery}
       onSearchKeyDown={handleSearchKeyDown}
-      onClearSearch={() => setSearchQuery('')}
+      onClearSearch={handleClearSearch}
       onFilterMode={setFilterMode}
       onToggleCollapse={onToggleCollapse}
       onOpenNewCourse={openNewCourse}
       onEditCourse={onEditCourse}
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}
-      onCancelDelete={() => setConfirmDeleteCourseId(null)}
+      onCancelDelete={handleCancelDelete}
       isEnrolled={isEnrolledInActivePlan}
       findConflict={findConflictInActivePlan}
-      onAddToPlan={(catalogId) => addCourseFromPool(catalogId, activePlanId)}
-      onRemoveFromPlan={(catalogId) => removeCourseFromPlanByCatalog(catalogId, activePlanId)}
+      onAddToPlan={handleAddToPlan}
+      onRemoveFromPlan={handleRemoveFromPlan}
     />
   );
 

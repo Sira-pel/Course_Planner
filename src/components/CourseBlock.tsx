@@ -12,7 +12,7 @@ interface CourseBlockProps {
   onDelete: (courseId: string) => void;
 }
 
-export const CourseBlock: React.FC<CourseBlockProps> = ({
+const CourseBlockComponent: React.FC<CourseBlockProps> = ({
   layout,
   startHour,
   totalMinutes,
@@ -187,3 +187,5 @@ export const CourseBlock: React.FC<CourseBlockProps> = ({
     </div>
   );
 };
+
+export const CourseBlock = React.memo(CourseBlockComponent);

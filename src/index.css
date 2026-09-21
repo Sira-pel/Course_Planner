@@ -36,7 +36,7 @@
 html {
   height: 100%;
   color-scheme: light;
-  scrollbar-gutter: stable;
+  background-color: #f1f5f9;
 }
 
 html,
@@ -55,6 +55,7 @@ body,
 
 html.dark {
   color-scheme: dark;
+  background-color: #020617;
   --up-raised: #121826;
   --up-ink: #e8edf4;
   --up-muted: #8b959e;
@@ -1593,38 +1594,30 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: circular clip from the toggle. Default VT fade is disabled. */
-html.is-theme-revealing::view-transition-image-pair(root) {
-  isolation: auto;
-}
-
-html.is-theme-revealing::view-transition-old(root),
-html.is-theme-revealing::view-transition-new(root) {
+/* Theme reveal: circular clip from the toggle. Default VT fade disabled for smooth radial reveal. */
+::view-transition-old(root),
+::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
-  isolation: isolate;
-  display: block;
 }
 
-html.is-theme-to-dark::view-transition-old(root) {
+::view-transition-old(root) {
   z-index: 1;
 }
 
-html.is-theme-to-dark::view-transition-new(root) {
-  z-index: 2;
+::view-transition-new(root) {
+  z-index: 9999;
 }
 
-html.is-theme-to-light::view-transition-old(root) {
-  z-index: 2;
+/* Prevent flash: initial clip is 0px at origin before animation expands */
+html.is-theme-revealing::view-transition-new(root) {
+  clip-path: circle(0px at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%));
 }
 
-html.is-theme-to-light::view-transition-new(root) {
-  z-index: 1;
-}
-
-html.is-theme-revealing,
-html.is-theme-revealing * {
-  transition-duration: 0s !important;
+html.is-theme-revealing .up-theme-glyph,
+html.is-theme-revealing .up-theme-sun,
+html.is-theme-revealing .up-theme-moon {
+  transition: none !important;
 }
 
 .up-theme-glyph {
@@ -1649,21 +1642,19 @@ html.is-theme-revealing * {
 .up-theme-glyph[data-mode='light'] .up-theme-sun,
 .up-theme-glyph[data-mode='dark'] .up-theme-moon {
   opacity: 1;
-  filter: blur(0);
-  transform: scale(1);
+  transform: scale(1) rotate(0deg);
 }
 
 .up-theme-glyph[data-mode='light'] .up-theme-moon,
 .up-theme-glyph[data-mode='dark'] .up-theme-sun {
   opacity: 0;
-  filter: blur(var(--blur-ink));
-  transform: scale(0.25);
+  transform: scale(0.35) rotate(-45deg);
   pointer-events: none;
 }
 
 html:not(.is-theme-revealing) .up-theme-sun,
 html:not(.is-theme-revealing) .up-theme-moon {
-  transition-property: opacity, filter, transform;
+  transition-property: opacity, transform;
   transition-duration: var(--dur-open);
   transition-timing-function: var(--ease-in-out);
 }

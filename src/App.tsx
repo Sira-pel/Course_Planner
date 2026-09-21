@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/Header';
@@ -16,14 +16,12 @@ import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
 import { DayOfWeek } from './types/schedule';
-import { applyDomTheme } from './utils/theme';
 
 export default function App() {
   const {
     plans,
     activePlanId,
     catalogCourses,
-    theme,
     setActivePlan,
     duplicatePlan,
     undo,
@@ -54,10 +52,6 @@ export default function App() {
   const handleCloseExport = useCallback(() => setIsExportOpen(false), []);
   const handleCloseShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
-
-  useEffect(() => {
-    applyDomTheme(theme);
-  }, [theme]);
 
   // Handler for opening new course modal
   const handleOpenNewCourse = useCallback(
@@ -112,6 +106,28 @@ export default function App() {
     resetToSample();
   }, [resetToSample]);
 
+  const handleTogglePool = useCallback(() => {
+    setIsPoolCollapsed((prev) => !prev);
+  }, []);
+
+  const handleOpenCatalog = useCallback(() => {
+    setIsPoolCollapsed(false);
+  }, []);
+
+  const handleOpenNewCourseFromHeader = useCallback(
+    (mode?: 'form' | 'quick') => handleOpenNewCourse('monday', '09:00', mode || 'form'),
+    [handleOpenNewCourse]
+  );
+
+  const handleAddCourseAtTime = useCallback(
+    (day: DayOfWeek, time: string) => handleOpenNewCourse(day, time, 'form'),
+    [handleOpenNewCourse]
+  );
+
+  const handleAddCourseDefault = useCallback(() => {
+    handleOpenNewCourse('monday', '09:00', 'form');
+  }, [handleOpenNewCourse]);
+
   useAppShortcuts({
     plans,
     activePlanId,
@@ -138,10 +154,10 @@ export default function App() {
       <main className="up-workspace flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
-          onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+          onOpenNewCourse={handleOpenNewCourseFromHeader}
           onOpenExport={handleOpenExport}
           onOpenShortcuts={handleOpenShortcuts}
-          onOpenCatalog={() => setIsPoolCollapsed(false)}
+          onOpenCatalog={handleOpenCatalog}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -150,16 +166,16 @@ export default function App() {
           <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
-              onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
-              onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+              onAddCourseAtTime={handleAddCourseAtTime}
+              onOpenNewCourse={handleOpenNewCourseFromHeader}
             />
           </div>
 
           {/* Course Pool Sidebar on the right (bottom on mobile, drawer on tablet) */}
           <CoursePoolSidebar
             isCollapsed={isPoolCollapsed}
-            onToggleCollapse={() => setIsPoolCollapsed((prev) => !prev)}
-            onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+            onToggleCollapse={handleTogglePool}
+            onOpenNewCourse={handleOpenNewCourseFromHeader}
             onEditCourse={handleEditCourse}
           />
         </div>
@@ -171,8 +187,8 @@ export default function App() {
         catalogCount={catalogCourses.length}
         reduceMotion={reduceMotion}
         onToggleMore={handleToggleMore}
-        onTogglePool={() => setIsPoolCollapsed((prev) => !prev)}
-        onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
+        onTogglePool={handleTogglePool}
+        onAddCourse={handleAddCourseDefault}
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
         onRequestClear={handleRequestClear}
@@ -184,7 +200,7 @@ export default function App() {
       {/* Modal Dialogs */}
       <CourseModal
         isOpen={isCourseModalOpen}
-        onClose={() => setIsCourseModalOpen(false)}
+        onClose={handleCloseCourseModal}
         editingCourseId={editingCourseId}
         initialDay={modalInitialDay}
         initialStartTime={modalInitialStartTime}
@@ -193,12 +209,12 @@ export default function App() {
 
       <ExportModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
+        onClose={handleCloseExport}
       />
 
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
-        onClose={() => setIsShortcutsOpen(false)}
+        onClose={handleCloseShortcuts}
       />
     </div>
   );

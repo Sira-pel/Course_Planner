@@ -207,7 +207,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   // closeSettings stays false for #btn-theme and Settings Light/Dark so the sheet stays open.
   const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
-    const goingToDark = theme !== 'dark';
+    const currentTheme = useScheduleStore.getState().theme;
+    const goingToDark = currentTheme !== 'dark';
     const apply = () => {
       flushSync(() => {
         if (closeSettings) setIsSettingsOpen(false);
