@@ -80,7 +80,8 @@ assert(transitionSrc.includes('easeInverse'), 'keyframe times are the inverse of
 assert(transitionSrc.includes('EASE_INVERSE_ITERS'), 'ease inverse uses a fixed bisection budget');
 assert(!transitionSrc.includes('KEYFRAME_COUNT'), 'uniform-time inverse scales are gone');
 assert(transitionSrc.includes("readEase('--ease-reveal')"), 'reveal easing comes from --ease-reveal');
-assert(transitionSrc.includes('Math.max(MIN_START_RADIUS_PX, startRadiusPx) / radius'), 'circle starts from the toggle radius');
+assert(transitionSrc.includes('Math.max(MIN_START_RADIUS_PX, startRadiusPx)'), 'circle starts from the toggle radius');
+assert(transitionSrc.includes('start / radius'), 'start scale is the toggle radius over the cover radius');
 assert(transitionSrc.includes('Math.max(box.width, box.height) / 2'), 'start radius is half the toggle’s larger side');
 assert(transitionSrc.includes('document.body'), 'origin and radius are measured from body');
 assert(transitionSrc.includes('visualViewport'), 'radius uses visualViewport as a max() cover guard');
@@ -90,6 +91,11 @@ assert(transitionSrc.includes('--up-reveal-r'), 'circle radius is published as a
 assert(transitionSrc.includes('--up-reveal-w'), 'snapshot width is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-h'), 'snapshot height is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-s0'), 'start scale is published as a CSS var');
+assert(transitionSrc.includes('--up-reveal-start'), 'Gecko clip starts at the toggle radius');
+assert(transitionSrc.includes('--up-reveal-clip'), 'Gecko animates a clip length, not the snapshot scale');
+assert(transitionSrc.includes('is-gecko-reveal'), 'Gecko opts out of inverse scale');
+assert(transitionSrc.includes('isGeckoEngine'), 'Gecko uses its own reveal path');
+assert(transitionSrc.includes('devicePixelRatio'), 'reveal geometry snaps to device pixels');
 assert(transitionSrc.includes('--dur-scene'), 'to-dark uses scene duration');
 assert(transitionSrc.includes('--dur-emphasis'), 'to-light uses emphasis duration');
 assert(transitionSrc.includes('skipTransition'), 'in-flight toggle jumps to finished');
@@ -172,13 +178,19 @@ assert(css.includes('html.is-theme-revealing::view-transition-image-pair(theme-d
 assert(css.includes('border-radius: 50%'), 'circle wrapper uses a round clip');
 assert(css.includes('overflow: hidden'), 'circle wrapper clips with overflow: hidden');
 assert(!css.includes('overflow: clip'), 'circle wrapper does not also set overflow: clip');
-assert(css.includes('clip-path: circle(50%)'), 'Firefox first frame is a static circle on the snapshot pair');
+assert(css.includes('clip-path: circle(50%)'), 'Chromium circle is a static clip on the scaled pair');
+assert(
+  css.includes('clip-path: circle(var(--up-reveal-clip) at 50% 50%)'),
+  'Gecko grows a circle clip without scaling the snapshot'
+);
+assert(css.includes('html.is-gecko-reveal.is-theme-revealing::view-transition-new(theme-dark)'), 'Gecko snapshot stays at 1:1');
+assert(css.includes('object-position: 0 0'), 'snapshot pixels anchor at the top left');
 assert(!css.includes('scrollbar-gutter'), 'html does not reserve a classic scrollbar gutter');
 assert(css.includes('--ease-reveal:'), 'reveal uses a dedicated ease token');
 assert(css.includes('html.is-theme-revealing::view-transition-group(theme-light)'), 'light group sits under the circle');
 assert(css.includes('z-index: 1'), 'theme-light stays underneath');
 assert(css.includes('z-index: 2'), 'theme-dark circle stays on top');
-assert(!css.includes('clip-path: circle(var'), 'page CSS does not animate clip-path radius');
+assert(!css.includes('clip-path: circle(var(--up-reveal-r'), 'cover radius is not the animated clip');
 
 const revealCssStart = css.indexOf('/* Theme reveal:');
 const revealCssEnd = css.indexOf('@media (prefers-reduced-motion: reduce)');

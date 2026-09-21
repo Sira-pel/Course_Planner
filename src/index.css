@@ -1555,7 +1555,13 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: named body snapshots, compositor circle via rounded-clip + scale. */
+@property --up-reveal-clip {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* Theme reveal: named body snapshots. Chromium scales a circle; Gecko clips one. */
 html.is-theme-revealing {
   view-transition-name: none;
 }
@@ -1621,6 +1627,8 @@ html.is-theme-revealing::view-transition-new(theme-dark) {
   top: calc(var(--up-reveal-r) - var(--up-reveal-y));
   width: var(--up-reveal-w);
   height: var(--up-reveal-h);
+  object-fit: fill;
+  object-position: 0 0;
   transform-origin: var(--up-reveal-x) var(--up-reveal-y);
   will-change: transform;
   animation: none !important;
@@ -1637,6 +1645,27 @@ html.is-theme-to-dark::view-transition-new(theme-dark) {
 
 html.is-theme-to-light::view-transition-image-pair(theme-dark) {
   transform: scale(1);
+}
+
+/* Gecko: keep the snapshot at 1:1 and grow the clip. Inverse scale slides borders on phone DPRs. */
+html.is-gecko-reveal.is-theme-to-dark {
+  --up-reveal-clip: var(--up-reveal-start);
+}
+
+html.is-gecko-reveal.is-theme-to-light {
+  --up-reveal-clip: var(--up-reveal-r);
+}
+
+html.is-gecko-reveal.is-theme-revealing::view-transition-image-pair(theme-dark) {
+  transform: none;
+  will-change: clip-path;
+  clip-path: circle(var(--up-reveal-clip) at 50% 50%);
+}
+
+html.is-gecko-reveal.is-theme-revealing::view-transition-old(theme-dark),
+html.is-gecko-reveal.is-theme-revealing::view-transition-new(theme-dark) {
+  transform: none;
+  will-change: auto;
 }
 
 html.is-theme-revealing .up-chrome-btn,

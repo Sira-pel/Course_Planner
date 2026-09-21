@@ -220,13 +220,31 @@ function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
   return FALLBACK_START_RADIUS_PX;
 }
 
+function devicePx(value: number): number {
+  const dpr = window.devicePixelRatio || 1;
+  if (!Number.isFinite(value) || !Number.isFinite(dpr) || dpr <= 0) return value;
+  return Math.round(value * dpr) / dpr;
+}
+
+function devicePxCeil(value: number): number {
+  const dpr = window.devicePixelRatio || 1;
+  if (!Number.isFinite(value) || !Number.isFinite(dpr) || dpr <= 0) return value;
+  return Math.ceil(value * dpr - 1e-6) / dpr;
+}
+
+/** Gecko slides 1px borders when the snapshot is scaled and inverse-scaled. Clip instead. */
+function isGeckoEngine(): boolean {
+  return typeof navigator !== 'undefined' && /Gecko\//.test(navigator.userAgent);
+}
+
 function setRevealGeometry(
   x: number,
   y: number,
   radius: number,
   width: number,
   height: number,
-  startScale: number
+  startScale: number,
+  startRadiusPx: number
 ): void {
   const root = document.documentElement;
   root.style.setProperty('--up-reveal-x', `${x}px`);
@@ -235,6 +253,7 @@ function setRevealGeometry(
   root.style.setProperty('--up-reveal-w', `${width}px`);
   root.style.setProperty('--up-reveal-h', `${height}px`);
   root.style.setProperty('--up-reveal-s0', String(startScale));
+  root.style.setProperty('--up-reveal-start', `${startRadiusPx}px`);
 }
 
 function clearRevealGeometry(): void {
@@ -245,28 +264,43 @@ function clearRevealGeometry(): void {
   root.style.removeProperty('--up-reveal-w');
   root.style.removeProperty('--up-reveal-h');
   root.style.removeProperty('--up-reveal-s0');
+  root.style.removeProperty('--up-reveal-start');
+  root.style.removeProperty('--up-reveal-clip');
 }
 
 function publishRevealGeometry(event: ThemeRevealOptions['event'], startRadiusPx: number): number {
   const bodyRect = document.body.getBoundingClientRect();
   const origin = originRelativeTo(document.body, event);
   const viewport = viewMetrics();
-  const coverWidth = Math.max(bodyRect.width, viewport.width);
-  const coverHeight = Math.max(bodyRect.height, viewport.height);
-  const radius = Math.max(
-    1,
-    farthestCornerRadius(origin.x, origin.y, coverWidth, coverHeight)
+  const x = devicePx(origin.x);
+  const y = devicePx(origin.y);
+  const width = devicePx(bodyRect.width);
+  const height = devicePx(bodyRect.height);
+  const radius = devicePxCeil(
+    Math.max(1, farthestCornerRadius(x, y, Math.max(width, viewport.width), Math.max(height, viewport.height)))
   );
-  const startScale = Math.min(1, Math.max(MIN_START_RADIUS_PX, startRadiusPx) / radius);
-  setRevealGeometry(origin.x, origin.y, radius, bodyRect.width, bodyRect.height, startScale);
+  const start = devicePx(Math.max(MIN_START_RADIUS_PX, startRadiusPx));
+  const startScale = Math.min(1, start / radius);
+  setRevealGeometry(x, y, radius, width, height, startScale, start);
   return startScale;
+}
+
+function syncDarkSnapshotSize(): void {
+  const group = getComputedStyle(document.documentElement, '::view-transition-group(theme-dark)');
+  const width = parseFloat(group.width);
+  const height = parseFloat(group.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+  const root = document.documentElement;
+  root.style.setProperty('--up-reveal-w', `${devicePx(width)}px`);
+  root.style.setProperty('--up-reveal-h', `${devicePx(height)}px`);
 }
 
 function clearRevealClasses(): void {
   document.documentElement.classList.remove(
     'is-theme-revealing',
     'is-theme-to-dark',
-    'is-theme-to-light'
+    'is-theme-to-light',
+    'is-gecko-reveal'
   );
 }
 
@@ -328,6 +362,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   const root = document.documentElement;
   const startRadiusPx = startRadiusPxFromEvent(event);
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
+  if (isGeckoEngine()) root.classList.add('is-gecko-reveal');
   publishRevealGeometry(event, startRadiusPx);
 
   let applied = false;
@@ -391,6 +426,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
         .then(() => {
           if (released) return;
           const startScale = publishRevealGeometry(event, startRadiusPx);
+          syncDarkSnapshotSize();
           if (!groupSizeWarned) {
             const groupWidth = parseFloat(
               getComputedStyle(root, '::view-transition-group(theme-dark)').width
@@ -407,11 +443,34 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
             }
           }
 
-          const ease = unitBezier(...parseCubicBezier(readEase('--ease-reveal')));
-          const { outer, inner } = bakeScaleKeyframes(startScale, ease, !goingToDark);
           const duration = goingToDark
             ? readDurationMs('--dur-scene', 620)
             : readDurationMs('--dur-emphasis', 500);
+          const easeCss = readEase('--ease-reveal');
+          if (root.classList.contains('is-gecko-reveal')) {
+            const full = parseFloat(root.style.getPropertyValue('--up-reveal-r'));
+            const start = parseFloat(root.style.getPropertyValue('--up-reveal-start'));
+            const from = goingToDark ? start : full;
+            const to = goingToDark ? full : start;
+            const clipAnimation = root.animate(
+              [
+                { '--up-reveal-clip': `${from}px` },
+                { '--up-reveal-clip': `${to}px` },
+              ],
+              {
+                duration,
+                easing: easeCss,
+                fill: 'both',
+                pseudoElement: '::view-transition-image-pair(theme-dark)',
+              }
+            );
+            animations.push(clipAnimation);
+            extendTransition(transition, clipAnimation.finished.catch(() => undefined));
+            return;
+          }
+
+          const ease = unitBezier(...parseCubicBezier(easeCss));
+          const { outer, inner } = bakeScaleKeyframes(startScale, ease, !goingToDark);
           const timing: KeyframeAnimationOptions = {
             duration,
             easing: 'linear',
