@@ -172,7 +172,7 @@ assert(css.includes('html.is-theme-revealing::view-transition-image-pair(theme-d
 assert(css.includes('border-radius: 50%'), 'circle wrapper uses a round clip');
 assert(css.includes('overflow: hidden'), 'circle wrapper clips with overflow: hidden');
 assert(!css.includes('overflow: clip'), 'circle wrapper does not also set overflow: clip');
-assert(!css.includes('clip-path: circle('), 'wrapper does not use clip-path: circle()');
+assert(css.includes('clip-path: circle(50%)'), 'Firefox first frame is a static circle on the snapshot pair');
 assert(!css.includes('scrollbar-gutter'), 'html does not reserve a classic scrollbar gutter');
 assert(css.includes('--ease-reveal:'), 'reveal uses a dedicated ease token');
 assert(css.includes('html.is-theme-revealing::view-transition-group(theme-light)'), 'light group sits under the circle');

@@ -1604,6 +1604,8 @@ html.is-theme-revealing::view-transition-image-pair(theme-dark) {
   height: calc(2 * var(--up-reveal-r));
   border-radius: 50%;
   overflow: hidden;
+  /* Static clip. Firefox paints the snapshot full-size until this is in the first frame. Do not animate it. */
+  clip-path: circle(50%);
   transform-origin: 50% 50%;
   isolation: isolate;
   will-change: transform;
