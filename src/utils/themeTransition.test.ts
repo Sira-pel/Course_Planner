@@ -180,8 +180,8 @@ assert(css.includes('overflow: hidden'), 'circle wrapper clips with overflow: hi
 assert(!css.includes('overflow: clip'), 'circle wrapper does not also set overflow: clip');
 assert(css.includes('clip-path: circle(50%)'), 'Chromium circle is a static clip on the scaled pair');
 assert(
-  css.includes('clip-path: circle(var(--up-reveal-clip) at 50% 50%)'),
-  'Gecko grows a circle clip without scaling the snapshot'
+  css.includes('clip-path: circle(var(--up-reveal-clip) at var(--up-reveal-x) var(--up-reveal-y))'),
+  'Gecko clips in the snapshot box so phone pixels stay put'
 );
 assert(css.includes('html.is-gecko-reveal.is-theme-revealing::view-transition-new(theme-dark)'), 'Gecko snapshot stays at 1:1');
 assert(css.includes('object-position: 0 0'), 'snapshot pixels anchor at the top left');

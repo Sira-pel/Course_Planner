@@ -1657,15 +1657,34 @@ html.is-gecko-reveal.is-theme-to-light {
 }
 
 html.is-gecko-reveal.is-theme-revealing::view-transition-image-pair(theme-dark) {
+  /* Stay in the snapshot's own box. A repositioned pair rounds 1px off on phone viewports. */
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  overflow: visible;
   transform: none;
   will-change: clip-path;
-  clip-path: circle(var(--up-reveal-clip) at 50% 50%);
+  clip-path: circle(var(--up-reveal-clip) at var(--up-reveal-x) var(--up-reveal-y));
 }
 
 html.is-gecko-reveal.is-theme-revealing::view-transition-old(theme-dark),
 html.is-gecko-reveal.is-theme-revealing::view-transition-new(theme-dark) {
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   transform: none;
   will-change: auto;
+  object-fit: fill;
+  object-position: 0 0;
 }
 
 html.is-theme-revealing .up-chrome-btn,
