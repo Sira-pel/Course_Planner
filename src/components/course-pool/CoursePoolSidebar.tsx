@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { Course } from '../../types/schedule';
 import { checkSessionCollision } from '../../utils/timeUtils';
@@ -30,7 +31,16 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     removeFromCatalog,
     addCourseFromPool,
     removeCourseFromPlanByCatalog,
-  } = useScheduleStore();
+  } = useScheduleStore(
+    useShallow((state) => ({
+      plans: state.plans,
+      activePlanId: state.activePlanId,
+      catalogCourses: state.catalogCourses,
+      removeFromCatalog: state.removeFromCatalog,
+      addCourseFromPool: state.addCourseFromPool,
+      removeCourseFromPlanByCatalog: state.removeCourseFromPlanByCatalog,
+    }))
+  );
 
   const reduceMotion = useReducedMotion();
   const layout = usePoolLayout();

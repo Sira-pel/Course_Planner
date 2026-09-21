@@ -19,18 +19,15 @@ import { DayOfWeek } from './types/schedule';
 import { applyDomTheme } from './utils/theme';
 
 export default function App() {
-  const {
-    plans,
-    activePlanId,
-    catalogCourses,
-    theme,
-    setActivePlan,
-    duplicatePlan,
-    undo,
-    redo,
-    resetToBlank,
-    resetToSample,
-  } = useScheduleStore();
+  const plans = useScheduleStore((state) => state.plans);
+  const activePlanId = useScheduleStore((state) => state.activePlanId);
+  const catalogCount = useScheduleStore((state) => state.catalogCourses.length);
+  const setActivePlan = useScheduleStore((state) => state.setActivePlan);
+  const duplicatePlan = useScheduleStore((state) => state.duplicatePlan);
+  const undo = useScheduleStore((state) => state.undo);
+  const redo = useScheduleStore((state) => state.redo);
+  const resetToBlank = useScheduleStore((state) => state.resetToBlank);
+  const resetToSample = useScheduleStore((state) => state.resetToSample);
 
   // Modals & Sidebar state
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -56,8 +53,11 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    applyDomTheme(theme);
-  }, [theme]);
+    applyDomTheme(useScheduleStore.getState().theme);
+    return useScheduleStore.subscribe((state, previous) => {
+      if (state.theme !== previous.theme) applyDomTheme(state.theme);
+    });
+  }, []);
 
   // Handler for opening new course modal
   const handleOpenNewCourse = useCallback(
@@ -71,6 +71,14 @@ export default function App() {
     },
     []
   );
+
+  const handleAddCourseAtTime = useCallback((day: DayOfWeek, time: string) => {
+    handleOpenNewCourse(day, time, 'form');
+  }, [handleOpenNewCourse]);
+
+  const handleOpenCalendarCourse = useCallback((mode?: 'form' | 'quick') => {
+    handleOpenNewCourse('monday', '09:00', mode ?? 'form');
+  }, [handleOpenNewCourse]);
 
   // Handler for editing an existing course
   const handleEditCourse = useCallback((courseId: string) => {
@@ -150,8 +158,8 @@ export default function App() {
           <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 relative overflow-x-auto">
             <CalendarGrid
               onEditCourse={handleEditCourse}
-              onAddCourseAtTime={(day, time) => handleOpenNewCourse(day, time, 'form')}
-              onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+              onAddCourseAtTime={handleAddCourseAtTime}
+              onOpenNewCourse={handleOpenCalendarCourse}
             />
           </div>
 
@@ -168,7 +176,7 @@ export default function App() {
       <MobileDock
         isMoreOpen={isMoreOpen}
         isConfirmingClear={isConfirmingClear}
-        catalogCount={catalogCourses.length}
+        catalogCount={catalogCount}
         reduceMotion={reduceMotion}
         onToggleMore={handleToggleMore}
         onTogglePool={() => setIsPoolCollapsed((prev) => !prev)}
@@ -184,7 +192,7 @@ export default function App() {
       {/* Modal Dialogs */}
       <CourseModal
         isOpen={isCourseModalOpen}
-        onClose={() => setIsCourseModalOpen(false)}
+        onClose={handleCloseCourseModal}
         editingCourseId={editingCourseId}
         initialDay={modalInitialDay}
         initialStartTime={modalInitialStartTime}
@@ -193,12 +201,12 @@ export default function App() {
 
       <ExportModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
+        onClose={handleCloseExport}
       />
 
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
-        onClose={() => setIsShortcutsOpen(false)}
+        onClose={handleCloseShortcuts}
       />
     </div>
   );

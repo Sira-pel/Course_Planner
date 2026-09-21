@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../../types/schedule';
+import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
@@ -58,7 +59,20 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     deleteCourse,
     removeFromCatalog,
     getNextColor,
-  } = useScheduleStore();
+  } = useScheduleStore(
+    useShallow((state) => ({
+      plans: state.plans,
+      activePlanId: state.activePlanId,
+      catalogCourses: state.catalogCourses,
+      addCourse: state.addCourse,
+      bulkAddCourses: state.bulkAddCourses,
+      updateCourse: state.updateCourse,
+      updateCatalogCourse: state.updateCatalogCourse,
+      deleteCourse: state.deleteCourse,
+      removeFromCatalog: state.removeFromCatalog,
+      getNextColor: state.getNextColor,
+    }))
+  );
 
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 

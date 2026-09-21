@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { Course } from '../../types/schedule';
@@ -25,6 +26,11 @@ interface ExportModalProps {
 type TabType = 'text' | 'ics' | 'image' | 'backup';
 
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return <ExportModalBody onClose={onClose} />;
+};
+
+const ExportModalBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const {
     plans,
     activePlanId,
@@ -37,7 +43,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
     semesterEnd,
     setSemesterDates,
     importFullState,
-  } = useScheduleStore();
+  } = useScheduleStore(
+    useShallow((state) => ({
+      plans: state.plans,
+      activePlanId: state.activePlanId,
+      catalogCourses: state.catalogCourses,
+      showWeekends: state.showWeekends,
+      startHour: state.startHour,
+      endHour: state.endHour,
+      theme: state.theme,
+      semesterStart: state.semesterStart,
+      semesterEnd: state.semesterEnd,
+      setSemesterDates: state.setSemesterDates,
+      importFullState: state.importFullState,
+    }))
+  );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
   const [activeTab, setActiveTab] = useState<TabType>('text');
@@ -61,8 +81,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
     if (!activePlan) return '';
     return generateScheduleText(activePlan, textFormat);
   }, [activePlan, textFormat]);
-
-  if (!isOpen) return null;
 
   const handleCopyText = async () => {
     try {
