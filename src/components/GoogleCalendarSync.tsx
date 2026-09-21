@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { AlertCircle, Calendar, CheckCircle2, RefreshCw, X } from 'lucide-react';
 import { SchedulePlan } from '../types/schedule';
 import { getAccessToken, googleSignIn, initAuth, logout, mapFirebaseAuthError } from '../utils/auth';
@@ -296,3 +296,5 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
     </div>
   );
 };
+
+export default GoogleCalendarSync;
