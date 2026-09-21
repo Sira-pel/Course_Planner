@@ -60,6 +60,11 @@ assert(formatDaysShort(tthGrouped[0].days) === 'TTh', 'formatDaysShort TTh');
 
 const expanded = patternsToSessions(grouped);
 assert(sameSessions(expanded, mwfSessions), 'round-trip: patternsToSessions preserves day/time/room');
+const emptyA = sessionsToPatterns([]);
+const emptyB = sessionsToPatterns([]);
+assert(emptyA.length === 1 && emptyB.length === 1, 'empty sessions still yield one fallback pattern');
+assert(emptyA[0].id !== emptyB[0].id, 'empty fallback pattern ids are unique');
+
 const regrouped = sessionsToPatterns(expanded);
 assert(regrouped.length === 1, 'round-trip: still one group');
 assert(daysEqual(regrouped[0].days, MWF), 'round-trip: days remain MWF');

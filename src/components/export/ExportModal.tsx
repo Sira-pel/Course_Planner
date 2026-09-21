@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { Course } from '../../types/schedule';
 import { generateScheduleText, TextExportFormat } from '../../utils/textExport';
@@ -24,8 +25,19 @@ interface ExportModalProps {
 type TabType = 'text' | 'ics' | 'image' | 'backup';
 
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
-  const { plans, activePlanId, catalogCourses, showWeekends, startHour, endHour, theme, importFullState } =
-    useScheduleStore();
+  const {
+    plans,
+    activePlanId,
+    catalogCourses,
+    showWeekends,
+    startHour,
+    endHour,
+    theme,
+    semesterStart,
+    semesterEnd,
+    setSemesterDates,
+    importFullState,
+  } = useScheduleStore();
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
 
   const [activeTab, setActiveTab] = useState<TabType>('text');
@@ -33,10 +45,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   // Text Export State
   const [textFormat, setTextFormat] = useState<TextExportFormat>('standard');
   const [copiedText, setCopiedText] = useState(false);
-
-  // ICS Export State
-  const [semesterStart, setSemesterStart] = useState('2026-09-01');
-  const [semesterEnd, setSemesterEnd] = useState('2026-12-18');
 
   // Image Export State
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -102,11 +110,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
 
   const handleDownloadBackup = () => {
     const backupData = {
-      version: 1,
+      version: PERSIST_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       activePlanId,
       plans,
       catalogCourses,
+      showWeekends,
+      startHour,
+      endHour,
+      theme,
+      semesterStart,
+      semesterEnd,
     };
     const jsonStr = JSON.stringify(backupData, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -251,8 +265,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               activePlan={activePlan}
               semesterStart={semesterStart}
               semesterEnd={semesterEnd}
-              onSemesterStart={setSemesterStart}
-              onSemesterEnd={setSemesterEnd}
+              onSemesterStart={(start) => setSemesterDates(start, semesterEnd)}
+              onSemesterEnd={(end) => setSemesterDates(semesterStart, end)}
               onDownloadIcs={handleDownloadIcs}
               onDownloadCourseIcs={handleDownloadCourseIcs}
             />

@@ -29,4 +29,14 @@ assert(catalog.length === 1, 'valid catalog row is kept');
 assert(catalog[0].code === 'CS 101', 'catalog code is trimmed/uppercased');
 assert(catalog[0].credits === 30, 'credits clamp at 30');
 
+const emptySessions = sanitizeCatalog([{ id: 'c_empty', code: 'CS101', name: 'Intro', sessions: [] }]);
+assert(emptySessions.length === 1, 'course with empty sessions is kept');
+assert(emptySessions[0].sessions.length === 0, 'empty sessions stay empty');
+
+const missingSessions = sanitizeCatalog([{ id: 'c_none', code: 'CS102', name: 'Intro 2' }]);
+assert(missingSessions[0].sessions.length === 0, 'missing sessions stay empty');
+
+const invalidOnly = sanitizeCatalog([{ id: 'c_bad', code: 'CS103', name: 'Intro 3', sessions: [null, 'bad'] }]);
+assert(invalidOnly[0].sessions.length === 0, 'all-invalid sessions stay empty rather than inventing a meeting');
+
 console.log('sanitize tests passed');

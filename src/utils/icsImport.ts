@@ -1,4 +1,5 @@
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { prefixedId } from './id';
 
 const dayMap: Record<string, DayOfWeek> = {
   'MO': 'monday',
@@ -10,36 +11,173 @@ const dayMap: Record<string, DayOfWeek> = {
   'SU': 'sunday',
 };
 
-function parseIcsTime(dateStr: string, defaultTime: string = '09:00'): string {
+function pad2(n: number): string {
+  return n.toString().padStart(2, '0');
+}
+
+function unescapeIcsText(value: string): string {
+  return value
+    .replace(/\\n/gi, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
+}
+
+function parseTzid(params: string): string | undefined {
+  const match = params.match(/TZID="?([^";]+)"?/i);
+  return match ? match[1].trim() : undefined;
+}
+
+function timeZoneOffsetMs(utcMs: number, timeZone: string): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'longOffset',
+      hour: 'numeric',
+    }).formatToParts(new Date(utcMs));
+    const name = parts.find((part) => part.type === 'timeZoneName')?.value ?? '';
+    if (/^(GMT|UTC)$/i.test(name)) return 0;
+    const match = name.match(/(?:GMT|UTC)([+-])(\d{1,2})(?::(\d{2}))?/i);
+    if (!match) return null;
+    const sign = match[1] === '-' ? -1 : 1;
+    const hours = Number(match[2]);
+    const minutes = Number(match[3] || '0');
+    return sign * (hours * 60 + minutes) * 60 * 1000;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert a wall-clock time in `timeZone` to the viewer's local HH:mm.
+ * Unknown/unsupported TZIDs return null so callers can fall back to floating local time.
+ */
+function zonedWallClockToLocal(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hours: number,
+  mins: number,
+  secs: number,
+  timeZone: string
+): { hm: string; local: Date } | null {
+  const wallAsUtc = Date.UTC(year, monthIndex, day, hours, mins, secs);
+  const firstOffset = timeZoneOffsetMs(wallAsUtc, timeZone);
+  if (firstOffset === null) return null;
+  let utcMs = wallAsUtc - firstOffset;
+  const secondOffset = timeZoneOffsetMs(utcMs, timeZone);
+  if (secondOffset === null) return null;
+  utcMs = wallAsUtc - secondOffset;
+  const local = new Date(utcMs);
+  return { hm: `${pad2(local.getHours())}:${pad2(local.getMinutes())}`, local };
+}
+
+/**
+ * ICS clock rules:
+ * - `Z` / TZID=UTC: convert UTC to the viewer's local clock.
+ * - other TZID: convert that zone's wall clock to local via Intl. If the zone is
+ *   unknown, fall back to the written HH:mm as floating local time (schedule grid
+ *   is weekly wall-clock, not a full TZ database).
+ * - no TZID and no Z: RFC 5545 floating local time, used as-is.
+ */
+function parseIcsTime(
+  dateStr: string,
+  defaultTime: string = '09:00',
+  tzid?: string
+): string {
   if (!dateStr || typeof dateStr !== 'string') return defaultTime;
   const cleanStr = dateStr.trim();
   const tIndex = cleanStr.indexOf('T');
   if (tIndex === -1) {
-    // All-day event or date-only value (e.g. 20260901)
     return defaultTime;
   }
 
-  const isUTC = cleanStr.endsWith('Z');
-  const timePart = cleanStr.substring(tIndex + 1).replace('Z', '');
+  const isUTC = cleanStr.endsWith('Z') || (tzid !== undefined && /^(UTC|Etc\/UTC|Etc\/GMT)$/i.test(tzid));
+  const timePart = cleanStr.substring(tIndex + 1).replace(/Z$/i, '');
   if (timePart.length < 4) return defaultTime;
 
   const hours = parseInt(timePart.substring(0, 2), 10);
   const mins = parseInt(timePart.substring(2, 4), 10);
   const secs = timePart.length >= 6 ? parseInt(timePart.substring(4, 6), 10) : 0;
-
   if (isNaN(hours) || isNaN(mins)) return defaultTime;
 
+  const year = parseInt(cleanStr.substring(0, 4), 10);
+  const month = parseInt(cleanStr.substring(4, 6), 10) - 1;
+  const day = parseInt(cleanStr.substring(6, 8), 10);
+
   if (isUTC) {
-    const year = parseInt(cleanStr.substring(0, 4), 10);
-    const month = parseInt(cleanStr.substring(4, 6), 10) - 1;
-    const day = parseInt(cleanStr.substring(6, 8), 10);
     if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
       const d = new Date(Date.UTC(year, month, day, hours, mins, isNaN(secs) ? 0 : secs));
-      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     }
+  } else if (tzid) {
+    const converted = zonedWallClockToLocal(
+      year,
+      month,
+      day,
+      hours,
+      mins,
+      isNaN(secs) ? 0 : secs,
+      tzid
+    );
+    if (converted) return converted.hm;
+    // Fallback: floating wall-clock from the ICS text.
   }
 
-  return `${Math.min(23, Math.max(0, hours)).toString().padStart(2, '0')}:${Math.min(59, Math.max(0, mins)).toString().padStart(2, '0')}`;
+  return `${pad2(Math.min(23, Math.max(0, hours)))}:${pad2(Math.min(59, Math.max(0, mins)))}`;
+}
+
+function weekdayFromIcsDate(dateStr: string, tzid?: string): DayOfWeek {
+  const dayNames: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const year = parseInt(dateStr.substring(0, 4), 10);
+  const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+  const dNum = parseInt(dateStr.substring(6, 8), 10);
+  const isUTC = dateStr.endsWith('Z') || (tzid !== undefined && /^(UTC|Etc\/UTC|Etc\/GMT)$/i.test(tzid));
+
+  if (isUTC) {
+    const jsDate = new Date(Date.UTC(year, month, dNum));
+    return dayNames[jsDate.getDay()];
+  }
+
+  if (tzid) {
+    const tIndex = dateStr.indexOf('T');
+    const timePart = tIndex === -1 ? '' : dateStr.substring(tIndex + 1).replace(/Z$/i, '');
+    const hours = timePart.length >= 2 ? parseInt(timePart.substring(0, 2), 10) : 0;
+    const mins = timePart.length >= 4 ? parseInt(timePart.substring(2, 4), 10) : 0;
+    const converted = zonedWallClockToLocal(
+      year,
+      month,
+      dNum,
+      isNaN(hours) ? 0 : hours,
+      isNaN(mins) ? 0 : mins,
+      0,
+      tzid
+    );
+    if (converted) return dayNames[converted.local.getDay()];
+  }
+
+  const jsDate = new Date(year, month, dNum);
+  return dayNames[jsDate.getDay()];
+}
+
+function parseDescriptionFields(raw: string | undefined): { instructor?: string; credits?: number } {
+  if (!raw) return {};
+  const text = unescapeIcsText(raw);
+  const instructorMatch = text.match(/Instructor:\s*([^|\r\n]+)/i);
+  const creditsMatch = text.match(/Credits:\s*(\d+(?:\.\d+)?)/i);
+  const instructor = instructorMatch?.[1]?.trim();
+  const credits = creditsMatch ? Number(creditsMatch[1]) : undefined;
+  return {
+    instructor: instructor ? instructor : undefined,
+    credits: credits !== undefined && Number.isFinite(credits) ? Math.max(0, Math.min(30, credits)) : undefined,
+  };
+}
+
+function matchIcsProperty(evStr: string, name: string): { params: string; value: string } | null {
+  const re = new RegExp(`${name}([^:\\r\\n]*):([^\\r\\n]+)`, 'i');
+  const match = evStr.match(re);
+  if (!match) return null;
+  return { params: match[1] || '', value: match[2].trim() };
 }
 
 export function parseIcsContent(icsContent: string): Course[] {
@@ -52,17 +190,16 @@ export function parseIcsContent(icsContent: string): Course[] {
   for (let i = 1; i < eventStrs.length; i++) {
     const evStr = eventStrs[i].split(/END:VEVENT/i)[0];
     const summaryMatch = evStr.match(/(?:SUMMARY|SUMMARY;[^:]*):(.+)/i);
-    const startMatch = evStr.match(/(?:DTSTART|DTSTART;[^:]*):(\d{8}T?\d{0,6}Z?)/i);
-    const endMatch = evStr.match(/(?:DTEND|DTEND;[^:]*):(\d{8}T?\d{0,6}Z?)/i);
+    const startProp = matchIcsProperty(evStr, 'DTSTART');
+    const endProp = matchIcsProperty(evStr, 'DTEND');
     const rruleMatch = evStr.match(/(?:RRULE|RRULE;[^:]*):(.+)/i);
     const locationMatch = evStr.match(/(?:LOCATION|LOCATION;[^:]*):(.+)/i);
+    const descriptionProp = matchIcsProperty(evStr, 'DESCRIPTION');
 
-    if (summaryMatch && startMatch && endMatch) {
-      const rawSummary = summaryMatch[1].trim()
-        .replace(/\\,/g, ',')
-        .replace(/\\;/g, ';')
-        .replace(/\\n/gi, '\n')
-        .replace(/\\\\/g, '\\');
+    if (summaryMatch && startProp && endProp) {
+      const rawSummary = unescapeIcsText(summaryMatch[1].trim());
+      const startTzid = parseTzid(startProp.params);
+      const endTzid = parseTzid(endProp.params) ?? startTzid;
 
       // Check for color properties in event (RFC 7986, Apple, Outlook, generic)
       const colorMatch = evStr.match(/(?:COLOR|X-APPLE-CALENDAR-COLOR|X-OUTLOOK-COLOR|X-COLOR):([^\r\n]+)/i);
@@ -90,30 +227,26 @@ export function parseIcsContent(icsContent: string): Course[] {
         }
       }
       
-      const startTime = parseIcsTime(startMatch[1], '09:00');
-      const endTimeRaw = parseIcsTime(endMatch[1], '10:15');
+      const startTime = parseIcsTime(startProp.value, '09:00', startTzid);
+      let endTime = parseIcsTime(endProp.value, '10:15', endTzid);
 
       // Guarantee chronological order (end time after start time)
-      let finalStartTime = startTime;
-      let finalEndTime = endTimeRaw;
-      const [sh, sm] = finalStartTime.split(':').map(Number);
-      const [eh, em] = finalEndTime.split(':').map(Number);
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
       const startMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
       const endMin = (isNaN(eh) ? 10 : eh) * 60 + (isNaN(em) ? 0 : em);
       if (endMin <= startMin) {
         const adjustedEnd = Math.min(23 * 60 + 59, startMin + 50);
         const adjH = Math.floor(adjustedEnd / 60).toString().padStart(2, '0');
         const adjM = (adjustedEnd % 60).toString().padStart(2, '0');
-        finalEndTime = `${adjH}:${adjM}`;
+        endTime = `${adjH}:${adjM}`;
       }
 
       const location = locationMatch 
-        ? locationMatch[1].trim()
-            .replace(/\\,/g, ',')
-            .replace(/\\;/g, ';')
-            .replace(/\\n/gi, ' ')
-            .replace(/\\\\/g, '\\') 
+        ? unescapeIcsText(locationMatch[1].trim()).replace(/\n/g, ' ')
         : undefined;
+
+      const descFields = parseDescriptionFields(descriptionProp?.value);
       
       const sessions: ClassSession[] = [];
       
@@ -132,23 +265,15 @@ export function parseIcsContent(icsContent: string): Course[] {
       }
       
       if (days.length === 0) {
-        const dateStr = startMatch[1];
-        const isUTC = dateStr.endsWith('Z');
-        const year = parseInt(dateStr.substring(0,4), 10);
-        const month = parseInt(dateStr.substring(4,6), 10) - 1;
-        const dNum = parseInt(dateStr.substring(6,8), 10);
-        const jsDate = isUTC ? new Date(Date.UTC(year, month, dNum)) : new Date(year, month, dNum);
-        
-        const dayNames: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        days.push(dayNames[jsDate.getDay()]);
+        days.push(weekdayFromIcsDate(startProp.value, startTzid));
       }
       
       for (const d of days) {
         sessions.push({
-          id: `tmp_${Math.random()}`,
+          id: prefixedId('s'),
           day: d,
-          startTime: finalStartTime,
-          endTime: finalEndTime,
+          startTime,
+          endTime,
           room: location,
         });
       }
@@ -170,11 +295,12 @@ export function parseIcsContent(icsContent: string): Course[] {
       }
       
       courses.push({
-        id: `c_ics_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        id: prefixedId('c'),
         code,
         name: summary,
         section,
-        credits: 3, // default
+        instructor: descFields.instructor,
+        credits: descFields.credits ?? 3,
         color: eventColor || COURSE_COLORS[courses.length % COURSE_COLORS.length],
         sessions,
       });

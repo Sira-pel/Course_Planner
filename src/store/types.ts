@@ -17,6 +17,8 @@ export interface ScheduleState {
   startHour: number;
   endHour: number;
   theme: 'light' | 'dark';
+  semesterStart: string;
+  semesterEnd: string;
 
   // History for Undo/Redo
   past: HistorySnapshot[];
@@ -57,6 +59,7 @@ export interface ScheduleState {
   toggleTheme: () => void;
   setShowWeekends: (show: boolean) => void;
   setTimeRange: (startHour: number, endHour: number) => void;
+  setSemesterDates: (start: string, end: string) => void;
   resetToBlank: () => void;
   resetToSample: () => void;
   importFullState: (jsonString: string) => { success: boolean; error?: string };
@@ -64,8 +67,18 @@ export interface ScheduleState {
 
 export type PersistedSchedule = Pick<
   ScheduleState,
-  'plans' | 'activePlanId' | 'catalogCourses' | 'showWeekends' | 'startHour' | 'endHour' | 'theme'
->;
+  | 'plans'
+  | 'activePlanId'
+  | 'catalogCourses'
+  | 'showWeekends'
+  | 'startHour'
+  | 'endHour'
+  | 'theme'
+  | 'semesterStart'
+  | 'semesterEnd'
+> & {
+  version: number;
+};
 
 export type StoreSet = StoreApi<ScheduleState>['setState'];
 export type StoreGet = StoreApi<ScheduleState>['getState'];

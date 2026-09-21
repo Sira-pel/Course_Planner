@@ -1,4 +1,5 @@
 import type { SchedulePlan } from '../types/schedule';
+import { prefixedId } from '../utils/id';
 import { commitWithHistory } from './history';
 import { uniquePlanId } from './sanitize';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
@@ -44,8 +45,8 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
 
       const newPlanId = uniquePlanId(state.plans.map((p) => p.id));
       // Deep copy courses with new collision-free IDs to prevent reference collisions
-      const clonedCourses = sourcePlan.courses.map((c, cIdx) => {
-        const newCourseId = `c_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 7)}`;
+      const clonedCourses = sourcePlan.courses.map((c) => {
+        const newCourseId = prefixedId('c');
         return {
           ...c,
           id: newCourseId,

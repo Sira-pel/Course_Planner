@@ -1,3 +1,5 @@
+import { reportStorageWriteFailure } from '../store/storageWrite';
+
 export type ThemeName = 'light' | 'dark';
 
 export function isThemeName(value: unknown): value is ThemeName {
@@ -14,8 +16,9 @@ export function applyDomTheme(theme: ThemeName): void {
 export function persistTheme(theme: ThemeName): void {
   try {
     localStorage.setItem('uniplan_theme', theme);
-  } catch {
+  } catch (error) {
     // Private mode and quota must not throw into the click/render path.
+    reportStorageWriteFailure(error);
   }
 }
 

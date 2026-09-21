@@ -5,7 +5,7 @@ import { resolveInitialTheme } from '../utils/theme';
 import { createCatalogSlice } from './catalogSlice';
 import { createCourseSlice } from './courseSlice';
 import { createHistorySlice } from './history';
-import { persistOptions } from './persist';
+import { DEFAULT_SEMESTER_END, DEFAULT_SEMESTER_START, persistOptions } from './persist';
 import { createPlanSlice } from './planSlice';
 import { createPrefsSlice } from './prefsSlice';
 import type { ScheduleState } from './types';
@@ -29,6 +29,8 @@ export const useScheduleStore = create<ScheduleState>()(
       startHour: 7,
       endHour: 17,
       theme: resolveInitialTheme(),
+      semesterStart: DEFAULT_SEMESTER_START,
+      semesterEnd: DEFAULT_SEMESTER_END,
       past: [],
       future: [],
       ...createPlanSlice(set, get),

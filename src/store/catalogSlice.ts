@@ -1,5 +1,6 @@
 import type { Course } from '../types/schedule';
 import { sameCourseIdentity } from '../utils/courseIdentity';
+import { prefixedId } from '../utils/id';
 import { commitWithHistory } from './history';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
 
@@ -52,7 +53,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       if (alreadyInPlan) return;
 
       // Deep copy with fresh unique IDs
-      const newCourseId = `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const newCourseId = prefixedId('c');
       const freshCopy: Course = {
         ...catalogItem,
         id: newCourseId,
