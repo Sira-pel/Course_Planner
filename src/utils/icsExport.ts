@@ -1,14 +1,12 @@
-import { SchedulePlan, DayOfWeek, Course } from '../types/schedule';
-
-const ICS_DAY_CODES: Record<DayOfWeek, { code: string; jsDay: number }> = {
-  sunday: { code: 'SU', jsDay: 0 },
-  monday: { code: 'MO', jsDay: 1 },
-  tuesday: { code: 'TU', jsDay: 2 },
-  wednesday: { code: 'WE', jsDay: 3 },
-  thursday: { code: 'TH', jsDay: 4 },
-  friday: { code: 'FR', jsDay: 5 },
-  saturday: { code: 'SA', jsDay: 6 },
-};
+import { SchedulePlan, Course } from '../types/schedule';
+import {
+  formatIcsDateTime,
+  formatIcsUntil,
+  getFirstDayOccurrence,
+  getIcsDayInfo,
+  parseLocalDate,
+  sessionTimesAreValid,
+} from './calendarDates';
 
 /**
  * Maps a hex color code to a standard colored circle emoji.
@@ -94,48 +92,6 @@ function escapeIcsText(str: string): string {
     .replace(/\r?\n/g, '\\n');
 }
 
-function parseLocalDate(dateStr: string): Date {
-  if (!dateStr) return new Date();
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
-    return new Date(year, month, day, 0, 0, 0);
-  }
-  return new Date(dateStr);
-}
-
-function formatIcsDateTime(date: Date, timeStr: string): string {
-  const [h, m] = (timeStr || '09:00').split(':');
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hours = (h || '09').padStart(2, '0');
-  const minutes = (m || '00').padStart(2, '0');
-  return `${year}${month}${day}T${hours}${minutes}00`;
-}
-
-function formatIcsUntil(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  // Per RFC 5545 §3.3.10: If DTSTART has floating local time, UNTIL MUST also be floating local time (no Z)
-  return `${year}${month}${day}T235959`;
-}
-
-/**
- * Finds the first occurrence of target day of the week on or after startDate.
- */
-function getFirstDayOccurrence(startDate: Date, targetJsDay: number): Date {
-  const current = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const currentDay = current.getDay();
-  let diff = targetJsDay - currentDay;
-  if (diff < 0) diff += 7;
-  current.setDate(current.getDate() + diff);
-  return current;
-}
-
 export interface IcsExportOptions {
   includeColorEmoji?: boolean;
   specificCourseId?: string;
@@ -154,7 +110,7 @@ export function generateIcsCalendar(
 
   const startDate = parseLocalDate(semesterStart);
   const endDate = parseLocalDate(semesterEnd);
-  const untilStr = formatIcsUntil(endDate);
+  const untilStr = endDate ? formatIcsUntil(endDate) : '';
   const includeColorEmoji = options.includeColorEmoji !== false;
 
   const targetCourses = options.specificCourseId
@@ -192,12 +148,16 @@ export function generateIcsCalendar(
 
   targetCourses.forEach((course) => {
     (course.sessions || []).forEach((session) => {
-      const dayInfo = ICS_DAY_CODES[session.day];
+      if (!startDate || !endDate) return;
+      const dayInfo = getIcsDayInfo(session.day);
       if (!dayInfo) return;
+      if (!sessionTimesAreValid(session.startTime, session.endTime)) return;
 
       const firstSessionDate = getFirstDayOccurrence(startDate, dayInfo.jsDay);
+      if (firstSessionDate.getTime() > endDate.getTime()) return;
       const dtStart = formatIcsDateTime(firstSessionDate, session.startTime);
       const dtEnd = formatIcsDateTime(firstSessionDate, session.endTime);
+      if (!dtStart || !dtEnd) return;
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
       const colorPrefix = '';
