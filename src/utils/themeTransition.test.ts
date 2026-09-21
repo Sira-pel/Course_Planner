@@ -57,14 +57,17 @@ assert(!transitionSrc.includes('pseudoElement'), 'theme reveal does not animate 
 assert(!transitionSrc.includes('mask-image'), 'theme reveal does not animate mask-image');
 assert(!transitionSrc.includes('--up-reveal-r'), 'theme reveal does not animate a mask radius variable');
 assert(transitionSrc.includes('clipPath') || transitionSrc.includes('clip-path'), 'the freeze layer is clipped, not masked');
-assert(transitionSrc.includes('evenodd'), 'light-to-dark opens a hole with an evenodd clip');
+assert(!transitionSrc.includes('evenodd'), 'light-to-dark does not punch an evenodd path hole');
+assert(!transitionSrc.includes('diskClip'), 'path disks are gone');
+assert(!transitionSrc.includes('holeClip'), 'path holes are gone');
+assert(transitionSrc.includes('circle('), 'reveal uses compositable circle() clip');
 assert(transitionSrc.includes('originRelativeTo'), 'circle origin is measured against the overlay frame');
-assert(transitionSrc.includes('diskClip'), 'dark-to-light clips a path disk with a locked center');
-assert(!transitionSrc.includes('circle('), 'Chromium circle() clip origin is not used');
+assert(transitionSrc.includes('goingToDark ? painted.app'), 'light-to-dark clips the live root, not a hole in the freeze');
 assert(transitionSrc.includes('cloneNode'), 'theme reveal freezes the outgoing UI');
 assert(transitionSrc.includes('attachShadow'), 'frozen UI is isolated from html.dark');
 assert(transitionSrc.includes('up-theme-reveal-veil'), 'theme reveal paints a dedicated overlay');
 assert(transitionSrc.includes('updatePlaybackRate'), 'in-flight toggle reverses playback from the current time');
+assert(transitionSrc.includes('animation.cancel'), 'finished clip animations are cancelled so fill:both cannot linger');
 assert(!transitionSrc.includes('.then(finish, finish)'), 'reverse must not treat a rejected finished promise as done');
 assert(transitionSrc.includes('playingForward'), 'reverse keeps the freeze until the circle returns');
 assert(transitionSrc.includes('isPhoneViewport'), 'phone viewports skip the circular reveal');
@@ -89,6 +92,8 @@ assert(css.includes('.up-theme-reveal-veil'), 'overlay class is present');
 assert(!css.includes('mask-image'), 'page CSS does not mask the freeze overlay');
 assert(!css.includes('.up-theme-reveal-disk'), 'solid night disk is gone');
 assert(css.includes('html.is-theme-revealing #root'), 'app stacking stays under the overlay during reveal');
+assert(css.includes('html.is-theme-to-dark .up-theme-reveal-veil'), 'to-dark freeze sits behind the live circle');
+assert(css.includes('html.is-theme-to-dark #root'), 'to-dark raises the live root above the freeze');
 assert(
   (css.match(/--up-raised:/g) || []).length === 2,
   'header and pool inherit --up-raised from html instead of restating it'

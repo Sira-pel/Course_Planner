@@ -1555,7 +1555,8 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: freeze the outgoing UI. Motion is transform / clip-path on that layer. */
+/* Theme reveal: freeze the outgoing UI. Light→dark clips #root with a growing
+   circle() over the freeze; dark→light clips the freeze with a shrinking circle(). */
 .up-theme-reveal-veil {
   position: fixed;
   inset: auto;
@@ -1576,9 +1577,18 @@ body[data-up-pool-open] .up-fab-cluster {
   overflow: hidden;
 }
 
+html.is-theme-to-dark .up-theme-reveal-veil {
+  z-index: 0;
+}
+
 html.is-theme-revealing #root {
   isolation: isolate;
   z-index: 0;
+}
+
+html.is-theme-to-dark #root {
+  position: relative;
+  z-index: 1;
 }
 
 html.is-theme-revealing .up-header,

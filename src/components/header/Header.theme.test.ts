@@ -20,6 +20,7 @@ assert(
   src.includes('onToggleTheme={(event) => handleToggleTheme(event, false)}'),
   'Settings Light/Dark keeps Settings open'
 );
+assert(!src.includes('flushSync'), 'theme apply does not force a sync React commit');
 
 assert(/onOpenCatalog=\{\(\) => \{\s*setIsSettingsOpen\(false\)/.test(src), 'opening the catalog still closes Settings');
 assert(/onImportIcsClick=\{\(\) => \{\s*setIsSettingsOpen\(false\)/.test(src), 'import still closes Settings');

@@ -34,6 +34,7 @@ type ActiveReveal = {
   playingForward: boolean;
   started: boolean;
   finish: () => void;
+  motionEl: HTMLElement | null;
 };
 
 let activeReveal: ActiveReveal | null = null;
@@ -80,26 +81,22 @@ function farthestCornerRadius(x: number, y: number, width: number, height: numbe
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
-function arcPair(radiusPx: number, x: number, y: number): { r: string; d: string; cx: string; cy: string } {
+function circleClip(radiusPx: number, x: number, y: number): string {
   const radius = Math.max(1, radiusPx);
-  return {
-    r: radius.toFixed(2),
-    d: (radius * 2).toFixed(2),
-    cx: x.toFixed(2),
-    cy: y.toFixed(2),
-  };
+  return `circle(${radius.toFixed(2)}px at ${x.toFixed(2)}px ${y.toFixed(2)}px)`;
 }
 
-function diskClip(radiusPx: number, x: number, y: number): string {
-  const { r, d, cx, cy } = arcPair(radiusPx, x, y);
-  return `path("M${cx} ${cy}m-${r} 0a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 -${d} 0")`;
-}
-
-function holeClip(radiusPx: number, x: number, y: number, width: number, height: number): string {
-  const { r, d, cx, cy } = arcPair(radiusPx, x, y);
-  const w = width.toFixed(2);
-  const h = height.toFixed(2);
-  return `path(evenodd, "M0 0H${w}V${h}H0Z M${cx} ${cy}m-${r} 0a${r} ${r} 0 1 0 ${d} 0a${r} ${r} 0 1 0 -${d} 0")`;
+function clearClip(el: HTMLElement | null, animation: Animation | null): void {
+  if (animation != null) {
+    try {
+      animation.cancel();
+    } catch {
+      // Already finished or not cancelable.
+    }
+  }
+  if (el == null) return;
+  el.style.clipPath = '';
+  el.style.willChange = '';
 }
 
 function clearRevealClasses(): void {
@@ -220,9 +217,13 @@ function afterPaint(fn: () => void): void {
   });
 }
 
-function paintFrozenUi(
-  oldIsDark: boolean
-): { veil: HTMLElement; freezeRoot: HTMLElement; viewW: number; viewH: number } | null {
+function paintFrozenUi(oldIsDark: boolean): {
+  veil: HTMLElement;
+  freezeRoot: HTMLElement;
+  app: HTMLElement;
+  viewW: number;
+  viewH: number;
+} | null {
   const app = document.getElementById('root');
   if (app == null || document.body == null) return null;
 
@@ -284,16 +285,17 @@ function paintFrozenUi(
   freezeBody.appendChild(shot);
   freezeRoot.appendChild(layoutStyle);
   freezeRoot.appendChild(freezeBody);
-  freezeRoot.style.willChange = 'clip-path';
   shadow.appendChild(freezeRoot);
   document.body.appendChild(veil);
   copyScroll(app, shot);
-  return { veil, freezeRoot, viewW, viewH };
+  return { veil, freezeRoot, app, viewW, viewH };
 }
 
 /**
  * Pointer-origin circular swap that keeps both UIs on screen.
- * Chromium animates transform / clip-path on one overlay layer.
+ * Light→dark clips the live tree with a growing circle() over the freeze.
+ * Dark→light clips the freeze with a shrinking circle(). Chromium composites
+ * that basic shape; inverted path() holes do not.
  * A second click reverses the circle from the current radius.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
@@ -327,13 +329,18 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     return;
   }
 
-  const origin = originRelativeTo(painted.veil, event);
-  const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y, painted.viewW, painted.viewH));
-  if (goingToDark) {
-    painted.freezeRoot.style.clipPath = holeClip(1, origin.x, origin.y, painted.viewW, painted.viewH);
-  } else {
-    painted.freezeRoot.style.clipPath = diskClip(endRadius, origin.x, origin.y);
-  }
+  const motionEl = goingToDark ? painted.app : painted.freezeRoot;
+  const originFrame = goingToDark ? painted.app : painted.veil;
+  const origin = originRelativeTo(originFrame, event);
+  const frameBox = originFrame.getBoundingClientRect();
+  const endRadius = Math.max(
+    1,
+    farthestCornerRadius(origin.x, origin.y, frameBox.width, frameBox.height)
+  );
+  const startRadius = goingToDark ? 1 : endRadius;
+  const stopRadius = goingToDark ? endRadius : 1;
+  motionEl.style.clipPath = circleClip(startRadius, origin.x, origin.y);
+  apply();
 
   let released = false;
   const finish = () => {
@@ -344,12 +351,20 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     if (shouldUndo && activeReveal.started) {
       apply();
     }
+    clearClip(activeReveal?.motionEl ?? motionEl, activeReveal?.animation ?? null);
     dropVeils();
     clearRevealClasses();
     activeReveal = null;
   };
 
-  activeReveal = { animation: null, undo: apply, playingForward: true, started: false, finish };
+  activeReveal = {
+    animation: null,
+    undo: apply,
+    playingForward: true,
+    started: false,
+    finish,
+    motionEl,
+  };
   armFailsafe(finish);
 
   afterPaint(() => {
@@ -359,44 +374,27 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
       return;
     }
 
-    apply();
-    const header = document.querySelector('.up-header');
-    if (header) void getComputedStyle(header).backgroundColor;
-
-    const duration = goingToDark
-      ? readDurationMs('--dur-scene', 620)
-      : readDurationMs('--dur-scene', 620);
+    const duration = readDurationMs('--dur-scene', 620);
     const easing = REVEAL_EASE;
-    const viewW = painted.viewW;
-    const viewH = painted.viewH;
 
     try {
-      const motionEl = painted.freezeRoot;
       if (typeof motionEl.animate !== 'function') {
         finish();
         return;
       }
-      const animation = goingToDark
-        ? motionEl.animate(
-            {
-              clipPath: [
-                holeClip(1, origin.x, origin.y, viewW, viewH),
-                holeClip(endRadius, origin.x, origin.y, viewW, viewH),
-              ],
-            },
-            { duration, easing, fill: 'both' }
-          )
-        : motionEl.animate(
-            {
-              clipPath: [
-                diskClip(endRadius, origin.x, origin.y),
-                diskClip(1, origin.x, origin.y),
-              ],
-            },
-            { duration, easing, fill: 'both' }
-          );
+      motionEl.style.willChange = 'clip-path';
+      const animation = motionEl.animate(
+        {
+          clipPath: [
+            circleClip(startRadius, origin.x, origin.y),
+            circleClip(stopRadius, origin.x, origin.y),
+          ],
+        },
+        { duration, easing, fill: 'both' }
+      );
       activeReveal.animation = animation;
       activeReveal.started = true;
+      armFailsafe(finish);
       animation.addEventListener('finish', finish);
     } catch {
       finish();

@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { flushSync } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { isPointerClick, runThemeReveal } from '../../utils/themeTransition';
@@ -209,10 +208,8 @@ export const Header: React.FC<HeaderProps> = ({
   const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
     const goingToDark = theme !== 'dark';
     const apply = () => {
-      flushSync(() => {
-        if (closeSettings) setIsSettingsOpen(false);
-        toggleTheme();
-      });
+      if (closeSettings) setIsSettingsOpen(false);
+      toggleTheme();
     };
 
     if (!isPointerClick(event) || reduceMotion) {
