@@ -90,7 +90,9 @@ npm run preview
 
 ## 🔒 Security & Data Privacy
 
-- **100% Client-Side**: All schedules and custom course data stay securely in your browser's `localStorage`. No personal student data is transmitted to external servers.
+- **Local plans**: Course schedules, scratchpad catalog, and UI preferences are stored in your browser's `localStorage`. Closing the tab does not send that data to a Uniplan server — there isn't one.
+- **Optional Google Calendar sync**: If you use **Sign in with Google** in the export modal, Uniplan sends your Google identity plus schedule fields (course titles, sections, instructors, rooms, and meeting times) to Google via Firebase Authentication and the Google Calendar API. A dedicated calendar named like `{plan} - Uniplan` is created or reused. Signing in is optional; `.ics` download stays fully local.
+- **Firebase / OAuth console**: Calendar sync needs a Firebase web app with **authorized domains**, a Google OAuth client with authorized JavaScript origins, the **Google Calendar API** enabled, and OAuth consent that includes `calendar.app.created` (create a dedicated calendar and its events) plus `calendar.calendarlist.readonly` (find an existing Uniplan calendar by name). Restrict the browser API key by HTTP referrer.
 - **Sanitized Imports**: JSON backup imports are strictly validated and sanitized to prevent malformed records or invalid state trees.
 - **RFC 5545 Escaping**: Text fields exported to `.ics` files are properly escaped to prevent calendar injection or parser corruption.
 
