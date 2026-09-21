@@ -141,13 +141,21 @@ function farthestCornerRadius(x: number, y: number, width: number, height: numbe
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
-function setRevealGeometry(x: number, y: number, radius: number, width: number, height: number): void {
+function setRevealGeometry(
+  x: number,
+  y: number,
+  radius: number,
+  width: number,
+  height: number,
+  startScale: number
+): void {
   const root = document.documentElement;
   root.style.setProperty('--up-reveal-x', `${x}px`);
   root.style.setProperty('--up-reveal-y', `${y}px`);
   root.style.setProperty('--up-reveal-r', `${radius}px`);
   root.style.setProperty('--up-reveal-w', `${width}px`);
   root.style.setProperty('--up-reveal-h', `${height}px`);
+  root.style.setProperty('--up-reveal-s0', String(startScale));
 }
 
 function clearRevealGeometry(): void {
@@ -157,6 +165,22 @@ function clearRevealGeometry(): void {
   root.style.removeProperty('--up-reveal-r');
   root.style.removeProperty('--up-reveal-w');
   root.style.removeProperty('--up-reveal-h');
+  root.style.removeProperty('--up-reveal-s0');
+}
+
+function publishRevealGeometry(event: ThemeRevealOptions['event']): number {
+  const bodyRect = document.body.getBoundingClientRect();
+  const origin = originRelativeTo(document.body, event);
+  const viewport = viewMetrics();
+  const coverWidth = Math.max(bodyRect.width, viewport.width);
+  const coverHeight = Math.max(bodyRect.height, viewport.height);
+  const radius = Math.max(
+    1,
+    farthestCornerRadius(origin.x, origin.y, coverWidth, coverHeight)
+  );
+  const startScale = Math.min(1, 0.5 / radius);
+  setRevealGeometry(origin.x, origin.y, radius, bodyRect.width, bodyRect.height, startScale);
+  return startScale;
 }
 
 function clearRevealClasses(): void {
@@ -224,6 +248,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
 
   const root = document.documentElement;
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
+  publishRevealGeometry(event);
 
   let applied = false;
   let committed = false;
@@ -249,9 +274,9 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     window.clearTimeout(failsafe);
     window.cancelAnimationFrame(pendingFrame);
     pendingFrame = 0;
+    clearRevealClasses();
     cancelAnimations(animations);
     runCommit();
-    clearRevealClasses();
     clearRevealGeometry();
     activeReveal = null;
   };
@@ -276,17 +301,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
       void transition.ready
         .then(() => {
           if (released) return;
-          const bodyRect = document.body.getBoundingClientRect();
-          const origin = originRelativeTo(document.body, event);
-          const viewport = viewMetrics();
-          const coverWidth = Math.max(bodyRect.width, viewport.width);
-          const coverHeight = Math.max(bodyRect.height, viewport.height);
-          const radius = Math.max(
-            1,
-            farthestCornerRadius(origin.x, origin.y, coverWidth, coverHeight)
-          );
-          const startScale = Math.min(1, 0.5 / radius);
-          setRevealGeometry(origin.x, origin.y, radius, bodyRect.width, bodyRect.height);
+          const startScale = publishRevealGeometry(event);
 
           const ease = unitBezier(...parseCubicBezier(readEase('--ease-out')));
           const { outer, inner } = bakeScaleKeyframes(startScale, ease, !goingToDark);

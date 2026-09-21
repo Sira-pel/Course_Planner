@@ -75,6 +75,7 @@ assert(transitionSrc.includes('--up-reveal-y'), 'origin y is published as a CSS 
 assert(transitionSrc.includes('--up-reveal-r'), 'circle radius is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-w'), 'snapshot width is published as a CSS var');
 assert(transitionSrc.includes('--up-reveal-h'), 'snapshot height is published as a CSS var');
+assert(transitionSrc.includes('--up-reveal-s0'), 'start scale is published as a CSS var');
 assert(transitionSrc.includes('readEase'), 'reveal easing comes from --ease-out');
 assert(transitionSrc.includes('--dur-scene'), 'to-dark uses scene duration');
 assert(transitionSrc.includes('--dur-emphasis'), 'to-light uses emphasis duration');
@@ -82,7 +83,7 @@ assert(transitionSrc.includes('skipTransition'), 'in-flight toggle jumps to fini
 assert(transitionSrc.includes('requestAnimationFrame'), 'flatten paints one frame before capture');
 assert(transitionSrc.includes('animation.cancel()'), 'fill:both animations are cancelled on finish');
 assert(!transitionSrc.includes('clipPath'), 'theme reveal does not animate clipPath');
-assert(!transitionSrc.includes('circle('), 'theme reveal does not use circle() clip-path');
+assert(!transitionSrc.includes('circle('), 'JS does not use clip-path: circle()');
 assert(!transitionSrc.includes('mask-image'), 'theme reveal does not animate mask-image');
 assert(!transitionSrc.includes('evenodd'), 'light-to-dark does not punch an evenodd path hole');
 assert(!transitionSrc.includes('diskClip'), 'path disks are gone');
@@ -100,6 +101,34 @@ assert(!transitionSrc.includes('flipPlayback'), 'VT snapshots are not reversed w
 assert(!transitionSrc.includes('updatePlaybackRate'), 'VT snapshots are not reversed with playbackRate');
 assert(transitionSrc.includes('.then(finish, finish)'), 'finished both settles into cleanup');
 
+const captureCall = transitionSrc.indexOf('document.startViewTransition');
+assert(captureCall >= 0, 'capture call exists');
+const beforeCapture = transitionSrc.slice(0, captureCall);
+assert(beforeCapture.includes('publishRevealGeometry'), 'geometry is published before startViewTransition');
+assert(
+  beforeCapture.includes("root.classList.add('is-theme-revealing'"),
+  'revealing class is on before capture'
+);
+const readyStart = transitionSrc.indexOf('transition.ready');
+const readyEnd = transitionSrc.indexOf('transition.finished');
+const readyBlock =
+  readyStart >= 0 && readyEnd > readyStart ? transitionSrc.slice(readyStart, readyEnd) : '';
+assert(readyBlock.includes('publishRevealGeometry'), 'geometry is refreshed on transition.ready');
+
+const finishStart = transitionSrc.indexOf('const finish = () =>');
+const finishEnd = transitionSrc.indexOf('activeReveal = {');
+const finishBlock =
+  finishStart >= 0 && finishEnd > finishStart ? transitionSrc.slice(finishStart, finishEnd) : '';
+const classClearIdx = finishBlock.indexOf('clearRevealClasses()');
+const cancelIdx = finishBlock.indexOf('cancelAnimations(');
+const geometryClearIdx = finishBlock.indexOf('clearRevealGeometry()');
+assert(classClearIdx >= 0, 'finish() clears reveal classes');
+assert(cancelIdx > classClearIdx, 'finish() removes classes before cancelling fill:both animations');
+assert(
+  geometryClearIdx > cancelIdx,
+  'finish() clears geometry after cancelling fill:both animations'
+);
+
 const busyStart = transitionSrc.indexOf('if (activeReveal)');
 const busyEnd = transitionSrc.indexOf("root.classList.add('is-theme-revealing'");
 const busyBlock = busyStart >= 0 && busyEnd > busyStart ? transitionSrc.slice(busyStart, busyEnd) : '';
@@ -114,10 +143,51 @@ assert(css.includes('html.is-theme-revealing::view-transition-group(root)'), 'ro
 assert(css.includes('html.is-theme-revealing::view-transition-image-pair(theme-dark)'), 'theme-dark image pair is the circle wrapper');
 assert(css.includes('border-radius: 50%'), 'circle wrapper uses a round clip');
 assert(css.includes('overflow: clip'), 'circle wrapper clips with overflow: clip');
+assert(css.includes('overflow: hidden'), 'circle wrapper also uses overflow: hidden');
+assert(css.includes('clip-path: circle(50%)'), 'wrapper uses a static circular clip');
 assert(css.includes('html.is-theme-revealing::view-transition-group(theme-light)'), 'light group sits under the circle');
 assert(css.includes('z-index: 1'), 'theme-light stays underneath');
 assert(css.includes('z-index: 2'), 'theme-dark circle stays on top');
-assert(!css.includes('clip-path'), 'page CSS does not clip the reveal with clip-path');
+assert(!css.includes('clip-path: circle(var'), 'page CSS does not animate clip-path radius');
+
+const revealCssStart = css.indexOf('/* Theme reveal:');
+const revealCssEnd = css.indexOf('@media (prefers-reduced-motion: reduce)');
+const revealCss =
+  revealCssStart >= 0 && revealCssEnd > revealCssStart ? css.slice(revealCssStart, revealCssEnd) : '';
+assert(revealCss.includes('animation: none !important'), 'revealing VT rules beat Firefox UA fades');
+assert(
+  revealCss.includes('html.is-theme-revealing::view-transition-group(root)') &&
+    revealCss.includes('html.is-theme-revealing::view-transition-image-pair(root)') &&
+    revealCss.includes('html.is-theme-revealing::view-transition-old(root)') &&
+    revealCss.includes('html.is-theme-revealing::view-transition-new(root)'),
+  'root VT pseudos are silenced'
+);
+assert(
+  revealCss.includes('html.is-theme-revealing::view-transition-group(theme-light)') &&
+    revealCss.includes('html.is-theme-revealing::view-transition-group(theme-dark)'),
+  'theme groups are silenced'
+);
+assert(revealCss.includes('transform: none'), 'theme groups pin transform none');
+assert(
+  /::view-transition-group\(theme-light\),\s*html\.is-theme-revealing::view-transition-group\(theme-dark\) \{[^}]*width: 100%;[^}]*height: 100%;[^}]*transform: none;/s.test(
+    revealCss
+  ),
+  'theme groups are full-size with inset and no morph'
+);
+assert(
+  revealCss.includes('html.is-theme-to-dark::view-transition-image-pair(theme-dark)'),
+  'to-dark first paint scales the circle wrapper'
+);
+assert(revealCss.includes('scale(var(--up-reveal-s0))'), 'to-dark wrapper starts at s0');
+assert(
+  revealCss.includes('html.is-theme-to-dark::view-transition-new(theme-dark)'),
+  'to-dark first paint inverse-scales the new snapshot'
+);
+assert(revealCss.includes('scale(calc(1 / var(--up-reveal-s0)))'), 'to-dark snapshot starts at 1/s0');
+assert(
+  revealCss.includes('html.is-theme-to-light::view-transition-image-pair(theme-dark)'),
+  'to-light first paint keeps the wrapper at scale 1'
+);
 assert(!css.includes('.up-theme-reveal-veil'), 'overlay class is gone');
 assert(!css.includes('mask-image'), 'page CSS does not mask the freeze overlay');
 assert(!css.includes('.up-theme-reveal-disk'), 'solid night disk is gone');
