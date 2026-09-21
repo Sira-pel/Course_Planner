@@ -1555,39 +1555,32 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: freeze the outgoing UI. Light→dark clips #root with a growing
-   circle() over the freeze; dark→light clips the freeze with a shrinking circle(). */
-.up-theme-reveal-veil {
-  position: fixed;
-  inset: auto;
-  left: 0;
-  top: 0;
-  right: auto;
-  bottom: auto;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  z-index: 2147483646;
-  pointer-events: none;
-  overflow: hidden;
+/* Theme reveal: flatten chrome, then clip View Transition snapshots with circle(). */
+html.is-theme-revealing::view-transition-image-pair(root) {
+  isolation: auto;
 }
 
-html.is-theme-to-dark .up-theme-reveal-veil {
-  z-index: 0;
-}
-
-html.is-theme-revealing #root {
+html.is-theme-revealing::view-transition-old(root),
+html.is-theme-revealing::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
   isolation: isolate;
-  z-index: 0;
+  display: block;
 }
 
-html.is-theme-to-dark #root {
-  position: relative;
+html.is-theme-to-dark::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.is-theme-to-dark::view-transition-new(root) {
+  z-index: 2;
+}
+
+html.is-theme-to-light::view-transition-old(root) {
+  z-index: 2;
+}
+
+html.is-theme-to-light::view-transition-new(root) {
   z-index: 1;
 }
 
@@ -1642,15 +1635,15 @@ html.is-theme-revealing .transition-opacity {
   transform-origin: 50% 50%;
 }
 
-.up-theme-glyph[data-mode='light'] .up-theme-sun,
-.up-theme-glyph[data-mode='dark'] .up-theme-moon {
+html:not(.dark) .up-theme-glyph .up-theme-sun,
+html.dark .up-theme-glyph .up-theme-moon {
   opacity: 1;
   filter: blur(0);
   transform: scale(1);
 }
 
-.up-theme-glyph[data-mode='light'] .up-theme-moon,
-.up-theme-glyph[data-mode='dark'] .up-theme-sun {
+html:not(.dark) .up-theme-glyph .up-theme-moon,
+html.dark .up-theme-glyph .up-theme-sun {
   opacity: 0;
   filter: blur(var(--blur-ink));
   transform: scale(0.25);
@@ -1743,13 +1736,13 @@ html:not(.is-theme-revealing) .up-theme-moon {
     transform: none;
   }
 
-  .up-theme-glyph[data-mode='light'] .up-theme-moon,
-  .up-theme-glyph[data-mode='dark'] .up-theme-sun {
+  html:not(.dark) .up-theme-glyph .up-theme-moon,
+  html.dark .up-theme-glyph .up-theme-sun {
     opacity: 0;
   }
 
-  .up-theme-glyph[data-mode='light'] .up-theme-sun,
-  .up-theme-glyph[data-mode='dark'] .up-theme-moon {
+  html:not(.dark) .up-theme-glyph .up-theme-sun,
+  html.dark .up-theme-glyph .up-theme-moon {
     opacity: 1;
   }
 }

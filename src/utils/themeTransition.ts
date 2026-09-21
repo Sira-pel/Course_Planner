@@ -1,5 +1,3 @@
-import { PHONE_MAX_PX } from './layoutBreakpoint';
-
 export type ThemeRevealOrigin = {
   x: number;
   y: number;
@@ -13,42 +11,29 @@ export type ThemeRevealOptions = {
   };
   goingToDark: boolean;
   apply: () => void;
+  commit: () => void;
 };
 
-const VEIL_CLASS = 'up-theme-reveal-veil';
-const SHOT_CLASS = 'up-theme-reveal-shot';
 const FAILSAFE_MS = 2000;
-const UP_VARS = [
-  '--up-raised',
-  '--up-ink',
-  '--up-muted',
-  '--up-line',
-  '--up-accent',
-  '--up-accent-ink',
-  '--up-focus',
-] as const;
+
+type ThemeViewTransition = {
+  ready: Promise<void>;
+  finished: Promise<void>;
+  skipTransition?: () => void;
+  waitUntil?: (promise: Promise<unknown>) => void;
+};
 
 type ActiveReveal = {
-  animation: Animation | null;
-  undo: () => void;
-  playingForward: boolean;
-  started: boolean;
+  transition: ThemeViewTransition | null;
   finish: () => void;
-  motionEl: HTMLElement | null;
 };
 
 let activeReveal: ActiveReveal | null = null;
 let failsafe = 0;
+let pendingFrame = 0;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function isPhoneViewport(): boolean {
-  if (typeof window.matchMedia === 'function') {
-    return window.matchMedia(`(max-width: ${PHONE_MAX_PX}px)`).matches;
-  }
-  return viewMetrics().width <= PHONE_MAX_PX;
 }
 
 function readDurationMs(token: string, fallback: number): number {
@@ -64,17 +49,27 @@ function readDurationMs(token: string, fallback: number): number {
   return fallback;
 }
 
-function viewMetrics(): { width: number; height: number } {
+function readEase(token: string): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return raw || 'cubic-bezier(0.22, 1, 0.36, 1)';
+}
+
+function viewMetrics(): { width: number; height: number; left: number; top: number } {
   const g = globalThis as typeof globalThis & {
-    visualViewport?: { width: number; height: number };
+    visualViewport?: { width: number; height: number; offsetLeft?: number; offsetTop?: number };
     innerWidth?: number;
     innerHeight?: number;
   };
   const vv = g.visualViewport;
   if (vv && vv.width > 0 && vv.height > 0) {
-    return { width: vv.width, height: vv.height };
+    return {
+      width: vv.width,
+      height: vv.height,
+      left: vv.offsetLeft ?? 0,
+      top: vv.offsetTop ?? 0,
+    };
   }
-  return { width: g.innerWidth ?? 0, height: g.innerHeight ?? 0 };
+  return { width: g.innerWidth ?? 0, height: g.innerHeight ?? 0, left: 0, top: 0 };
 }
 
 function farthestCornerRadius(x: number, y: number, width: number, height: number): number {
@@ -82,21 +77,7 @@ function farthestCornerRadius(x: number, y: number, width: number, height: numbe
 }
 
 function circleClip(radiusPx: number, x: number, y: number): string {
-  const radius = Math.max(1, radiusPx);
-  return `circle(${radius.toFixed(2)}px at ${x.toFixed(2)}px ${y.toFixed(2)}px)`;
-}
-
-function clearClip(el: HTMLElement | null, animation: Animation | null): void {
-  if (animation != null) {
-    try {
-      animation.cancel();
-    } catch {
-      // Already finished or not cancelable.
-    }
-  }
-  if (el == null) return;
-  el.style.clipPath = '';
-  el.style.willChange = '';
+  return `circle(${Math.max(0, radiusPx).toFixed(2)}px at ${x.toFixed(2)}px ${y.toFixed(2)}px)`;
 }
 
 function clearRevealClasses(): void {
@@ -107,103 +88,16 @@ function clearRevealClasses(): void {
   );
 }
 
-function dropVeils(): void {
-  document.querySelectorAll(`.${VEIL_CLASS}`).forEach((node) => {
-    if (node instanceof HTMLElement && 'hidePopover' in node && typeof node.hidePopover === 'function') {
-      try {
-        node.hidePopover();
-      } catch {
-        // Already closed or not a popover.
-      }
-    }
-    node.remove();
-  });
+function canStartViewTransition(
+  doc: Document
+): doc is Document & { startViewTransition: (update: () => void) => ThemeViewTransition } {
+  return typeof (doc as Document & { startViewTransition?: unknown }).startViewTransition === 'function';
 }
 
-const FREEZE_FLATTEN_CSS = `
-  html, html * {
-    z-index: 0 !important;
-    isolation: auto !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    filter: none !important;
+function extendTransition(transition: ThemeViewTransition, promise: Promise<unknown>): void {
+  if (typeof transition.waitUntil === 'function') {
+    transition.waitUntil(promise);
   }
-  .sticky {
-    position: relative !important;
-    top: 0 !important;
-  }
-`;
-
-const FREEZE_PHONE_CSS = `
-  #btn-add-course,
-  #btn-undo,
-  #btn-redo {
-    display: none !important;
-  }
-  .up-fab-cluster {
-    display: flex !important;
-  }
-  .up-footer {
-    display: none !important;
-  }
-`;
-
-const REVEAL_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-
-function copySheets(shadow: ShadowRoot, phoneLayout: boolean): void {
-  const freezeCss = FREEZE_FLATTEN_CSS + (phoneLayout ? FREEZE_PHONE_CSS : '');
-  try {
-    const flatten = new CSSStyleSheet();
-    flatten.replaceSync(freezeCss);
-    const base = document.adoptedStyleSheets.length > 0 ? [...document.adoptedStyleSheets] : [];
-    shadow.adoptedStyleSheets = [...base, flatten];
-  } catch {
-    if (document.adoptedStyleSheets.length > 0) {
-      try {
-        shadow.adoptedStyleSheets = [...document.adoptedStyleSheets];
-      } catch {
-        // Constructed sheets are not always shareable.
-      }
-    }
-  }
-  document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
-    shadow.appendChild(node.cloneNode(true));
-  });
-  const extra = document.createElement('style');
-  extra.textContent = freezeCss;
-  shadow.appendChild(extra);
-}
-
-function copyUpVars(from: Element, to: HTMLElement): void {
-  const styles = getComputedStyle(from);
-  for (const name of UP_VARS) {
-    to.style.setProperty(name, styles.getPropertyValue(name));
-  }
-}
-
-function copyScroll(from: Element, to: Element): void {
-  if (from.scrollTop !== 0 || from.scrollLeft !== 0) {
-    to.scrollTop = from.scrollTop;
-    to.scrollLeft = from.scrollLeft;
-  }
-  const fromKids = from.children;
-  const toKids = to.children;
-  const n = Math.min(fromKids.length, toKids.length);
-  for (let i = 0; i < n; i += 1) {
-    copyScroll(fromKids[i], toKids[i]);
-  }
-}
-
-function flipPlayback(animation: Animation): void {
-  if (animation.playState === 'paused' || animation.playState === 'idle') {
-    animation.play();
-  }
-  const rate = animation.playbackRate === 0 ? 1 : animation.playbackRate;
-  if (typeof animation.updatePlaybackRate === 'function') {
-    animation.updatePlaybackRate(-rate);
-    return;
-  }
-  animation.playbackRate = -rate;
 }
 
 function armFailsafe(finish: () => void): void {
@@ -211,191 +105,109 @@ function armFailsafe(finish: () => void): void {
   failsafe = window.setTimeout(finish, FAILSAFE_MS);
 }
 
-function afterPaint(fn: () => void): void {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(fn);
-  });
-}
-
-function paintFrozenUi(oldIsDark: boolean): {
-  veil: HTMLElement;
-  freezeRoot: HTMLElement;
-  app: HTMLElement;
-  viewW: number;
-  viewH: number;
-} | null {
-  const app = document.getElementById('root');
-  if (app == null || document.body == null) return null;
-
-  dropVeils();
-
-  const frame = document.documentElement.getBoundingClientRect();
-  const viewW = frame.width || viewMetrics().width;
-  const viewH = frame.height || viewMetrics().height;
-  const veil = document.createElement('div');
-  veil.className = `${VEIL_CLASS} ${oldIsDark ? 'is-theme-to-light' : 'is-theme-to-dark'}`;
-  veil.setAttribute('aria-hidden', 'true');
-  veil.style.inset = 'auto';
-  veil.style.left = `${frame.left}px`;
-  veil.style.top = `${frame.top}px`;
-  veil.style.width = `${viewW}px`;
-  veil.style.height = `${viewH}px`;
-  veil.style.margin = '0';
-  veil.style.maxWidth = 'none';
-  veil.style.maxHeight = 'none';
-
-  const shadow = veil.attachShadow({ mode: 'open' });
-  copySheets(shadow, viewW < 640);
-
-  const freezeRoot = document.createElement('html');
-  freezeRoot.className = oldIsDark ? 'dark' : '';
-  freezeRoot.style.display = 'block';
-  freezeRoot.style.width = `${viewW}px`;
-  freezeRoot.style.height = `${viewH}px`;
-  freezeRoot.style.colorScheme = oldIsDark ? 'dark' : 'light';
-  copyUpVars(document.documentElement, freezeRoot);
-
-  const layoutStyle = document.createElement('style');
-  layoutStyle.textContent = `
-    html { display: block; width: ${viewW}px; height: ${viewH}px; }
-    body { margin: 0; width: ${viewW}px; height: ${viewH}px; }
-  `;
-
-  const freezeBody = document.createElement('body');
-  freezeBody.className = document.body.className;
-  freezeBody.style.margin = '0';
-  freezeBody.style.width = `${viewW}px`;
-  freezeBody.style.height = `${viewH}px`;
-  const appSurface = document.querySelector('.up-app');
-  freezeBody.style.background =
-    (appSurface ? getComputedStyle(appSurface).backgroundColor : '') ||
-    getComputedStyle(document.body).backgroundColor;
-
-  const shot = app.cloneNode(true) as HTMLElement;
-  shot.classList.add(SHOT_CLASS);
-  const rect = app.getBoundingClientRect();
-  shot.style.position = 'absolute';
-  shot.style.left = `${rect.left - frame.left}px`;
-  shot.style.top = `${rect.top - frame.top}px`;
-  shot.style.width = `${rect.width}px`;
-  shot.style.height = `${rect.height}px`;
-  shot.style.margin = '0';
-  shot.style.overflow = 'hidden';
-
-  freezeBody.appendChild(shot);
-  freezeRoot.appendChild(layoutStyle);
-  freezeRoot.appendChild(freezeBody);
-  shadow.appendChild(freezeRoot);
-  document.body.appendChild(veil);
-  copyScroll(app, shot);
-  return { veil, freezeRoot, app, viewW, viewH };
-}
-
 /**
- * Pointer-origin circular swap that keeps both UIs on screen.
- * Light→dark clips the live tree with a growing circle() over the freeze.
- * Dark→light clips the freeze with a shrinking circle(). Chromium composites
- * that basic shape; inverted path() holes do not.
- * A second click reverses the circle from the current radius.
+ * Pointer-origin circular swap on View Transition bitmaps.
+ * Flatten chrome, capture both themes, then clip the snapshots with circle().
+ * Never clips live #root. Keyboard and reduced-motion callers must skip this.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
-  const { event, goingToDark, apply } = options;
+  const { event, goingToDark, apply, commit } = options;
 
-  if (prefersReducedMotion() || isPhoneViewport()) {
+  if (prefersReducedMotion() || !canStartViewTransition(document)) {
     apply();
+    commit();
     return;
   }
 
   if (activeReveal) {
-    if (!activeReveal.started || activeReveal.animation == null) {
-      activeReveal.playingForward = false;
-      activeReveal.finish();
+    if (activeReveal.transition && typeof activeReveal.transition.skipTransition === 'function') {
+      try {
+        activeReveal.transition.skipTransition();
+      } catch {
+        activeReveal.finish();
+      }
       return;
     }
-    activeReveal.playingForward = !activeReveal.playingForward;
-    flipPlayback(activeReveal.animation);
-    armFailsafe(activeReveal.finish);
+    activeReveal.finish();
     return;
   }
 
+  const origin = originFromPointer(event);
   const root = document.documentElement;
   root.classList.add('is-theme-revealing', goingToDark ? 'is-theme-to-dark' : 'is-theme-to-light');
 
-  const painted = paintFrozenUi(!goingToDark);
-  if (painted == null) {
-    apply();
-    dropVeils();
-    clearRevealClasses();
-    return;
-  }
-
-  const motionEl = goingToDark ? painted.app : painted.freezeRoot;
-  const originFrame = goingToDark ? painted.app : painted.veil;
-  const origin = originRelativeTo(originFrame, event);
-  const frameBox = originFrame.getBoundingClientRect();
-  const endRadius = Math.max(
-    1,
-    farthestCornerRadius(origin.x, origin.y, frameBox.width, frameBox.height)
-  );
-  const startRadius = goingToDark ? 1 : endRadius;
-  const stopRadius = goingToDark ? endRadius : 1;
-  motionEl.style.clipPath = circleClip(startRadius, origin.x, origin.y);
-  apply();
-
+  let applied = false;
+  let committed = false;
   let released = false;
+
+  const runApply = () => {
+    if (applied) return;
+    applied = true;
+    apply();
+  };
+
+  const runCommit = () => {
+    runApply();
+    if (committed) return;
+    committed = true;
+    commit();
+  };
+
   const finish = () => {
     if (released) return;
     released = true;
     window.clearTimeout(failsafe);
-    const shouldUndo = activeReveal != null && !activeReveal.playingForward;
-    if (shouldUndo && activeReveal.started) {
-      apply();
-    }
-    clearClip(activeReveal?.motionEl ?? motionEl, activeReveal?.animation ?? null);
-    dropVeils();
+    window.cancelAnimationFrame(pendingFrame);
+    pendingFrame = 0;
+    runCommit();
     clearRevealClasses();
     activeReveal = null;
   };
 
   activeReveal = {
-    animation: null,
-    undo: apply,
-    playingForward: true,
-    started: false,
+    transition: null,
     finish,
-    motionEl,
   };
   armFailsafe(finish);
 
-  afterPaint(() => {
+  pendingFrame = window.requestAnimationFrame(() => {
+    pendingFrame = 0;
     if (released || activeReveal == null) return;
-    if (!activeReveal.playingForward) {
-      finish();
-      return;
-    }
-
-    const duration = readDurationMs('--dur-scene', 620);
-    const easing = REVEAL_EASE;
 
     try {
-      if (typeof motionEl.animate !== 'function') {
-        finish();
-        return;
-      }
-      motionEl.style.willChange = 'clip-path';
-      const animation = motionEl.animate(
-        {
-          clipPath: [
-            circleClip(startRadius, origin.x, origin.y),
-            circleClip(stopRadius, origin.x, origin.y),
-          ],
-        },
-        { duration, easing, fill: 'both' }
-      );
-      activeReveal.animation = animation;
-      activeReveal.started = true;
+      const transition = document.startViewTransition(() => {
+        runApply();
+      });
+      activeReveal.transition = transition;
       armFailsafe(finish);
-      animation.addEventListener('finish', finish);
+
+      void transition.ready
+        .then(() => {
+          if (released) return;
+          const { width, height } = viewMetrics();
+          const endRadius = Math.max(1, farthestCornerRadius(origin.x, origin.y, width, height));
+          const start = circleClip(0, origin.x, origin.y);
+          const stop = circleClip(endRadius, origin.x, origin.y);
+          const animation = root.animate(
+            { clipPath: goingToDark ? [start, stop] : [stop, start] },
+            {
+              duration: goingToDark
+                ? readDurationMs('--dur-scene', 620)
+                : readDurationMs('--dur-emphasis', 500),
+              easing: readEase('--ease-out'),
+              fill: 'both',
+              pseudoElement: goingToDark
+                ? '::view-transition-new(root)'
+                : '::view-transition-old(root)',
+            }
+          );
+          extendTransition(transition, animation.finished);
+        })
+        .catch(() => {
+          runApply();
+        });
+
+      void transition.finished.then(finish, finish);
     } catch {
       finish();
     }
@@ -433,9 +245,9 @@ export function originFromPointer(event: {
   clientY: number;
   currentTarget: EventTarget | null;
 }): ThemeRevealOrigin {
-  const { width, height } = viewMetrics();
+  const { width, height, left, top } = viewMetrics();
   return originRelativeTo(
-    { getBoundingClientRect: () => ({ left: 0, top: 0, width, height }) },
+    { getBoundingClientRect: () => ({ left, top, width, height }) },
     event
   );
 }

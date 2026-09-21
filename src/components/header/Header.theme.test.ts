@@ -22,6 +22,16 @@ assert(
 );
 assert(!src.includes('flushSync'), 'theme apply does not force a sync React commit');
 
+const toggleFn = src.slice(src.indexOf('const handleToggleTheme'), src.indexOf('const handleCreatePlan'));
+assert(toggleFn.includes('isPointerClick'), 'keyboard/detail: 0 still skips the circle');
+assert(toggleFn.includes('reduceMotion'), 'reduced motion still skips the circle');
+assert(!toggleFn.includes('isPhone'), 'phone width does not skip the circle');
+assert(toggleFn.includes('applyDomTheme'), 'pointer apply paints html.dark synchronously');
+assert(toggleFn.includes('persistTheme'), 'pointer apply writes uniplan_theme synchronously');
+assert(toggleFn.includes('commitTheme'), 'Zustand theme commit waits for the reveal');
+assert(!toggleFn.includes('toggleTheme()'), 'pointer path does not set() through toggleTheme');
+assert(toggleFn.includes('setTheme(next)'), 'keyboard and reduced-motion still commit immediately');
+
 assert(/onOpenCatalog=\{\(\) => \{\s*setIsSettingsOpen\(false\)/.test(src), 'opening the catalog still closes Settings');
 assert(/onImportIcsClick=\{\(\) => \{\s*setIsSettingsOpen\(false\)/.test(src), 'import still closes Settings');
 assert(/onOpenExport=\{\(\) => \{\s*setIsSettingsOpen\(false\)/.test(src), 'export still closes Settings');
