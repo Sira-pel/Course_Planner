@@ -1,9 +1,10 @@
 import { SchedulePlan, Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { prefixedId } from '../utils/id';
 
 const VALID_DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export function sanitizeCourse(c: any, index: number): Course {
-  const courseId = typeof c?.id === 'string' && c.id.trim() ? c.id.trim() : `c_${Date.now()}_${index}`;
+  const courseId = typeof c?.id === 'string' && c.id.trim() ? c.id.trim() : prefixedId('c');
   const code = typeof c?.code === 'string' && c.code.trim() ? c.code.trim().toUpperCase() : `CRS ${index + 1}`;
   const name = typeof c?.name === 'string' && c.name.trim() ? c.name.trim() : `${code} Course`;
   const color = typeof c?.color === 'string' && c.color.trim() ? c.color.trim() : COURSE_COLORS[index % COURSE_COLORS.length];
@@ -41,7 +42,7 @@ export function sanitizeCourse(c: any, index: number): Course {
     instructor: typeof c?.instructor === 'string' && c.instructor.trim() ? c.instructor.trim() : undefined,
     credits,
     color,
-    sessions: sessions.length > 0 ? sessions : [{ id: `s_${courseId}_0`, day: 'monday', startTime: '09:00', endTime: '10:15' }],
+    sessions,
   };
 }
 
@@ -58,9 +59,11 @@ export function allocatePlanId(used: Set<string>, preferred?: string): string {
 
 export function uniquePlanId(existingIds: Iterable<string>): string {
   const used = existingIds instanceof Set ? existingIds : new Set(existingIds);
-  const timed = `plan_${Date.now()}`;
-  if (!used.has(timed)) return timed;
-  return allocatePlanId(used);
+  let candidate = prefixedId('plan');
+  while (used.has(candidate)) {
+    candidate = prefixedId('plan');
+  }
+  return candidate;
 }
 
 export function sanitizePlans(rawPlans: any[]): SchedulePlan[] {

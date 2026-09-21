@@ -1,4 +1,5 @@
 import { ClassSession, Course, DayOfWeek, DAYS_LIST } from '../../types/schedule';
+import { prefixedId } from '../../utils/id';
 import { timeToMinutes, minutesToTime } from '../../utils/timeUtils';
 
 export interface MeetingPattern {
@@ -86,7 +87,7 @@ export function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
   if (sessions.length === 0) {
     return [
       {
-        id: `p_${Date.now()}`,
+        id: prefixedId('p'),
         days: ['monday'],
         startTime: '09:00',
         endTime: '10:15',

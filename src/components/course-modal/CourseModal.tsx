@@ -18,6 +18,7 @@ import {
   sortDays,
   toInputTime,
 } from './meetingPatterns';
+import { prefixedId } from '../../utils/id';
 import { EASE_OUT } from '../../utils/motion';
 
 interface CourseModalProps {
@@ -97,7 +98,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const [color, setColor] = useState(COURSE_COLORS[0]);
   const [patterns, setPatterns] = useState<MeetingPattern[]>([
     {
-      id: `p_${Date.now()}`,
+      id: prefixedId('p'),
       days: [initialDay],
       startTime: initialStartTime,
       endTime: '10:15',
@@ -151,7 +152,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       const newItems: EditableRecognizedItem[] = parsed.map((res, idx) => {
         if (res.success && res.course) {
           return {
-            id: res.course.id || `rec_${idx}_${Date.now()}`,
+            id: res.course.id || prefixedId('rec'),
             rawText: res.rawText,
             course: res.course,
             selected: true,
@@ -159,7 +160,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           };
         }
         const fallbackCourse: Course = {
-          id: `rec_fail_${idx}_${Date.now()}`,
+          id: prefixedId('rec_fail'),
           code: 'COURSE 101',
           name: res.rawText.slice(0, 40) || 'Custom Course',
           credits: 3,
@@ -273,7 +274,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       const startTime = toInputTime(initialStartTime, '09:00');
       setPatterns([
         {
-          id: `p_${Date.now()}`,
+          id: prefixedId('p'),
           days: [initialDay],
           startTime,
           endTime: endAfterStart(startTime, 75),
@@ -448,7 +449,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     setPatterns((prev) => [
       ...prev,
       {
-        id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        id: prefixedId('p'),
         days: [nextUnusedDay(used)],
         startTime: last ? last.startTime : '09:00',
         endTime: last ? last.endTime : '10:15',
@@ -517,7 +518,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     }
 
     const courseData: Course = {
-      id: existingCourse ? existingCourse.id : `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: existingCourse ? existingCourse.id : prefixedId('c'),
       code: trimmedCode,
       name: trimmedName,
       section: section.trim() || undefined,

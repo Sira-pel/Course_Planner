@@ -1,4 +1,5 @@
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { prefixedId } from './id';
 
 export interface ParseResult {
   success: boolean;
@@ -417,7 +418,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
 
     // Format final Course object
     const color = COURSE_COLORS[Math.abs(colorIndex) % COURSE_COLORS.length];
-    const courseId = `c_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const courseId = prefixedId('c');
 
     const sessions: ClassSession[] = days.map((day, idx) => ({
       id: `s_${courseId}_${idx}`,
