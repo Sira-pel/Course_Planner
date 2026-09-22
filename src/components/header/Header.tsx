@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { applyDomTheme, persistTheme } from '../../utils/theme';
 import { isPointerClick, runThemeReveal } from '../../utils/themeTransition';
@@ -59,7 +60,34 @@ export const Header: React.FC<HeaderProps> = ({
     canRedo,
     resetToBlank,
     resetToSample,
-  } = useScheduleStore();
+  } = useScheduleStore(
+    useShallow((state) => ({
+      plans: state.plans,
+      activePlanId: state.activePlanId,
+      ghostPlanIds: state.ghostPlanIds,
+      showWeekends: state.showWeekends,
+      startHour: state.startHour,
+      endHour: state.endHour,
+      theme: state.theme,
+      setActivePlan: state.setActivePlan,
+      createPlan: state.createPlan,
+      duplicatePlan: state.duplicatePlan,
+      renamePlan: state.renamePlan,
+      deletePlan: state.deletePlan,
+      toggleGhostPlan: state.toggleGhostPlan,
+      clearGhostPlans: state.clearGhostPlans,
+      setShowWeekends: state.setShowWeekends,
+      setTimeRange: state.setTimeRange,
+      setTheme: state.setTheme,
+      commitTheme: state.commitTheme,
+      undo: state.undo,
+      redo: state.redo,
+      canUndo: state.past.length > 0,
+      canRedo: state.future.length > 0,
+      resetToBlank: state.resetToBlank,
+      resetToSample: state.resetToSample,
+    }))
+  );
 
   const reduceMotion = useReducedMotion();
   const isPhone = useIsPhone();
@@ -345,7 +373,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             id="btn-undo"
             onClick={undo}
-            disabled={!canUndo()}
+            disabled={!canUndo}
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
             className="up-icon-btn up-chrome-btn"
@@ -356,7 +384,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             id="btn-redo"
             onClick={redo}
-            disabled={!canRedo()}
+            disabled={!canRedo}
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
             className="up-icon-btn up-chrome-btn"

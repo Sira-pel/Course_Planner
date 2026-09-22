@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
+import { nextMeasuredWidth } from './calendarMeasure';
 import { CourseBlock } from './CourseBlock';
 import { DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
 import { computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
@@ -12,11 +13,11 @@ interface CalendarGridProps {
   onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
 }
 
-export const CalendarGrid: React.FC<CalendarGridProps> = ({
+export const CalendarGrid = memo(function CalendarGrid({
   onEditCourse,
   onAddCourseAtTime,
   onOpenNewCourse,
-}) => {
+}: CalendarGridProps) {
   const plans = useScheduleStore((state) => state.plans);
   const activePlanId = useScheduleStore((state) => state.activePlanId);
   const ghostPlanIds = useScheduleStore((state) => state.ghostPlanIds);
@@ -26,36 +27,26 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerDimensions, setContainerDimensions] = useState(() => ({
-    width: typeof window !== 'undefined' ? Math.min(1200, window.innerWidth) : 1000,
-    height: 800,
-  }));
+  const [containerWidth, setContainerWidth] = useState(() =>
+    typeof window !== 'undefined' ? Math.min(1200, window.innerWidth) : 1000
+  );
 
-  // Track calendar dimensions responsively (supports window resizes and sidebar expand/collapse)
+  // Width changes the gutter and day labels. Row height is a percentage, so
+  // vertical resizes (mobile browser chrome) do not need a React update.
   useEffect(() => {
-    if (!containerRef.current) return;
-    
-    // Initial size
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      setContainerDimensions({ width: rect.width, height: rect.height });
-    }
+    const node = containerRef.current;
+    if (!node) return;
+
+    const apply = (measured: number) => {
+      setContainerWidth((previous) => nextMeasuredWidth(previous, measured));
+    };
+
+    apply(node.getBoundingClientRect().width);
 
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        const h = entry.contentRect.height;
-        if (w > 0 || h > 0) {
-          setContainerDimensions((prev) => {
-            if (Math.abs(prev.width - w) < 1 && Math.abs(prev.height - h) < 1) {
-              return prev;
-            }
-            return { width: w, height: h };
-          });
-        }
-      }
+      for (const entry of entries) apply(entry.contentRect.width);
     });
-    observer.observe(containerRef.current);
+    observer.observe(node);
     return () => observer.disconnect();
   }, []);
 
@@ -83,8 +74,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     });
     return set;
   }, [conflicts]);
-
-  const { width: containerWidth, height: containerHeight } = containerDimensions;
 
   // Adaptive time boundaries: if any enrolled or ghost course has sessions outside startHour/endHour,
   // gracefully expand the visible hours so no class is cropped or squeezed to zero.
@@ -361,7 +350,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                       startHour={effectiveStartHour}
                       totalMinutes={totalMinutes}
                       onEdit={onEditCourse}
-                      onDelete={(cId) => deleteCourse(cId)}
+                      onDelete={deleteCourse}
                     />
                   ))}
 
@@ -379,4 +368,4 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { LayoutSession, GHOST_PLAN_COLORS } from '../types/schedule';
 import { getContrastTextColor, minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { AlertTriangle, Edit2, Trash2, MapPin, User, ArrowRight } from 'lucide-react';
@@ -12,13 +12,13 @@ interface CourseBlockProps {
   onDelete: (courseId: string) => void;
 }
 
-export const CourseBlock: React.FC<CourseBlockProps> = ({
+export const CourseBlock = memo(function CourseBlock({
   layout,
   startHour,
   totalMinutes,
   onEdit,
   onDelete,
-}) => {
+}: CourseBlockProps) {
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict } = layout;
 
@@ -57,7 +57,7 @@ export const CourseBlock: React.FC<CourseBlockProps> = ({
             onEdit(course.id);
           }
         }}
-        className={`absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} backdrop-blur-[2px] transition-all cursor-pointer hover:shadow-md hover:scale-[1.01] p-1.5 overflow-hidden select-none z-10 active:scale-95`}
+        className={`absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} backdrop-blur-[2px] transition-[transform,box-shadow] duration-150 cursor-pointer hover:shadow-md hover:scale-[1.01] p-1.5 overflow-hidden select-none z-10 active:scale-95`}
         style={{
           top: `${topPercent}%`,
           height: `calc(${heightPercent}% - 2px)`,
@@ -97,7 +97,7 @@ export const CourseBlock: React.FC<CourseBlockProps> = ({
     <div
       id={`course-block-${course.id}-${session.id}`}
       onClick={() => onEdit(course.id)}
-      className={`group absolute rounded-lg transition-all duration-150 cursor-pointer select-none p-2 overflow-hidden shadow-sm hover:shadow-lg hover:z-30 hover:scale-[1.015] ${
+      className={`group absolute rounded-lg transition-[transform,box-shadow] duration-150 cursor-pointer select-none p-2 overflow-hidden shadow-sm hover:shadow-lg hover:z-30 hover:scale-[1.015] ${
         hasConflict
           ? 'ring-2 ring-red-500 ring-offset-1 dark:ring-offset-slate-900 animate-pulse'
           : 'border border-black/15 dark:border-white/20'
@@ -186,4 +186,4 @@ export const CourseBlock: React.FC<CourseBlockProps> = ({
       )}
     </div>
   );
-};
+});
