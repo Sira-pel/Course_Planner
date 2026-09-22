@@ -30,6 +30,7 @@ function migrateBackupPayload(raw: Record<string, unknown>): Record<string, unkn
 export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
   | 'setTheme'
+  | 'commitTheme'
   | 'toggleTheme'
   | 'setShowWeekends'
   | 'setTimeRange'
@@ -43,6 +44,12 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
       if (!isThemeName(theme)) return;
       applyDomTheme(theme);
       persistTheme(theme);
+      if (get().theme === theme) return;
+      set({ theme });
+    },
+
+    commitTheme: (theme: 'light' | 'dark') => {
+      if (!isThemeName(theme)) return;
       if (get().theme === theme) return;
       set({ theme });
     },

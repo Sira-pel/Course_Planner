@@ -56,6 +56,7 @@ export interface ScheduleState {
 
   // Settings & Reset
   setTheme: (theme: 'light' | 'dark') => void;
+  commitTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   setShowWeekends: (show: boolean) => void;
   setTimeRange: (startHour: number, endHour: number) => void;

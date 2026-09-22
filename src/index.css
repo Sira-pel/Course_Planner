@@ -4,6 +4,7 @@
 
 :root {
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-reveal: cubic-bezier(0.3, 0.55, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-pop: cubic-bezier(0.34, 1.36, 0.64, 1);
@@ -36,7 +37,6 @@
 html {
   height: 100%;
   color-scheme: light;
-  scrollbar-gutter: stable;
 }
 
 html,
@@ -114,13 +114,6 @@ html.dark {
 
 /* Header: ledger instrument strip */
 .up-header {
-  --up-raised: #f7f8fb;
-  --up-ink: #1b2430;
-  --up-muted: #5c6774;
-  --up-line: #d5dbe3;
-  --up-accent: #3d4fd8;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #3d4fd8;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -145,16 +138,6 @@ html.dark {
     opacity: 1;
     background: color-mix(in srgb, var(--up-ink) 8%, transparent);
   }
-}
-
-.dark .up-header {
-  --up-raised: #121826;
-  --up-ink: #e8edf4;
-  --up-muted: #8b959e;
-  --up-line: #2a3342;
-  --up-accent: #5b6cf0;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #8b96ff;
 }
 
 .up-header-row {
@@ -1023,31 +1006,10 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-pool-dock,
 .up-pool-drawer,
 .up-pool-sheet {
-  --up-raised: #f7f8fb;
-  --up-ink: #1b2430;
-  --up-muted: #5c6774;
-  --up-line: #d5dbe3;
-  --up-accent: #3d4fd8;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #3d4fd8;
   box-sizing: border-box;
   background: var(--up-raised);
   color: var(--up-ink);
   border-color: var(--up-line);
-}
-
-.dark .up-pool-rail,
-.dark .up-pool-panel,
-.dark .up-pool-dock,
-.dark .up-pool-drawer,
-.dark .up-pool-sheet {
-  --up-raised: #121826;
-  --up-ink: #e8edf4;
-  --up-muted: #8b959e;
-  --up-line: #2a3342;
-  --up-accent: #5b6cf0;
-  --up-accent-ink: #f4f5ff;
-  --up-focus: #8b96ff;
 }
 
 .up-pool-desktop {
@@ -1593,38 +1555,155 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
-/* Theme reveal: circular clip from the toggle. Default VT fade is disabled. */
-html.is-theme-revealing::view-transition-image-pair(root) {
-  isolation: auto;
+@property --up-reveal-clip {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
 
+/* Theme reveal: named body snapshots. Chromium scales a circle; Gecko clips one. */
+html.is-theme-revealing {
+  view-transition-name: none;
+}
+
+html.is-theme-revealing:not(.dark) body {
+  view-transition-name: theme-light;
+}
+
+html.is-theme-revealing.dark body {
+  view-transition-name: theme-dark;
+}
+
+html.is-theme-revealing::view-transition-group(root),
+html.is-theme-revealing::view-transition-image-pair(root),
 html.is-theme-revealing::view-transition-old(root),
 html.is-theme-revealing::view-transition-new(root) {
-  animation: none;
+  animation: none !important;
+}
+
+html.is-theme-revealing::view-transition-group(theme-light),
+html.is-theme-revealing::view-transition-group(theme-dark) {
+  animation: none !important;
+}
+
+html.is-theme-revealing::view-transition-group(theme-light) {
+  z-index: 1;
+}
+
+html.is-theme-revealing::view-transition-group(theme-dark) {
+  z-index: 2;
+}
+
+html.is-theme-revealing::view-transition-image-pair(theme-light),
+html.is-theme-revealing::view-transition-old(theme-light),
+html.is-theme-revealing::view-transition-new(theme-light) {
+  animation: none !important;
   mix-blend-mode: normal;
+}
+
+html.is-theme-revealing::view-transition-image-pair(theme-dark) {
+  position: absolute;
+  inset: auto;
+  left: calc(var(--up-reveal-x) - var(--up-reveal-r));
+  top: calc(var(--up-reveal-y) - var(--up-reveal-r));
+  width: calc(2 * var(--up-reveal-r));
+  height: calc(2 * var(--up-reveal-r));
+  border-radius: 50%;
+  overflow: hidden;
+  /* Static clip. Firefox paints the snapshot full-size until this is in the first frame. Do not animate it. */
+  clip-path: circle(50%);
+  transform-origin: 50% 50%;
   isolation: isolate;
-  display: block;
+  will-change: transform;
+  animation: none !important;
+  mix-blend-mode: normal;
 }
 
-html.is-theme-to-dark::view-transition-old(root) {
-  z-index: 1;
+html.is-theme-revealing::view-transition-old(theme-dark),
+html.is-theme-revealing::view-transition-new(theme-dark) {
+  position: absolute;
+  inset: auto;
+  left: calc(var(--up-reveal-r) - var(--up-reveal-x));
+  top: calc(var(--up-reveal-r) - var(--up-reveal-y));
+  width: var(--up-reveal-w);
+  height: var(--up-reveal-h);
+  object-fit: fill;
+  object-position: 0 0;
+  transform-origin: var(--up-reveal-x) var(--up-reveal-y);
+  will-change: transform;
+  animation: none !important;
+  mix-blend-mode: normal;
 }
 
-html.is-theme-to-dark::view-transition-new(root) {
-  z-index: 2;
+html.is-theme-to-dark::view-transition-image-pair(theme-dark) {
+  transform: scale(var(--up-reveal-s0));
 }
 
-html.is-theme-to-light::view-transition-old(root) {
-  z-index: 2;
+html.is-theme-to-dark::view-transition-new(theme-dark) {
+  transform: scale(calc(1 / var(--up-reveal-s0)));
 }
 
-html.is-theme-to-light::view-transition-new(root) {
-  z-index: 1;
+html.is-theme-to-light::view-transition-image-pair(theme-dark) {
+  transform: scale(1);
 }
 
-html.is-theme-revealing,
-html.is-theme-revealing * {
-  transition-duration: 0s !important;
+/* Gecko: keep the snapshot at 1:1 and grow the clip. Inverse scale slides borders on phone DPRs. */
+html.is-gecko-reveal.is-theme-to-dark {
+  --up-reveal-clip: var(--up-reveal-start);
+}
+
+html.is-gecko-reveal.is-theme-to-light {
+  --up-reveal-clip: var(--up-reveal-r);
+}
+
+html.is-gecko-reveal.is-theme-revealing::view-transition-image-pair(theme-dark) {
+  /* Stay in the snapshot's own box. A repositioned pair rounds 1px off on phone viewports. */
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  overflow: visible;
+  transform: none;
+  will-change: clip-path;
+  clip-path: circle(var(--up-reveal-clip) at var(--up-reveal-x) var(--up-reveal-y));
+}
+
+html.is-gecko-reveal.is-theme-revealing::view-transition-old(theme-dark),
+html.is-gecko-reveal.is-theme-revealing::view-transition-new(theme-dark) {
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  transform: none;
+  will-change: auto;
+  object-fit: fill;
+  object-position: 0 0;
+}
+
+html.is-theme-revealing .up-chrome-btn,
+html.is-theme-revealing .up-pool-tab,
+html.is-theme-revealing .up-pool-row,
+html.is-theme-revealing .up-header,
+html.is-theme-revealing .up-app,
+html.is-theme-revealing .up-footer,
+html.is-theme-revealing .up-pool-rail,
+html.is-theme-revealing .up-pool-panel,
+html.is-theme-revealing .up-pool-dock,
+html.is-theme-revealing .up-pool-drawer,
+html.is-theme-revealing .up-pool-sheet,
+html.is-theme-revealing #calendar-grid-container,
+html.is-theme-revealing .up-scroll,
+html.is-theme-revealing .transition-colors,
+html.is-theme-revealing .transition-all,
+html.is-theme-revealing .transition-opacity {
+  transition: none !important;
 }
 
 .up-theme-glyph {
@@ -1646,15 +1725,15 @@ html.is-theme-revealing * {
   transform-origin: 50% 50%;
 }
 
-.up-theme-glyph[data-mode='light'] .up-theme-sun,
-.up-theme-glyph[data-mode='dark'] .up-theme-moon {
+html:not(.dark) .up-theme-glyph .up-theme-sun,
+html.dark .up-theme-glyph .up-theme-moon {
   opacity: 1;
   filter: blur(0);
   transform: scale(1);
 }
 
-.up-theme-glyph[data-mode='light'] .up-theme-moon,
-.up-theme-glyph[data-mode='dark'] .up-theme-sun {
+html:not(.dark) .up-theme-glyph .up-theme-moon,
+html.dark .up-theme-glyph .up-theme-sun {
   opacity: 0;
   filter: blur(var(--blur-ink));
   transform: scale(0.25);
@@ -1733,10 +1812,19 @@ html:not(.is-theme-revealing) .up-theme-moon {
     transform: none;
   }
 
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
   ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-new(root),
+  ::view-transition-group(theme-dark),
+  ::view-transition-image-pair(theme-dark),
+  ::view-transition-old(theme-dark),
+  ::view-transition-new(theme-dark),
+  ::view-transition-group(theme-light),
+  ::view-transition-image-pair(theme-light),
+  ::view-transition-old(theme-light),
+  ::view-transition-new(theme-light) {
     animation: none !important;
-    clip-path: none !important;
     filter: none !important;
   }
 
@@ -1747,13 +1835,13 @@ html:not(.is-theme-revealing) .up-theme-moon {
     transform: none;
   }
 
-  .up-theme-glyph[data-mode='light'] .up-theme-moon,
-  .up-theme-glyph[data-mode='dark'] .up-theme-sun {
+  html:not(.dark) .up-theme-glyph .up-theme-moon,
+  html.dark .up-theme-glyph .up-theme-sun {
     opacity: 0;
   }
 
-  .up-theme-glyph[data-mode='light'] .up-theme-sun,
-  .up-theme-glyph[data-mode='dark'] .up-theme-moon {
+  html:not(.dark) .up-theme-glyph .up-theme-sun,
+  html.dark .up-theme-glyph .up-theme-moon {
     opacity: 1;
   }
 }

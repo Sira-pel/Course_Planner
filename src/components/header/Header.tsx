@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { flushSync } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { isPointerClick, originFromPointer, runThemeReveal } from '../../utils/themeTransition';
+import { applyDomTheme, persistTheme } from '../../utils/theme';
+import { isPointerClick, runThemeReveal } from '../../utils/themeTransition';
 import { detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
@@ -51,7 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
     clearGhostPlans,
     setShowWeekends,
     setTimeRange,
-    toggleTheme,
+    setTheme,
+    commitTheme,
     undo,
     redo,
     canUndo,
@@ -208,22 +209,25 @@ export const Header: React.FC<HeaderProps> = ({
   // closeSettings stays false for #btn-theme and Settings Light/Dark so the sheet stays open.
   const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
     const goingToDark = theme !== 'dark';
-    const apply = () => {
-      flushSync(() => {
-        if (closeSettings) setIsSettingsOpen(false);
-        toggleTheme();
-      });
-    };
+    const next = goingToDark ? 'dark' : 'light';
 
     if (!isPointerClick(event) || reduceMotion) {
-      apply();
+      if (closeSettings) setIsSettingsOpen(false);
+      setTheme(next);
       return;
     }
 
     runThemeReveal({
-      origin: originFromPointer(event),
+      event,
       goingToDark,
-      apply,
+      apply: () => {
+        if (closeSettings) setIsSettingsOpen(false);
+        applyDomTheme(next);
+        persistTheme(next);
+      },
+      commit: () => {
+        commitTheme(next);
+      },
     });
   };
 
@@ -388,7 +392,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Dark mode"
             aria-pressed={theme === 'dark'}
           >
-            <span className="up-theme-glyph" data-mode={theme} aria-hidden="true">
+            <span className="up-theme-glyph" aria-hidden="true">
               <Sun className="up-theme-sun w-4 h-4" />
               <Moon className="up-theme-moon w-4 h-4" />
             </span>
