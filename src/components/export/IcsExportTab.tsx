@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
-import { GoogleCalendarSync } from '../GoogleCalendarSync';
+
+const GoogleCalendarSync = lazy(() => import('../GoogleCalendarSync'));
 
 interface IcsExportTabProps {
   activePlan: SchedulePlan;
@@ -69,7 +70,9 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
           </button>
         </div>
 
-        <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
+        <Suspense fallback={<p className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">Loading Google Calendar sync.</p>}>
+          <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
+        </Suspense>
         {/* Optional: Individual Course .ics Download */}
         {activePlan.courses.length > 1 && (
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
