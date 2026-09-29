@@ -44,10 +44,10 @@ export const TF: DayOfWeek[] = ['tuesday', 'friday'];
 export const MW: DayOfWeek[] = ['monday', 'wednesday'];
 
 export const DAY_PRESETS = [
-  { label: 'MWF', days: MWF },
-  { label: 'TTh', days: TTH },
   { label: 'MTh', days: MTH },
   { label: 'TF', days: TF },
+  { label: 'MW', days: MW },
+  { label: 'TTh', days: TTH },
 ] as const;
 
 export const FALLBACK_DAYS: DayOfWeek[] = ['monday'];
