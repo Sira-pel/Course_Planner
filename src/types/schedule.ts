@@ -78,6 +78,16 @@ export const GHOST_PLAN_COLORS = [
   { border: 'border-rose-500 dark:border-rose-400', bg: 'bg-rose-500/15 dark:bg-rose-500/20', text: 'text-rose-700 dark:text-rose-300', dot: '#F43F5E' },
 ];
 
+export function getPlanGhostColorIndex(planId: string, plans: SchedulePlan[]): number {
+  const idx = plans.findIndex((p) => p.id === planId);
+  return idx >= 0 ? idx : 0;
+}
+
+export function getPlanGhostColor(planId: string, plans: SchedulePlan[]) {
+  const colorIndex = getPlanGhostColorIndex(planId, plans);
+  return GHOST_PLAN_COLORS[colorIndex % GHOST_PLAN_COLORS.length];
+}
+
 export const DAYS_LIST: { id: DayOfWeek; short: string; label: string; full: string }[] = [
   { id: 'monday', short: 'M', label: 'Mon', full: 'Monday' },
   { id: 'tuesday', short: 'T', label: 'Tue', full: 'Tuesday' },

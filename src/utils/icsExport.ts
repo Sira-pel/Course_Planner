@@ -7,6 +7,7 @@ import {
   parseLocalDate,
   sessionTimesAreValid,
 } from './calendarDates';
+import { randomId } from './id';
 
 /**
  * Maps a hex color code to a standard colored circle emoji.
@@ -173,7 +174,7 @@ export function generateIcsCalendar(
 
       const safeCourseId = String(course.id).replace(/[^a-zA-Z0-9_-]/g, '');
       const safeSessionId = String(session.id).replace(/[^a-zA-Z0-9_-]/g, '');
-      const uid = `event_${safeCourseId || 'c'}_${safeSessionId || 's'}_${Date.now()}@uniplan.app`;
+      const uid = `event_${safeCourseId || 'c'}_${safeSessionId || 's'}_${randomId()}@uniplan.app`;
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);

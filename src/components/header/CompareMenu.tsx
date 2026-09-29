@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import { Layers, Plus, Copy, ChevronDown } from 'lucide-react';
-import { GHOST_PLAN_COLORS } from '../../types/schedule';
+import { getPlanGhostColor } from '../../types/schedule';
 import type { SchedulePlan } from '../../types/schedule';
 
 interface CompareMenuProps {
@@ -119,10 +119,10 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                 </p>
 
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {plans.map((p, idx) => {
+                  {plans.map((p) => {
                     const isActive = p.id === activePlanId;
                     const isGhosted = ghostPlanIds.includes(p.id);
-                    const ghostStyle = GHOST_PLAN_COLORS[idx % GHOST_PLAN_COLORS.length];
+                    const ghostStyle = getPlanGhostColor(p.id, plans);
 
                     if (isActive) {
                       return (

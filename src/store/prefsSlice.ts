@@ -96,7 +96,12 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
 
     importFullState: (jsonString: string) => {
       try {
-        const parsed: unknown = JSON.parse(jsonString);
+        const parsed: unknown = JSON.parse(jsonString, (key, value) => {
+          if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            return undefined;
+          }
+          return value;
+        });
         if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
           return { success: false, error: 'Invalid backup file: expected a JSON object' };
         }

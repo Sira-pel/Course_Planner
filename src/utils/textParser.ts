@@ -114,12 +114,23 @@ export function parseSingleTimeToken(
     return { h, m };
   }
 
-  // 3-digit or 4-digit military time e.g. "0830", "1330", "1415", "0900"
-  if (/^\d{3,4}$/.test(stripped)) {
+  // 4-digit military time e.g. "0830", "1330", "1415", "0900"
+  if (/^\d{4}$/.test(stripped)) {
     const num = parseInt(stripped, 10);
     let h = Math.floor(num / 100);
     const m = num % 100;
     if (h > 23 || m > 59) return null;
+    if (isExplicitPM && h < 12) h += 12;
+    else if (!isExplicitAM && !isExplicitPM && h >= 1 && h <= 7) h += 12;
+    return { h, m };
+  }
+
+  // 3-digit military time e.g. "830", "915" (8:30, 9:15)
+  if (/^[1-9]\d{2}$/.test(stripped)) {
+    const num = parseInt(stripped, 10);
+    let h = Math.floor(num / 100);
+    const m = num % 100;
+    if (m > 59) return null;
     if (isExplicitPM && h < 12) h += 12;
     else if (!isExplicitAM && !isExplicitPM && h >= 1 && h <= 7) h += 12;
     return { h, m };
@@ -263,13 +274,43 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     const warnings: string[] = [];
 
     // -------------------------------------------------------------
-    // STEP 1: Extract Time Range & Days
+    // STEP 1: Extract Course Code (with optional section or title)
+    // -------------------------------------------------------------
+    let section: string | undefined = undefined;
+    let code = '';
+    let name = '';
+
+    // Pattern 1: Code followed by parenthesized title e.g. "ITM 380 (Cloud Computing)"
+    const codeWithParenTitleMatch = lineWorking.match(/\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\s*\(\s*([^)]+)\s*\)/i);
+    if (codeWithParenTitleMatch) {
+      code = `${codeWithParenTitleMatch[1].toUpperCase()} ${codeWithParenTitleMatch[2].toUpperCase()}`;
+      name = codeWithParenTitleMatch[3].trim();
+      lineWorking = lineWorking.replace(codeWithParenTitleMatch[0], ' ');
+    } else {
+      // Pattern 2: Course Code with Hyphenated Section e.g. "CS 101-001", "CS101-001", "COSC 340-02"
+      const codeWithSectionMatch = lineWorking.match(COURSE_CODE_WITH_SECTION_REGEX);
+      if (codeWithSectionMatch) {
+        code = `${codeWithSectionMatch[1].toUpperCase()} ${codeWithSectionMatch[2].toUpperCase()}`;
+        section = codeWithSectionMatch[3];
+        lineWorking = lineWorking.replace(codeWithSectionMatch[0], ' ');
+      } else {
+        // Pattern 3: Standard Course Code e.g. "CS 101", "CS101", "ITM 380"
+        const codeMatch = lineWorking.match(COURSE_CODE_REGEX);
+        if (codeMatch) {
+          code = `${codeMatch[1].toUpperCase()} ${codeMatch[2].toUpperCase()}`;
+          lineWorking = lineWorking.replace(codeMatch[0], ' ');
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // STEP 2: Extract Time Range & Days
     // -------------------------------------------------------------
     // Normalize unicode dashes in the entire line for uniform matching
     lineWorking = lineWorking.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-');
 
     // Time range regex: e.g. "8:30-10:00", "12:00-1:30", "1:45-3:15", "10:15-11:45", "9:00 AM - 10:15 AM"
-    const timeRangeRegex = /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|\d{3,4})\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|\d{3,4})\b/i;
+    const timeRangeRegex = /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
     const timeRangeMatch = lineWorking.match(timeRangeRegex);
 
     let startTime = '09:00';
@@ -293,10 +334,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
 
     if (dayMatches && dayMatches.length > 0) {
       days = normalizeDays(dayMatches);
-      for (const d of dayMatches) {
-        // Remove day token from lineWorking
-        lineWorking = lineWorking.replace(new RegExp(`\\b${d}\\b`, 'gi'), ' ');
-      }
+      lineWorking = lineWorking.replace(DAYS_TOKEN_REGEX, ' ');
     }
 
     if (days.length === 0) {
@@ -309,19 +347,9 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // -------------------------------------------------------------
-    // STEP 2: Extract Section, Single-Letter Cohorts, Credits, Room
+    // STEP 3: Extract Section (if not yet found), Single-Letter Cohorts, Credits, Room
     // -------------------------------------------------------------
-    let section: string | undefined = undefined;
-    let code = '';
-    let name = '';
-
-    // Check for Course Code with Hyphenated Section first (e.g. "CS 101-001", "CS101-001", "COSC 340-02")
-    const codeWithSectionMatch = lineWorking.match(COURSE_CODE_WITH_SECTION_REGEX);
-    if (codeWithSectionMatch) {
-      code = `${codeWithSectionMatch[1].toUpperCase()} ${codeWithSectionMatch[2].toUpperCase()}`;
-      section = codeWithSectionMatch[3];
-      lineWorking = lineWorking.replace(codeWithSectionMatch[0], ' ');
-    } else {
+    if (!section) {
       // Standard Section keyword matching e.g. "Sec 001", "Section 02", "-001"
       const sectionMatch = lineWorking.match(/\b(?:sec|section)\.?\s*([0-9A-Za-z]+)\b/i) || lineWorking.match(/(?:^|\s)[-_]\s*([0-9A-Za-z]{1,4})\b/i);
       if (sectionMatch) {
@@ -350,7 +378,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // -------------------------------------------------------------
-    // STEP 3: Extract Instructor
+    // STEP 4: Extract Instructor
     // -------------------------------------------------------------
     let instructor: string | undefined = undefined;
 
@@ -369,25 +397,9 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // -------------------------------------------------------------
-    // STEP 4: Extract Course Code (if not matched) and Course Title
+    // STEP 5: Course Title (and parenthesized title if not yet extracted)
     // -------------------------------------------------------------
-    if (!code) {
-      // Pattern 1: Code followed by parenthesized title e.g. "ITM 380 (Cloud Computing)"
-      const codeWithParenTitleMatch = lineWorking.match(/\b([A-Za-z]{2,5}\s*[-_]?\s*[0-9]{2,4}[A-Za-z]?)\s*\(\s*([^)]+)\s*\)/i);
-      if (codeWithParenTitleMatch) {
-        code = codeWithParenTitleMatch[1].replace(/\s+/g, ' ').toUpperCase();
-        name = codeWithParenTitleMatch[2].trim();
-        lineWorking = lineWorking.replace(codeWithParenTitleMatch[0], ' ');
-      } else {
-        // Pattern 2: Standard Code detection e.g. "ITM 380", "COSC 340", "CYBR 351", "CS101", "CS 101"
-        const codeMatch = lineWorking.match(COURSE_CODE_REGEX);
-        if (codeMatch) {
-          code = `${codeMatch[1].toUpperCase()} ${codeMatch[2].toUpperCase()}`;
-          lineWorking = lineWorking.replace(codeMatch[0], ' ');
-        }
-      }
-    } else {
-      // Code is already extracted, check if there is a parenthesized title like (Data Structures)
+    if (!name) {
       const parenTitleMatch = lineWorking.match(/\(\s*([^)]+)\s*\)/);
       if (parenTitleMatch) {
         name = parenTitleMatch[1].trim();
@@ -395,7 +407,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       }
     }
 
-    // Clean remaining lineWorking to form the title (or instructor if not matched)
+    // Clean remaining lineWorking to form the title
     let cleanedRemaining = lineWorking
       .replace(/[()[\]{}]+/g, ' ')
       .replace(/[|,\\/\-_–—\t]+/g, ' ')

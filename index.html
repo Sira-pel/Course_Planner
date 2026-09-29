@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f1f5f9" id="theme-color-meta" />
     <title>Uniplan</title>
     <meta name="description" content="University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter." />
     <meta property="og:title" content="Uniplan" />
@@ -24,18 +25,21 @@
               if (persisted === 'dark' || persisted === 'light') theme = persisted;
             }
           }
-          if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.style.colorScheme = 'dark';
           } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.style.colorScheme = 'light';
           }
+          var meta = document.getElementById('theme-color-meta');
+          if (meta) meta.setAttribute('content', isDark ? '#020617' : '#f1f5f9');
         } catch (e) {}
       })();
     </script>
   </head>
-  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+  <body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

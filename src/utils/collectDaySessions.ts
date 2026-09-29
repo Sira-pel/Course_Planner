@@ -14,7 +14,8 @@ export function collectDaySessions(
   day: DayOfWeek,
   activePlan: SchedulePlan | undefined,
   ghostPlans: SchedulePlan[],
-  conflictingCourseIds: Set<string>
+  conflictingCourseIds: Set<string>,
+  planIndexMap?: Map<string, number>
 ): DaySessionItem[] {
   const items: DaySessionItem[] = [];
 
@@ -36,6 +37,7 @@ export function collectDaySessions(
 
   ghostPlans.forEach((ghostPlan, gIdx) => {
     if (activePlan && ghostPlan.id === activePlan.id) return;
+    const ghostIndex = planIndexMap ? (planIndexMap.get(ghostPlan.id) ?? gIdx) : gIdx;
     for (const course of ghostPlan.courses) {
       for (const session of course.sessions) {
         if (session.day !== day) continue;
@@ -45,7 +47,7 @@ export function collectDaySessions(
           planId: ghostPlan.id,
           planName: ghostPlan.name,
           isGhost: true,
-          ghostIndex: gIdx,
+          ghostIndex,
           hasConflict: false,
         });
       }

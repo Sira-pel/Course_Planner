@@ -1614,7 +1614,7 @@ html.is-theme-revealing::view-transition-image-pair(theme-dark) {
   clip-path: circle(50%);
   transform-origin: 50% 50%;
   isolation: isolate;
-  will-change: transform;
+  will-change: transform, opacity;
   animation: none !important;
   mix-blend-mode: normal;
 }
@@ -1700,6 +1700,8 @@ html.is-theme-revealing .up-pool-drawer,
 html.is-theme-revealing .up-pool-sheet,
 html.is-theme-revealing #calendar-grid-container,
 html.is-theme-revealing .up-scroll,
+html.is-theme-revealing .up-menu,
+html.is-theme-revealing .up-settings,
 html.is-theme-revealing .transition-colors,
 html.is-theme-revealing .transition-all,
 html.is-theme-revealing .transition-opacity {

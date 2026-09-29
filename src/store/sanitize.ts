@@ -3,19 +3,38 @@ import { prefixedId } from '../utils/id';
 
 const VALID_DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+function safeTrim(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed.slice(0, maxLength);
+}
+
 export function sanitizeCourse(c: any, index: number): Course {
-  const courseId = typeof c?.id === 'string' && c.id.trim() ? c.id.trim() : prefixedId('c');
-  const code = typeof c?.code === 'string' && c.code.trim() ? c.code.trim().toUpperCase() : `CRS ${index + 1}`;
-  const name = typeof c?.name === 'string' && c.name.trim() ? c.name.trim() : `${code} Course`;
-  const color = typeof c?.color === 'string' && c.color.trim() ? c.color.trim() : COURSE_COLORS[index % COURSE_COLORS.length];
+  if (!c || typeof c !== 'object') {
+    c = {};
+  }
+
+  const rawId = safeTrim(c.id, 64);
+  const courseId = rawId || prefixedId('c');
+
+  const rawCode = safeTrim(c.code, 30);
+  const code = rawCode ? rawCode.toUpperCase() : `CRS ${index + 1}`;
+
+  const rawName = safeTrim(c.name, 200);
+  const name = rawName || `${code} Course`;
+
+  const rawColor = safeTrim(c.color, 32);
+  const color = rawColor || COURSE_COLORS[index % COURSE_COLORS.length];
+
   const credits = typeof c?.credits === 'number' && !isNaN(c.credits) ? Math.max(0, Math.min(30, c.credits)) : 3;
 
   const sessions: ClassSession[] = Array.isArray(c?.sessions)
     ? c.sessions
         .filter((s: any) => s && typeof s === 'object')
         .map((s: any, sIdx: number): ClassSession => {
-          const rawStart = typeof s.startTime === 'string' && s.startTime ? s.startTime : '09:00';
-          let rawEnd = typeof s.endTime === 'string' && s.endTime ? s.endTime : '10:15';
+          const rawStart = typeof s.startTime === 'string' && s.startTime ? s.startTime.slice(0, 10) : '09:00';
+          let rawEnd = typeof s.endTime === 'string' && s.endTime ? s.endTime.slice(0, 10) : '10:15';
           const [sh, sm] = rawStart.split(':').map(Number);
           const [eh, em] = rawEnd.split(':').map(Number);
           const sMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
@@ -25,11 +44,11 @@ export function sanitizeCourse(c: any, index: number): Course {
             rawEnd = `${Math.floor(adj / 60).toString().padStart(2, '0')}:${(adj % 60).toString().padStart(2, '0')}`;
           }
           return {
-            id: typeof s.id === 'string' && s.id ? s.id : `s_${courseId}_${sIdx}`,
+            id: safeTrim(s.id, 64) || `s_${courseId}_${sIdx}`,
             day: VALID_DAYS.includes(s.day) ? s.day : 'monday',
             startTime: rawStart,
             endTime: rawEnd,
-            room: typeof s.room === 'string' && s.room.trim() ? s.room.trim() : undefined,
+            room: safeTrim(s.room, 60),
           };
         })
     : [];
@@ -38,8 +57,8 @@ export function sanitizeCourse(c: any, index: number): Course {
     id: courseId,
     code,
     name,
-    section: typeof c?.section === 'string' && c.section.trim() ? c.section.trim() : undefined,
-    instructor: typeof c?.instructor === 'string' && c.instructor.trim() ? c.instructor.trim() : undefined,
+    section: safeTrim(c.section, 30),
+    instructor: safeTrim(c.instructor, 100),
     credits,
     color,
     sessions,
@@ -73,10 +92,11 @@ export function sanitizePlans(rawPlans: any[]): SchedulePlan[] {
   return rawPlans
     .filter((p) => p && typeof p === 'object')
     .map((p, pIdx) => {
-      const rawId = typeof p.id === 'string' && p.id.trim() ? p.id.trim() : '';
+      const rawId = safeTrim(p.id, 64) || '';
       const planId = allocatePlanId(usedIds, rawId || undefined);
       usedIds.add(planId);
-      const planName = typeof p.name === 'string' && p.name.trim() ? p.name.trim() : `Plan ${String.fromCharCode(65 + pIdx)}`;
+      const rawPlanName = safeTrim(p.name, 60);
+      const planName = rawPlanName || `Plan ${String.fromCharCode(65 + pIdx)}`;
       const courses = Array.isArray(p.courses)
         ? p.courses.map((c: any, cIdx: number) => sanitizeCourse(c, cIdx))
         : [];

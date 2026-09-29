@@ -235,12 +235,12 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   index={index}
                   reduceMotion={reduceMotion}
                   activePlanName={activePlanName}
-                  onEdit={() => onEditCourse(item.id)}
-                  onRequestDelete={() => onRequestDelete(item.id)}
-                  onConfirmDelete={() => onConfirmDelete(item.id)}
+                  onEdit={onEditCourse}
+                  onRequestDelete={onRequestDelete}
+                  onConfirmDelete={onConfirmDelete}
                   onCancelDelete={onCancelDelete}
-                  onAddToPlan={() => onAddToPlan(item.id)}
-                  onRemoveFromPlan={() => onRemoveFromPlan(item.id)}
+                  onAddToPlan={onAddToPlan}
+                  onRemoveFromPlan={onRemoveFromPlan}
                 />
               );
             })

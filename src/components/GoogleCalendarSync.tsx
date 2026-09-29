@@ -36,6 +36,7 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
   const [syncError, setSyncError] = useState<string | null>(null);
   const [skippedCount, setSkippedCount] = useState(0);
   const [reusedCalendar, setReusedCalendar] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const loginLockRef = useRef(false);
@@ -104,7 +105,7 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
     abortRef.current?.abort();
   };
 
-  const handleSync = async () => {
+  const handleStartSync = async () => {
     if (syncLockRef.current || isSyncing) return;
 
     setSyncError(null);
@@ -131,11 +132,12 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
       return;
     }
 
-    const calendarName = uniplanCalendarSummary(activePlan.name);
-    const confirmed = window.confirm(
-      `This will sync your class sessions to a Google calendar named "${calendarName}". If that calendar already exists, it will be reused (previous Uniplan events on it are replaced). Continue?`
-    );
-    if (!confirmed) return;
+    setShowConfirm(true);
+  };
+
+  const executeSync = async () => {
+    setShowConfirm(false);
+    if (syncLockRef.current || isSyncing) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -250,7 +252,7 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={handleSync}
+                  onClick={handleStartSync}
                   disabled={isSyncing}
                   className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                 >
@@ -268,6 +270,33 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
                 </button>
               </div>
             </div>
+
+            {showConfirm && !isSyncing && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-xs space-y-2">
+                <p className="text-amber-900 dark:text-amber-200 font-medium">
+                  Sync schedule to Google Calendar &ldquo;{calendarName}&rdquo;?
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 text-[11px]">
+                  If a calendar with this name already exists, previous Uniplan events on it will be replaced.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={executeSync}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium text-xs shadow-sm transition-colors"
+                  >
+                    Confirm &amp; Sync
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(false)}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded font-medium text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {syncSuccess && (
               <div className="flex items-start gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs">
@@ -292,6 +321,29 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
             <p className="flex-1">{syncError}</p>
           </div>
         )}
+
+        <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+          <span>Google Calendar Integration</span>
+          <div className="flex gap-2">
+            <a
+              href="/privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Privacy Policy
+            </a>
+            <span>•</span>
+            <a
+              href="/terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Terms
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

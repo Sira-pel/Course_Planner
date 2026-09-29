@@ -7,6 +7,91 @@ import { computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } f
 import { collectDaySessions } from '../utils/collectDaySessions';
 import { Plus, Clock } from 'lucide-react';
 
+const DAY_INDEX_MAP: DayOfWeek[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
+
+function getTodayDayOfWeek(): DayOfWeek {
+  return DAY_INDEX_MAP[new Date().getDay()];
+}
+
+interface CurrentTimeIndicatorProps {
+  effectiveStartHour: number;
+  totalMinutes: number;
+}
+
+const CurrentTimeIndicator = memo(function CurrentTimeIndicator({
+  effectiveStartHour,
+  totalMinutes,
+}: CurrentTimeIndicatorProps) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let timer: number | null = null;
+
+    const tick = () => {
+      if (!document.hidden) {
+        setNow(new Date());
+      }
+    };
+
+    const startTimer = () => {
+      if (!timer) {
+        timer = window.setInterval(tick, 60000);
+      }
+    };
+
+    const stopTimer = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setNow(new Date());
+        startTimer();
+      } else {
+        stopTimer();
+      }
+    };
+
+    if (!document.hidden) {
+      startTimer();
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const currentMinutesFromGridStart =
+    now.getHours() * 60 + now.getMinutes() - effectiveStartHour * 60;
+  if (currentMinutesFromGridStart < 0 || currentMinutesFromGridStart > totalMinutes) {
+    return null;
+  }
+  const nowPercent = (currentMinutesFromGridStart / totalMinutes) * 100;
+
+  return (
+    <div
+      className="absolute left-0 right-0 z-40 flex items-center pointer-events-none"
+      style={{ top: `${nowPercent}%` }}
+    >
+      <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs" />
+      <div className="flex-1 border-t-2 border-red-500 shadow-xs" />
+    </div>
+  );
+});
+
 interface CalendarGridProps {
   onEditCourse: (courseId: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
@@ -113,41 +198,39 @@ export const CalendarGrid = memo(function CalendarGrid({
   // Pre-calculate day layout sessions
   const dayLayoutMap = useMemo(() => {
     const map = new Map<DayOfWeek, LayoutSession[]>();
+    const planIndexMap = new Map<string, number>();
+    plans.forEach((p, idx) => planIndexMap.set(p.id, idx));
 
     days.forEach(dayObj => {
       const layout = computeDayLayout(
-        collectDaySessions(dayObj.id, activePlan, ghostPlans, conflictingCourseIds)
+        collectDaySessions(dayObj.id, activePlan, ghostPlans, conflictingCourseIds, planIndexMap)
       );
       map.set(dayObj.id, layout);
     });
 
     return map;
-  }, [days, activePlan, ghostPlans, conflictingCourseIds]);
+  }, [days, activePlan, ghostPlans, conflictingCourseIds, plans]);
 
-  // Current day and time highlight (updates every 60s)
-  const [now, setNow] = useState(() => new Date());
+  // Day highlight: updates when midnight passes or tab becomes visible again
+  const [currentDayOfWeek, setCurrentDayOfWeek] = useState<DayOfWeek>(getTodayDayOfWeek);
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const currentDayOfWeek: DayOfWeek | null = useMemo(() => {
-    const jsDay = now.getDay();
-    const map: Record<number, DayOfWeek> = {
-      0: 'sunday',
-      1: 'monday',
-      2: 'tuesday',
-      3: 'wednesday',
-      4: 'thursday',
-      5: 'friday',
-      6: 'saturday',
+    const updateDay = () => {
+      const today = getTodayDayOfWeek();
+      setCurrentDayOfWeek((prev) => (prev !== today ? today : prev));
     };
-    return map[jsDay] || null;
-  }, [now]);
 
-  const currentMinutesFromGridStart = (now.getHours() * 60 + now.getMinutes()) - (effectiveStartHour * 60);
-  const showNowLine = currentMinutesFromGridStart >= 0 && currentMinutesFromGridStart <= totalMinutes;
-  const nowPercent = (currentMinutesFromGridStart / totalMinutes) * 100;
+    document.addEventListener('visibilitychange', updateDay);
+
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const msUntilMidnight = Math.max(1000, nextMidnight.getTime() - now.getTime() + 500);
+
+    const timer = setTimeout(updateDay, Math.min(msUntilMidnight, 3600000));
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', updateDay);
+    };
+  }, [currentDayOfWeek]);
 
   const gutterWidth = containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
   const colWidth = days.length > 0 ? (containerWidth - gutterWidth) / days.length : 120;
@@ -163,16 +246,16 @@ export const CalendarGrid = memo(function CalendarGrid({
     <div
       ref={containerRef}
       id="calendar-grid-container"
-      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200/90 dark:border-slate-800 overflow-hidden relative z-0 isolate"
+      className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
       <div className="up-scroll flex-1 overflow-auto relative flex flex-col w-full max-w-full">
         {/* Day Headers (Sticky at top of scroll area) */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs sticky top-0 z-30 shadow-2xs w-full max-w-full">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky top-0 z-30 shadow-2xs w-full max-w-full">
           {/* Top-left corner time label */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="h-11 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 select-none bg-slate-100/70 dark:bg-slate-950/70"
+            className="h-11 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 select-none bg-slate-100 dark:bg-slate-950"
           >
             <Clock className="w-3.5 h-3.5" />
           </div>
@@ -193,7 +276,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   key={day.id}
                   id={`day-header-${day.id}`}
                   title={day.full}
-                  className={`h-11 flex items-center select-none transition-colors ${
+                  className={`h-11 flex items-center select-none ${
                     colWidth < 68 ? 'justify-center px-1' : 'justify-between px-2 sm:px-3'
                   } ${
                     isToday ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-b-2 border-indigo-600' : ''
@@ -242,10 +325,34 @@ export const CalendarGrid = memo(function CalendarGrid({
           className="flex w-full max-w-full relative flex-1 min-h-0"
           style={{ minHeight: `${numHours * HOUR_MIN_PX}px` }}
         >
+          {/* Horizontal Hour Guidelines across all day columns */}
+          <div
+            className="absolute top-0 bottom-0 right-0 pointer-events-none z-0"
+            style={{ left: `${gutterWidth}px` }}
+          >
+            {Array.from({ length: numHours }).map((_, slotIdx) => (
+              <div
+                key={`hour-slot-${slotIdx}`}
+                style={{
+                  top: `${slotIdx * hourPct}%`,
+                  height: `${hourPct}%`,
+                }}
+                className={`absolute left-0 right-0 ${
+                  slotIdx === numHours - 1
+                    ? ''
+                    : 'border-b border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {/* Subtle 30-minute dashed half-hour line */}
+                <div className="w-full h-1/2 border-b border-dashed border-slate-200/60 dark:border-slate-800/60" />
+              </div>
+            ))}
+          </div>
+
           {/* Time Gutter (Left Column) */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/60 relative"
+            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 relative z-10"
           >
             {hourMarks.map((hour, idx) => {
               const timeStr = containerWidth < 380
@@ -275,34 +382,13 @@ export const CalendarGrid = memo(function CalendarGrid({
             })}
           </div>
 
-          {/* Days Columns Grid */}
+          {/* Days Columns Grid (1:1 column match with sticky header) */}
           <div
-            className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 relative self-stretch"
+            className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 relative self-stretch min-w-0 z-10"
             style={{
               gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
             }}
           >
-            {/* Horizontal Hour Lines Background */}
-            <div className="absolute inset-0 pointer-events-none">
-              {Array.from({ length: numHours }).map((_, slotIdx) => (
-                <div
-                  key={`hour-slot-${slotIdx}`}
-                  style={{
-                    top: `${slotIdx * hourPct}%`,
-                    height: `${hourPct}%`,
-                  }}
-                  className={`absolute left-0 right-0 ${
-                    slotIdx === numHours - 1
-                      ? ''
-                      : 'border-b border-slate-200/90 dark:border-slate-800/80'
-                  }`}
-                >
-                  {/* Subtle 30-minute dashed half-hour line */}
-                  <div className="w-full h-1/2 border-b border-dashed border-slate-200/50 dark:border-slate-800/40" />
-                </div>
-              ))}
-            </div>
-
             {/* Render Each Day Column */}
             {days.map((day) => {
               const isToday = day.id === currentDayOfWeek;
@@ -312,7 +398,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={day.id}
                   id={`day-column-${day.id}`}
-                  className={`relative h-full transition-colors group/col ${
+                  className={`relative h-full group/col ${
                     isToday ? 'bg-indigo-500/[0.02] dark:bg-indigo-500/[0.03]' : ''
                   }`}
                   onDoubleClick={(e) => {
@@ -332,14 +418,11 @@ export const CalendarGrid = memo(function CalendarGrid({
                   }}
                 >
                   {/* Current Time Indicator on today's column */}
-                  {isToday && showNowLine && (
-                    <div
-                      className="absolute left-0 right-0 z-40 flex items-center pointer-events-none"
-                      style={{ top: `${nowPercent}%` }}
-                    >
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs" />
-                      <div className="flex-1 border-t-2 border-red-500 shadow-xs" />
-                    </div>
+                  {isToday && (
+                    <CurrentTimeIndicator
+                      effectiveStartHour={effectiveStartHour}
+                      totalMinutes={totalMinutes}
+                    />
                   )}
 
                   {/* Course Sessions on this Day */}

@@ -125,4 +125,10 @@ const noVersionRes = noVersion.slice.importFullState(JSON.stringify({
 assert(noVersionRes.success === true, 'backup without version still imports (treated as current-1)');
 assert(noVersion.get().showWeekends === true, 'unversioned backup still restores prefs');
 
+const protoPollutionStore = createFake();
+const protoPollutionJson = '{"__proto__":{"polluted":true},"plans":[{"id":"plan_sec","name":"Secure","courses":[]}],"showWeekends":false}';
+const protoRes = protoPollutionStore.slice.importFullState(protoPollutionJson);
+assert(protoRes.success === true, 'import with proto key succeeds safely');
+assert(!('polluted' in Object.prototype), 'prototype is not polluted');
+
 console.log('prefsSlice import tests passed');

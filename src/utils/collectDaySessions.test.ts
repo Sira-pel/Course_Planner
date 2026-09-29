@@ -60,6 +60,14 @@ assert(
 assert(ghostItems.find((item) => item.planId === 'plan_b')?.ghostIndex === 0, 'first ghost keeps index 0');
 assert(ghostItems.find((item) => item.planId === 'plan_c')?.ghostIndex === 1, 'second ghost keeps index 1');
 
+const planIndexMap = new Map<string, number>([
+  ['plan_b', 1],
+  ['plan_c', 2],
+]);
+const withMap = collectDaySessions('monday', activePlan, [ghostPlan, otherGhostPlan], conflictingCourseIds, planIndexMap);
+assert(withMap.find((item) => item.planId === 'plan_b')?.ghostIndex === 1, 'ghost B uses plan index map value 1');
+assert(withMap.find((item) => item.planId === 'plan_c')?.ghostIndex === 2, 'ghost C uses plan index map value 2');
+
 const wednesday = collectDaySessions('wednesday', activePlan, [ghostPlan], conflictingCourseIds);
 assert(wednesday.length === 1, 'other-day sessions are excluded');
 assert(wednesday[0].session.id === 's2', 'wednesday keeps the matching active session');

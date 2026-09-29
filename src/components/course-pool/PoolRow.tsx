@@ -14,15 +14,15 @@ export interface PoolRowProps {
   index: number;
   reduceMotion: boolean | null;
   activePlanName: string | undefined;
-  onEdit: () => void;
-  onRequestDelete: () => void;
-  onConfirmDelete: () => void;
+  onEdit: (id: string) => void;
+  onRequestDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
-  onAddToPlan: () => void;
-  onRemoveFromPlan: () => void;
+  onAddToPlan: (id: string) => void;
+  onRemoveFromPlan: (id: string) => void;
 }
 
-export const PoolRow: React.FC<PoolRowProps> = ({
+export const PoolRow = React.memo(function PoolRow({
   item,
   inActivePlan,
   conflict,
@@ -36,7 +36,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
   onCancelDelete,
   onAddToPlan,
   onRemoveFromPlan,
-}) => {
+}: PoolRowProps) {
   return (
     <motion.div
       className="up-pool-row group"
@@ -65,7 +65,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={onConfirmDelete}
+                onClick={() => onConfirmDelete(item.id)}
                 className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
               >
                 Delete
@@ -83,7 +83,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
             <div className="up-pool-row-actions flex items-center gap-0.5">
               <button
                 type="button"
-                onClick={onEdit}
+                onClick={() => onEdit(item.id)}
                 title="Edit course"
                 aria-label={`Edit ${item.code}`}
                 className="up-icon-btn up-chrome-btn up-pool-icon-hit"
@@ -92,7 +92,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
               </button>
               <button
                 type="button"
-                onClick={onRequestDelete}
+                onClick={() => onRequestDelete(item.id)}
                 title="Remove from pool"
                 aria-label={`Remove ${item.code} from pool`}
                 className="up-icon-btn up-chrome-btn up-pool-icon-hit"
@@ -144,7 +144,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
             </span>
             <button
               type="button"
-              onClick={onRemoveFromPlan}
+              onClick={() => onRemoveFromPlan(item.id)}
               className="up-pool-text-btn up-chrome-btn"
               title="Remove this class from the current timetable"
             >
@@ -154,7 +154,7 @@ export const PoolRow: React.FC<PoolRowProps> = ({
         ) : (
           <button
             type="button"
-            onClick={onAddToPlan}
+            onClick={() => onAddToPlan(item.id)}
             className="up-pool-add up-chrome-btn"
             title={`Add ${item.code} to ${activePlanName}`}
           >
@@ -165,4 +165,4 @@ export const PoolRow: React.FC<PoolRowProps> = ({
       </div>
     </motion.div>
   );
-};
+});

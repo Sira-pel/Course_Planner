@@ -154,8 +154,10 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 onClick={onToggleTheme}
                 className="up-settings-item up-chrome-btn"
               >
-                {theme === 'dark' ? <Sun /> : <Moon />}
-                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                <Sun className="hidden dark:block" />
+                <Moon className="block dark:hidden" />
+                <span className="hidden dark:inline">Light mode</span>
+                <span className="inline dark:hidden">Dark mode</span>
               </button>
               <button
                 type="button"

@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { Course } from '../../types/schedule';
-import { checkSessionCollision } from '../../utils/timeUtils';
+import { Course, DayOfWeek } from '../../types/schedule';
+import { timeToMinutes } from '../../utils/timeUtils';
 import { usePoolLayout } from '../../utils/usePoolLayout';
 import { courseIdentityKey, sameCourseIdentity } from '../../utils/courseIdentity';
 import { ShoppingBag } from 'lucide-react';
@@ -70,23 +70,47 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     [activeCourseKeys]
   );
 
-  const findConflictInActivePlan = (catalogItem: Course): Course | null => {
-    if (!activePlan) return null;
-    const activeNonSelfCourses = activePlan.courses.filter(
-      (c) => !sameCourseIdentity(c, catalogItem)
-    );
-
-    for (const poolSession of catalogItem.sessions) {
-      for (const enrolled of activeNonSelfCourses) {
-        for (const enrSession of enrolled.sessions) {
-          if (checkSessionCollision(poolSession, enrSession)) {
-            return enrolled;
-          }
+  const activeSessionsByDay = useMemo(() => {
+    const map = new Map<DayOfWeek, Array<{ start: number; end: number; course: Course }>>();
+    if (!activePlan) return map;
+    for (const c of activePlan.courses) {
+      for (const s of c.sessions) {
+        const start = timeToMinutes(s.startTime);
+        const end = timeToMinutes(s.endTime);
+        if (end <= start) continue;
+        const list = map.get(s.day);
+        if (list) {
+          list.push({ start, end, course: c });
+        } else {
+          map.set(s.day, [{ start, end, course: c }]);
         }
       }
     }
-    return null;
-  };
+    return map;
+  }, [activePlan]);
+
+  const findConflictInActivePlan = useCallback(
+    (catalogItem: Course): Course | null => {
+      if (!activePlan || activeSessionsByDay.size === 0) return null;
+
+      for (const poolSession of catalogItem.sessions) {
+        const candidates = activeSessionsByDay.get(poolSession.day);
+        if (!candidates) continue;
+        const sStart = timeToMinutes(poolSession.startTime);
+        const sEnd = timeToMinutes(poolSession.endTime);
+        if (sEnd <= sStart) continue;
+
+        for (const enrolled of candidates) {
+          if (sameCourseIdentity(enrolled.course, catalogItem)) continue;
+          if (sStart < enrolled.end && enrolled.start < sEnd) {
+            return enrolled.course;
+          }
+        }
+      }
+      return null;
+    },
+    [activePlan, activeSessionsByDay]
+  );
 
   const filteredCourses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -205,10 +229,28 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     setSearchQuery('');
   };
 
-  const handleConfirmDelete = (id: string) => {
+  const handleConfirmDelete = useCallback((id: string) => {
     removeFromCatalog(id);
     setConfirmDeleteCourseId(null);
-  };
+  }, [removeFromCatalog]);
+
+  const handleCancelDelete = useCallback(() => {
+    setConfirmDeleteCourseId(null);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  const handleAddToPlan = useCallback(
+    (catalogId: string) => addCourseFromPool(catalogId, activePlanId),
+    [addCourseFromPool, activePlanId]
+  );
+
+  const handleRemoveFromPlan = useCallback(
+    (catalogId: string) => removeCourseFromPlanByCatalog(catalogId, activePlanId),
+    [removeCourseFromPlanByCatalog, activePlanId]
+  );
 
   const countBadge = (
     <AnimatePresence initial={false} mode="popLayout">
@@ -248,18 +290,18 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       reduceMotion={reduceMotion}
       onSearchChange={setSearchQuery}
       onSearchKeyDown={handleSearchKeyDown}
-      onClearSearch={() => setSearchQuery('')}
+      onClearSearch={handleClearSearch}
       onFilterMode={setFilterMode}
       onToggleCollapse={onToggleCollapse}
       onOpenNewCourse={openNewCourse}
       onEditCourse={onEditCourse}
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}
-      onCancelDelete={() => setConfirmDeleteCourseId(null)}
+      onCancelDelete={handleCancelDelete}
       isEnrolled={isEnrolledInActivePlan}
       findConflict={findConflictInActivePlan}
-      onAddToPlan={(catalogId) => addCourseFromPool(catalogId, activePlanId)}
-      onRemoveFromPlan={(catalogId) => removeCourseFromPlanByCatalog(catalogId, activePlanId)}
+      onAddToPlan={handleAddToPlan}
+      onRemoveFromPlan={handleRemoveFromPlan}
     />
   );
 

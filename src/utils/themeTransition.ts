@@ -178,7 +178,12 @@ function bakeScaleKeyframes(
   const outer: Keyframe[] = [];
   const inner: Keyframe[] = [];
   for (const frame of frames) {
-    outer.push({ offset: frame.offset, transform: `scale(${frame.scale})` });
+    const kf: Keyframe = { offset: frame.offset, transform: `scale(${frame.scale})` };
+    if (shrink && frame.offset >= 0.85) {
+      const fadeProgress = (frame.offset - 0.85) / 0.15;
+      kf.opacity = 1 - fadeProgress;
+    }
+    outer.push(kf);
     inner.push({ offset: frame.offset, transform: `scale(${1 / frame.scale})` });
   }
   return { outer, inner };
@@ -206,8 +211,20 @@ function farthestCornerRadius(x: number, y: number, width: number, height: numbe
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
+export function isMobileScreen(): boolean {
+  const g = globalThis as typeof globalThis & { matchMedia?: (query: string) => { matches: boolean } };
+  if (typeof g.matchMedia !== 'function') return false;
+  return g.matchMedia('(max-width: 639px)').matches;
+}
+
 function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
-  const target = event.currentTarget;
+  let target = event.currentTarget;
+  if (isMobileScreen()) {
+    const mobileBtn = typeof document !== 'undefined' ? document.getElementById('btn-theme') : null;
+    if (mobileBtn) {
+      target = mobileBtn;
+    }
+  }
   if (
     typeof target === 'object' &&
     target !== null &&
@@ -215,6 +232,10 @@ function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
     typeof target.getBoundingClientRect === 'function'
   ) {
     const box = target.getBoundingClientRect();
+    const isElongated = box.width > box.height * 1.5 || box.height > box.width * 1.5;
+    if (isElongated) {
+      return Math.min(box.width, box.height) / 2;
+    }
     return Math.max(box.width, box.height) / 2;
   }
   return FALLBACK_START_RADIUS_PX;
@@ -452,11 +473,18 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
             const start = parseFloat(root.style.getPropertyValue('--up-reveal-start'));
             const from = goingToDark ? start : full;
             const to = goingToDark ? full : start;
+            const clipKeyframes: Keyframe[] = goingToDark
+              ? [
+                  { '--up-reveal-clip': `${from}px` },
+                  { '--up-reveal-clip': `${to}px` },
+                ]
+              : [
+                  { '--up-reveal-clip': `${from}px`, opacity: 1 },
+                  { '--up-reveal-clip': `${from + (to - from) * 0.85}px`, opacity: 1, offset: 0.85 },
+                  { '--up-reveal-clip': `${to}px`, opacity: 0, offset: 1 },
+                ];
             const clipAnimation = root.animate(
-              [
-                { '--up-reveal-clip': `${from}px` },
-                { '--up-reveal-clip': `${to}px` },
-              ],
+              clipKeyframes,
               {
                 duration,
                 easing: easeCss,
@@ -513,6 +541,20 @@ export function originRelativeTo(
 ): ThemeRevealOrigin {
   const frame = container.getBoundingClientRect();
   const target = event.currentTarget;
+
+  if (isMobileScreen()) {
+    const btn =
+      (typeof document !== 'undefined' ? document.getElementById('btn-theme') : null) ||
+      (target && typeof target === 'object' && 'getBoundingClientRect' in target ? (target as Element) : null);
+    if (btn && typeof btn.getBoundingClientRect === 'function') {
+      const box = btn.getBoundingClientRect();
+      return {
+        x: box.left + box.width / 2 - frame.left,
+        y: box.top + box.height / 2 - frame.top,
+      };
+    }
+  }
+
   if (
     typeof target === 'object' &&
     target !== null &&
@@ -520,6 +562,10 @@ export function originRelativeTo(
     typeof target.getBoundingClientRect === 'function'
   ) {
     const box = target.getBoundingClientRect();
+    const isElongated = box.width > box.height * 1.5 || box.height > box.width * 1.5;
+    if (isElongated && (event.clientX !== 0 || event.clientY !== 0)) {
+      return { x: event.clientX - frame.left, y: event.clientY - frame.top };
+    }
     return {
       x: box.left + box.width / 2 - frame.left,
       y: box.top + box.height / 2 - frame.top,

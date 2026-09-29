@@ -316,4 +316,64 @@ const shrink = geometricScaleLadder(18 / 1550, unitBezier(0.3, 0.55, 0.3, 1), tr
 assert(interpolateScale(grow, 1 / 60) < 0.08, 'to-dark first 60 Hz frame stays ≤ ~5–8% of cover');
 assert(interpolateScale(shrink, 1 / 60) > 0.9, 'to-light is ease-out shrink, not a reversed grow ladder');
 
+// Test mobile fixed-point origin: ignores user input clientX/clientY and uses button directly
+{
+  const origMatchMedia = globalThis.matchMedia;
+  const origDocument = globalThis.document;
+
+  const mockBtn = {
+    getBoundingClientRect: () => ({ left: 320, top: 12, width: 44, height: 44 }),
+  };
+
+  globalThis.matchMedia = ((query: string) => ({
+    matches: query.includes('max-width: 639px'),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+
+  globalThis.document = {
+    ...origDocument,
+    getElementById: (id: string) => (id === 'btn-theme' ? mockBtn : null),
+  } as unknown as Document;
+
+  const mobileOrigin = originRelativeTo(
+    { getBoundingClientRect: () => ({ left: 0, top: 0, width: 375, height: 812 }) },
+    {
+      clientX: 50, // user tapped here
+      clientY: 100,
+      currentTarget: null,
+    }
+  );
+
+  // Button center: 320 + 44/2 = 342, 12 + 44/2 = 34
+  assert(
+    mobileOrigin.x === 342 && mobileOrigin.y === 34,
+    'mobile uses the fixed button center (342, 34) instead of user input (50, 100)'
+  );
+
+  const settingsMenuItem = {
+    getBoundingClientRect: () => ({ left: 16, top: 400, width: 343, height: 44 }),
+  };
+  const mobileOriginFromMenu = originRelativeTo(
+    { getBoundingClientRect: () => ({ left: 0, top: 0, width: 375, height: 812 }) },
+    {
+      clientX: 50,
+      clientY: 420,
+      currentTarget: settingsMenuItem as unknown as EventTarget,
+    }
+  );
+  assert(
+    mobileOriginFromMenu.x === 342 && mobileOriginFromMenu.y === 34,
+    'mobile settings item tap still resolves origin to fixed btn-theme center'
+  );
+
+  globalThis.matchMedia = origMatchMedia;
+  globalThis.document = origDocument;
+}
+
 console.log('themeTransition tests passed');

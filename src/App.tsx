@@ -6,11 +6,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
-import { Header } from './components/Header';
+import { Header } from './components/header/Header';
 import { CalendarGrid } from './components/CalendarGrid';
-import { CourseModal } from './components/CourseModal';
-import { ExportModal } from './components/ExportModal';
-import { CoursePoolSidebar } from './components/CoursePoolSidebar';
+import { CourseModal } from './components/course-modal/CourseModal';
+import { ExportModal } from './components/export/ExportModal';
+import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
