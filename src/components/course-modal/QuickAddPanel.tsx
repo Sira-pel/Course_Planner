@@ -232,14 +232,14 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                             aria-label="Start time"
                             value={session0.startTime}
                             onChange={(e) => onUpdateItemTimes(item.id, e.target.value, session0.endTime)}
-                            className={`${inputClass} font-mono`}
+                            className={`${inputClass} font-mono px-2 sm:px-3`}
                           />
                           <input
                             type="time"
                             aria-label="End time"
                             value={session0.endTime}
                             onChange={(e) => onUpdateItemTimes(item.id, session0.startTime, e.target.value)}
-                            className={`${inputClass} font-mono`}
+                            className={`${inputClass} font-mono px-2 sm:px-3`}
                           />
                           <input
                             type="text"

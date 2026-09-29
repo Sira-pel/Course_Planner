@@ -361,10 +361,12 @@ export const Header: React.FC<HeaderProps> = ({
                 }
                 transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
               >
-                <AlertTriangle className="up-conflict-icon w-3.5 h-3.5" />
-                <span className="font-mono tabular-nums">{conflicts.length}</span>
-                <span className="hidden sm:inline">
-                  {conflicts.length === 1 ? 'collision' : 'collisions'}
+                <AlertTriangle className="up-conflict-icon w-3.5 h-3.5 shrink-0" />
+                <span className="inline-flex items-baseline gap-1 leading-none tabular-nums">
+                  <span>{conflicts.length}</span>
+                  <span className="hidden sm:inline">
+                    {conflicts.length === 1 ? 'collision' : 'collisions'}
+                  </span>
                 </span>
               </motion.button>
             )}

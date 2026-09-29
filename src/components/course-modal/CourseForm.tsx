@@ -209,7 +209,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                   </div>
 
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-4 min-w-0">
+                    <div className="col-span-6 sm:col-span-4 min-w-0">
                       <label className="sr-only" htmlFor={index === 0 ? 'course-start' : `meeting-start-${pattern.id}`}>
                         Start time
                       </label>
@@ -228,10 +228,10 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                             endTime: endM <= startM ? endAfterStart(startTime, DEFAULT_DURATION_MINUTES) : pattern.endTime,
                           });
                         }}
-                        className={`${inputClass} font-mono`}
+                        className={`${inputClass} font-mono px-2 sm:px-3`}
                       />
                     </div>
-                    <div className="col-span-4 min-w-0">
+                    <div className="col-span-6 sm:col-span-4 min-w-0">
                       <label className="sr-only" htmlFor={`meeting-end-${pattern.id}`}>
                         End time
                       </label>
@@ -241,10 +241,10 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                         required
                         value={pattern.endTime}
                         onChange={(e) => onUpdatePattern(index, { endTime: e.target.value })}
-                        className={`${inputClass} font-mono`}
+                        className={`${inputClass} font-mono px-2 sm:px-3`}
                       />
                     </div>
-                    <div className="col-span-4 min-w-0">
+                    <div className="col-span-12 sm:col-span-4 min-w-0">
                       <label className="sr-only" htmlFor={`meeting-room-${pattern.id}`}>
                         Room
                       </label>

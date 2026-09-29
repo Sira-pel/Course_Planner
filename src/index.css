@@ -678,6 +678,7 @@ html.dark {
   color: #c42b4a;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1930,6 +1931,19 @@ html.dark .course-tab-pill {
 html.dark .course-input:focus,
 html.dark .course-input:focus-visible {
   border-color: #818cf8;
+}
+
+input[type="time"].course-input {
+  min-width: 0;
+}
+
+input[type="time"].course-input::-webkit-datetime-edit {
+  padding: 0;
+}
+
+input[type="time"].course-input::-webkit-calendar-picker-indicator {
+  margin-left: 2px;
+  padding: 0;
 }
 
 #course-paste {
