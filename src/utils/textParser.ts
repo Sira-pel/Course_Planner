@@ -15,8 +15,8 @@ const COURSE_CODE_WITH_SECTION_REGEX = /\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[
 // Regex to capture course codes like CS101, CS 101, ITM 380, COSC-340, CYBR 351, MATH 201A
 const COURSE_CODE_REGEX = /\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\b/i;
 
-// Regex to detect days including MW, TF, WF, TR, TTH, TUTH, MWF, M/W, T/F, W/F, T/R, MoWe, TuFr, etc.
-const DAYS_TOKEN_REGEX = /\b(MWF|TTH|TUTH|WF|MW|TF|TR|MTWTHF|MTWRF|MOWEFR|MOWE|TUFR|WEFR|TUTH|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|M|T|W|TH|R|F|S|SU)\b/gi;
+// Regex to detect days including MW, TF, WF, TR, TTH, TUTH, MTH, MWF, M/W, T/F, W/F, T/R, MoWe, TuFr, etc.
+const DAYS_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|MTWTHF|MTWRF|MOWEFR|MOWE|TUFR|WEFR|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|M|T|W|TH|R|F|S|SU)\b/gi;
 
 /**
  * Normalizes day tokens into standard DayOfWeek array.
@@ -35,6 +35,9 @@ export function normalizeDays(tokens: string[]): DayOfWeek[] {
       days.add('friday');
     } else if (upper === 'TTH' || upper === 'TUTH' || upper === 'TR') {
       days.add('tuesday');
+      days.add('thursday');
+    } else if (upper === 'MTH' || upper === 'MOTH') {
+      days.add('monday');
       days.add('thursday');
     } else if (upper === 'TF' || upper === 'TUFR') {
       days.add('tuesday');
