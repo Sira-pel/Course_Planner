@@ -351,9 +351,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   useEffect(() => {
     if (phase !== 'open') return;
     if (mode === 'form') {
-      codeInputRef.current?.focus();
+      codeInputRef.current?.focus({ preventScroll: true });
     } else {
-      pasteInputRef.current?.focus();
+      pasteInputRef.current?.focus({ preventScroll: true });
     }
   }, [mode, phase]);
 
@@ -711,7 +711,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
         <div
           ref={clipRef}
-          className={`course-morph up-scroll mt-3 min-h-0 flex-auto ${morphHeight !== null ? 'is-morphing' : ''}`}
+          className={`course-morph up-scroll mt-3 min-h-0 flex-auto ${
+            morphHeight !== null ? 'is-morphing' : ''
+          } ${mode === 'quick' && recognizedItems.length === 0 ? 'overflow-y-hidden' : ''}`}
           style={morphHeight !== null ? { height: morphHeight } : undefined}
         >
           <AnimatePresence initial={false} mode="sync">
@@ -732,6 +734,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                         width: '100%',
                         top: 0,
                         left: 0,
+                        overflow: 'hidden',
+                        maxHeight: '100%',
+                        pointerEvents: 'none',
                       }
                 }
                 transition={{
@@ -789,6 +794,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                         width: '100%',
                         top: 0,
                         left: 0,
+                        overflow: 'hidden',
+                        maxHeight: '100%',
+                        pointerEvents: 'none',
                       }
                 }
                 transition={{

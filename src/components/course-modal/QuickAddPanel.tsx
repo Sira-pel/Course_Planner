@@ -67,7 +67,9 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             onChange={(e) => onRawTextChange(e.target.value)}
             rows={5}
             placeholder={'CS 101 Computer science MWF 09:00-10:15\nITM 380 Cloud Computing MW 8:30-10:00'}
-            className={`${inputClass} min-h-32 resize-none font-mono text-[13px] leading-relaxed pr-24`}
+            className={`${inputClass} min-h-36 resize-none font-mono text-[13px] leading-relaxed pr-24 ${
+              rawText.trim() ? 'has-scroll' : ''
+            }`}
           />
           <button
             type="button"

@@ -100,6 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const lastSettingsToggleAt = useRef<number>(0);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
   const plansDropdownRef = useRef<HTMLDivElement>(null);
@@ -160,7 +161,9 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.up-menu')) return;
+      if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor')) return;
+      if (document.documentElement.classList.contains('is-theme-revealing')) return;
+      if (Date.now() - lastSettingsToggleAt.current < 350) return;
       if (ghostDropdownRef.current && !ghostDropdownRef.current.contains(e.target as Node)) {
         setGhostMenuOpen(false);
       }
@@ -439,6 +442,9 @@ export const Header: React.FC<HeaderProps> = ({
             showWeekends={showWeekends}
             theme={theme}
             onToggleOpen={() => {
+              const now = Date.now();
+              if (now - lastSettingsToggleAt.current < 350) return;
+              lastSettingsToggleAt.current = now;
               setPlansMenuOpen(false);
               setGhostMenuOpen(false);
               setIsSettingsOpen((open) => !open);

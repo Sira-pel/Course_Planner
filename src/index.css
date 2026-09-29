@@ -1932,6 +1932,28 @@ html.dark .course-input:focus-visible {
   border-color: #818cf8;
 }
 
+#course-paste {
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#course-paste::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+#course-paste.has-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+#course-paste.has-scroll::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+}
+
 .course-morph {
   position: relative;
   min-height: 0;
