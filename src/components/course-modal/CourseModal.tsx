@@ -12,6 +12,7 @@ import {
   type EditableRecognizedItem,
   type MeetingPattern,
   FALLBACK_DAYS,
+  DEFAULT_DURATION_MINUTES,
   endAfterStart,
   nextUnusedDay,
   patternsToSessions,
@@ -107,7 +108,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       id: prefixedId('p'),
       days: [initialDay],
       startTime: initialStartTime,
-      endTime: '10:15',
+      endTime: endAfterStart(initialStartTime, DEFAULT_DURATION_MINUTES),
       room: '',
     },
   ]);
@@ -176,7 +177,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               id: `s_fail_${idx}`,
               day: 'monday',
               startTime: '09:00',
-              endTime: '10:15',
+              endTime: '10:30',
             },
           ],
         };
@@ -257,7 +258,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           id: prefixedId('p'),
           days: [initialDay],
           startTime,
-          endTime: endAfterStart(startTime, 75),
+          endTime: endAfterStart(startTime, DEFAULT_DURATION_MINUTES),
           room: '',
         },
       ]);
@@ -323,7 +324,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         if (item.id !== id) return item;
         const baseSession = item.course.sessions[0] || {
           startTime: '09:00',
-          endTime: '10:15',
+          endTime: '10:30',
           room: '',
         };
         const newDays = days.length > 0 ? days : FALLBACK_DAYS;
@@ -395,7 +396,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         id: prefixedId('p'),
         days: [nextUnusedDay(used)],
         startTime: last ? last.startTime : '09:00',
-        endTime: last ? last.endTime : '10:15',
+        endTime: last ? last.endTime : '10:30',
         room: last ? last.room : '',
       },
     ]);

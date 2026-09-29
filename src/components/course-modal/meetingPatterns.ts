@@ -23,19 +23,32 @@ export interface EditableRecognizedItem {
 const DAY_ORDER = DAYS_LIST.map((d) => d.id);
 
 export const DURATION_CHIPS = [
-  { label: '50m', minutes: 50 },
-  { label: '75m', minutes: 75 },
-  { label: '90m', minutes: 90 },
+  { label: '1h', minutes: 60 },
+  { label: '1h30', minutes: 90 },
+  { label: '2h', minutes: 120 },
+  { label: '2h30', minutes: 150 },
 ] as const;
 
+export const DEFAULT_DURATION_MINUTES = 90;
+
 export const SAMPLE_CHIPS = [
-  { label: 'CS 101', text: 'CS 101 Computer science MWF 09:00-10:15' },
+  { label: 'CS 101', text: 'CS 101 Computer science MWF 09:00-10:00' },
   { label: 'ITM 380', text: 'ITM 380 (Cloud Computing) - Sec 001, 8:30-10:00 MW, Vanndy You' },
   { label: 'COSC 340', text: 'COSC 340 (Networking Essentials) - Sec 002, 10:15-11:45 MW, Math Sa' },
 ] as const;
 
 export const MWF: DayOfWeek[] = ['monday', 'wednesday', 'friday'];
 export const TTH: DayOfWeek[] = ['tuesday', 'thursday'];
+export const MTH: DayOfWeek[] = ['monday', 'thursday'];
+export const TF: DayOfWeek[] = ['tuesday', 'friday'];
+export const MW: DayOfWeek[] = ['monday', 'wednesday'];
+
+export const DAY_PRESETS = [
+  { label: 'MTh', days: MTH },
+  { label: 'TF', days: TF },
+  { label: 'MW', days: MW },
+  { label: 'TTh', days: TTH },
+] as const;
 
 export const FALLBACK_DAYS: DayOfWeek[] = ['monday'];
 export const LAST_MINUTE = 23 * 60 + 59;
@@ -56,6 +69,9 @@ export function formatDaysShort(days: DayOfWeek[]): string {
   const sorted = sortDays(days);
   if (daysEqual(sorted, MWF)) return 'MWF';
   if (daysEqual(sorted, TTH)) return 'TTh';
+  if (daysEqual(sorted, MTH)) return 'MTh';
+  if (daysEqual(sorted, TF)) return 'TF';
+  if (daysEqual(sorted, MW)) return 'MW';
   return sorted.map((d) => DAYS_LIST.find((x) => x.id === d)?.label ?? d).join(' ');
 }
 
@@ -90,7 +106,7 @@ export function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
         id: prefixedId('p'),
         days: ['monday'],
         startTime: '09:00',
-        endTime: '10:15',
+        endTime: '10:30',
         room: '',
       },
     ];
@@ -101,7 +117,7 @@ export function sessionsToPatterns(sessions: ClassSession[]): MeetingPattern[] {
 
   for (const session of sessions) {
     const startTime = toInputTime(session.startTime, '09:00');
-    const endTime = toInputTime(session.endTime, '10:15');
+    const endTime = toInputTime(session.endTime, '10:30');
     const key = `${startTime}|${endTime}|${session.room || ''}`;
     const existing = indexByKey.get(key);
     if (existing !== undefined) {
@@ -126,7 +142,7 @@ export function patternsToSessions(patterns: MeetingPattern[]): ClassSession[] {
   return patterns.flatMap((pattern) => {
     const days = pattern.days.length > 0 ? sortDays(pattern.days) : FALLBACK_DAYS;
     const startTime = toInputTime(pattern.startTime, '09:00');
-    const endTime = toInputTime(pattern.endTime, '10:15');
+    const endTime = toInputTime(pattern.endTime, '10:30');
     return days.map((day) => ({
       id: `${pattern.id}_${day}`,
       day,

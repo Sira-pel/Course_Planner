@@ -66,7 +66,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             value={rawText}
             onChange={(e) => onRawTextChange(e.target.value)}
             rows={5}
-            placeholder={'CS 101 Computer science MWF 09:00-10:15\nITM 380 Cloud Computing MW 8:30-10:00'}
+            placeholder={'CS 101 Computer science MWF 09:00-10:00\nITM 380 Cloud Computing MW 8:30-10:00'}
             className={`${inputClass} min-h-36 resize-none font-mono text-[13px] leading-relaxed pr-24`}
           />
           <button
@@ -110,7 +110,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
               const c = item.course;
               const session0 = c.sessions[0] || {
                 startTime: '09:00',
-                endTime: '10:15',
+                endTime: '10:30',
                 day: 'monday' as DayOfWeek,
               };
               const currentDays = c.sessions.map((s) => s.day);
