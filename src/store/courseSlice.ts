@@ -1,5 +1,5 @@
 import { COURSE_COLORS, type Course } from '../types/schedule';
-import { sameCourseIdentity } from '../utils/courseIdentity';
+import { courseIdentityKey, sameCourseIdentity } from '../utils/courseIdentity';
 import { commitWithHistory } from './history';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
 
@@ -87,14 +87,18 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
         return p;
       });
 
-      // Add to catalog pool as well
+      // Add to catalog pool as well using a Set for O(1) lookups
+      const catalogKeys = new Set(
+        state.catalogCourses.map(cat => courseIdentityKey(cat.code, cat.section))
+      );
       const currentCatalog = [...state.catalogCourses];
-      newCourses.forEach(c => {
-        const exists = currentCatalog.some(cat => sameCourseIdentity(cat, c));
-        if (!exists) {
+      for (const c of newCourses) {
+        const key = courseIdentityKey(c.code, c.section);
+        if (!catalogKeys.has(key)) {
+          catalogKeys.add(key);
           currentCatalog.push({ ...c, id: `cat_${c.id}` });
         }
-      });
+      }
 
       commitWithHistory(set, get, {
         plans: updatedPlans,

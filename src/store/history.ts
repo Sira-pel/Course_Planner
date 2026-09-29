@@ -8,23 +8,11 @@ export function createHistorySnapshot(state: {
   activePlanId: string;
   ghostPlanIds: string[];
 }): HistorySnapshot {
-  if (typeof structuredClone === 'function') {
-    try {
-      return {
-        plans: structuredClone(state.plans),
-        catalogCourses: structuredClone(state.catalogCourses),
-        activePlanId: state.activePlanId,
-        ghostPlanIds: structuredClone(state.ghostPlanIds),
-      };
-    } catch {
-      // Fallback if environment throws
-    }
-  }
   return {
-    plans: JSON.parse(JSON.stringify(state.plans)),
-    catalogCourses: JSON.parse(JSON.stringify(state.catalogCourses)),
+    plans: state.plans,
+    catalogCourses: state.catalogCourses,
     activePlanId: state.activePlanId,
-    ghostPlanIds: [...state.ghostPlanIds],
+    ghostPlanIds: state.ghostPlanIds,
   };
 }
 

@@ -1,4 +1,5 @@
 import { SchedulePlan, Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { parseSessionTime } from '../utils/calendarDates';
 import { prefixedId } from '../utils/id';
 
 const VALID_DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -8,6 +9,49 @@ function safeTrim(value: unknown, maxLength: number): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   return trimmed.slice(0, maxLength);
+}
+
+function parseTimeToMinutes(timeStr: unknown, defaultMinutes: number): { minutes: number; formatted: string } {
+  if (typeof timeStr !== 'string' || !timeStr.trim()) {
+    const hours = Math.floor(defaultMinutes / 60);
+    const mins = defaultMinutes % 60;
+    return {
+      minutes: defaultMinutes,
+      formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
+    };
+  }
+
+  const trimmed = timeStr.trim();
+  const parsed = parseSessionTime(trimmed);
+  if (parsed) {
+    const minutes = parsed.hours * 60 + parsed.minutes;
+    return {
+      minutes,
+      formatted: `${parsed.hours.toString().padStart(2, '0')}:${parsed.minutes.toString().padStart(2, '0')}`,
+    };
+  }
+
+  // Handle military time without colon: 3 or 4 digits (e.g., "0900", "900", "1430")
+  const militaryMatch = /^(\d{1,2})(\d{2})$/.exec(trimmed);
+  if (militaryMatch) {
+    const hours = Number(militaryMatch[1]);
+    const mins = Number(militaryMatch[2]);
+    if (hours >= 0 && hours <= 23 && mins >= 0 && mins <= 59) {
+      const minutes = hours * 60 + mins;
+      return {
+        minutes,
+        formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
+      };
+    }
+  }
+
+  // Fallback to default
+  const hours = Math.floor(defaultMinutes / 60);
+  const mins = defaultMinutes % 60;
+  return {
+    minutes: defaultMinutes,
+    formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
+  };
 }
 
 export function sanitizeCourse(c: any, index: number): Course {
@@ -33,12 +77,13 @@ export function sanitizeCourse(c: any, index: number): Course {
     ? c.sessions
         .filter((s: any) => s && typeof s === 'object')
         .map((s: any, sIdx: number): ClassSession => {
-          const rawStart = typeof s.startTime === 'string' && s.startTime ? s.startTime.slice(0, 10) : '09:00';
-          let rawEnd = typeof s.endTime === 'string' && s.endTime ? s.endTime.slice(0, 10) : '10:15';
-          const [sh, sm] = rawStart.split(':').map(Number);
-          const [eh, em] = rawEnd.split(':').map(Number);
-          const sMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
-          const eMin = (isNaN(eh) ? 10 : eh) * 60 + (isNaN(em) ? 15 : em);
+          const startParsed = parseTimeToMinutes(s.startTime, 9 * 60);
+          const endParsed = parseTimeToMinutes(s.endTime, 10 * 60 + 15);
+          let rawStart = startParsed.formatted;
+          let rawEnd = endParsed.formatted;
+          const sMin = startParsed.minutes;
+          let eMin = endParsed.minutes;
+
           if (eMin <= sMin) {
             const adj = Math.min(23 * 60 + 59, sMin + 50);
             rawEnd = `${Math.floor(adj / 60).toString().padStart(2, '0')}:${(adj % 60).toString().padStart(2, '0')}`;

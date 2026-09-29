@@ -26,7 +26,11 @@ function isSecurityLikeError(error: unknown): boolean {
 
 function storageLooksUnavailable(): boolean {
   try {
-    return typeof localStorage === 'undefined' || localStorage.length === 0;
+    if (typeof localStorage === 'undefined') return true;
+    const testKey = '__uniplan_storage_test__';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    return false;
   } catch {
     return true;
   }
