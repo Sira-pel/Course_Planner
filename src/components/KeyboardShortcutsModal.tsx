@@ -7,7 +7,7 @@ interface KeyboardShortcutsModalProps {
 }
 
 const SHORTCUTS = [
-  { key: 'Ctrl + N', desc: 'Open Add Course dialog' },
+  { key: 'Alt + N', desc: 'Open Add Course dialog' },
   { key: 'Ctrl + K', desc: 'Open Smart Quick-Add text parser' },
   { key: '1, 2, 3...', desc: 'Quick-switch to Plan A, B, C (when not typing)' },
   { key: 'Ctrl + D', desc: 'Duplicate current schedule plan' },

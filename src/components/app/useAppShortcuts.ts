@@ -77,15 +77,19 @@ export function useAppShortcuts({
         return;
       }
 
+      // Alt + N (or Option + N on Mac): Open Add Course dialog (works everywhere, even in text fields)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key.toLowerCase() === 'n' || e.code === 'KeyN')) {
+        e.preventDefault();
+        onOpenNewCourse('monday', '09:00', 'form');
+        return;
+      }
+
       // If user is actively typing in a text field, do not trigger single-key or Ctrl shortcuts (except undo in text)
       if (isInputFocused) return;
 
       // Ctrl/Cmd shortcuts
       if (e.ctrlKey || e.metaKey) {
-        if (e.key.toLowerCase() === 'n') {
-          e.preventDefault();
-          onOpenNewCourse('monday', '09:00', 'form');
-        } else if (e.key.toLowerCase() === 'k') {
+        if (e.key.toLowerCase() === 'k') {
           e.preventDefault();
           onOpenNewCourse('monday', '09:00', 'quick');
         } else if (e.key.toLowerCase() === 'd') {
