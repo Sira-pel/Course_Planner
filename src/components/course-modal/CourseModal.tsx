@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../../types/schedule';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -20,7 +20,6 @@ import {
   toInputTime,
 } from './meetingPatterns';
 import { prefixedId } from '../../utils/id';
-import { EASE_OUT } from '../../utils/motion';
 
 interface CourseModalProps {
   isOpen: boolean;
@@ -81,13 +80,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       catalogCourses.find((c) => c.id === editingCourseId)
     : null;
 
-  const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState<'form' | 'quick'>('form');
-  const [modeDir, setModeDir] = useState<1 | -1>(1);
   const [phase, setPhase] = useState<'hidden' | 'open' | 'closing'>('hidden');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shakeField, setShakeField] = useState<'code' | 'name' | 'times' | null>(null);
-  const [morphHeight, setMorphHeight] = useState<number | null>(null);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -98,11 +94,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const quickTabRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const clipRef = useRef<HTMLDivElement>(null);
-  const incomingRef = useRef<HTMLDivElement>(null);
-  const morphingRef = useRef(false);
-  const fromHeightRef = useRef(0);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const [tabPill, setTabPill] = useState({ x: 0, w: 0, snap: true });
 
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -233,38 +225,12 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     return collisionList;
   }, [selectedCourses, activePlan]);
 
-  useLayoutEffect(() => {
-    if (existingCourse || phase === 'hidden') return;
-    const track = tabTrackRef.current;
-    const activeEl = mode === 'form' ? formTabRef.current : quickTabRef.current;
-    if (!track || !activeEl) return;
-
-    const trackBox = track.getBoundingClientRect();
-    const tabBox = activeEl.getBoundingClientRect();
-    setTabPill((prev) => ({
-      x: tabBox.left - trackBox.left,
-      w: tabBox.width,
-      snap: prev.w === 0,
-    }));
-  }, [mode, phase, existingCourse]);
-
-  useEffect(() => {
-    if (!tabPill.snap || tabPill.w === 0) return;
-    const id = requestAnimationFrame(() => {
-      setTabPill((prev) => ({ ...prev, snap: false }));
-    });
-    return () => cancelAnimationFrame(id);
-  }, [tabPill.snap, tabPill.w]);
-
   useEffect(() => {
     if (!isOpen) return;
     setIsConfirmingDelete(false);
-    setMorphHeight(null);
-    morphingRef.current = false;
     setShakeField(null);
     setRawText('');
     setRecognizedItems([]);
-    setTabPill({ x: 0, w: 0, snap: true });
     if (existingCourse) {
       setMode('form');
       setCode(existingCourse.code);
@@ -307,46 +273,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
   const switchMode = (next: 'form' | 'quick') => {
     if (next === mode) return;
-    fromHeightRef.current = clipRef.current?.offsetHeight ?? 0;
-    morphingRef.current = true;
-    setMorphHeight(fromHeightRef.current);
-    setModeDir(next === 'quick' ? 1 : -1);
     setMode(next);
     setError(null);
   };
-
-  useLayoutEffect(() => {
-    const clip = clipRef.current;
-    if (!morphingRef.current || !clip) return;
-
-    if (reduceMotion) {
-      morphingRef.current = false;
-      clip.style.height = '';
-      setMorphHeight(null);
-      return;
-    }
-
-    const incoming = incomingRef.current;
-    const sheet = sheetRef.current;
-    const natural = incoming?.offsetHeight ?? fromHeightRef.current;
-    const chrome = sheet ? sheet.offsetHeight - fromHeightRef.current : 0;
-    const maxSheet = Math.round(window.innerHeight * 0.88);
-    const maxClip = Math.max(120, maxSheet - chrome);
-    const to = Math.min(natural, maxClip);
-
-    clip.style.height = `${fromHeightRef.current}px`;
-    void clip.offsetHeight;
-    clip.style.height = `${to}px`;
-    setMorphHeight(to);
-
-    const timeout = window.setTimeout(() => {
-      morphingRef.current = false;
-      clip.style.height = '';
-      setMorphHeight(null);
-    }, MORPH_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [mode, reduceMotion]);
 
   useEffect(() => {
     if (phase !== 'open') return;
@@ -654,18 +583,16 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         {!existingCourse && (
           <div
             ref={tabTrackRef}
-            className="course-tab-track mt-0.5 mb-1 flex p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl shrink-0"
+            className="course-tab-track relative grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-xl shrink-0 mt-0.5 mb-1"
             role="tablist"
             aria-label="Add course method"
           >
             <span
-              className={`course-tab-pill ${tabPill.snap ? 'is-snap' : ''}`}
-              style={
-                {
-                  '--tabs-x': `${tabPill.x}px`,
-                  '--tabs-w': `${tabPill.w}px`,
-                } as React.CSSProperties
-              }
+              className={`absolute top-1 bottom-1 left-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm pointer-events-none transition-transform duration-[var(--dur-chrome)] ease-[var(--ease-snap)] ${
+                mode === 'form'
+                  ? 'translate-x-0 w-[calc(50%-4px)]'
+                  : 'translate-x-full w-[calc(50%-4px)]'
+              }`}
             />
             <button
               type="button"
@@ -674,7 +601,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'form'}
               onClick={() => switchMode('form')}
-              className={`relative z-10 flex-1 py-2 text-sm font-semibold rounded-lg transition-colors duration-[var(--dur-chrome)] ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ${
                 mode === 'form'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -689,7 +616,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'quick'}
               onClick={() => switchMode('quick')}
-              className={`relative z-10 flex-1 py-2 text-sm font-semibold rounded-lg transition-colors duration-[var(--dur-chrome)] ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ${
                 mode === 'quick'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -711,122 +638,63 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
         <div
           ref={clipRef}
-          className={`course-morph up-scroll mt-3 min-h-0 flex-auto ${
-            morphHeight !== null ? 'is-morphing' : ''
-          } ${mode === 'quick' && recognizedItems.length === 0 ? 'overflow-y-hidden' : ''}`}
-          style={morphHeight !== null ? { height: morphHeight } : undefined}
+          className="course-morph up-scroll mt-3 min-h-0 flex-auto"
         >
-          <AnimatePresence initial={false} mode="sync">
-            {mode === 'form' ? (
-              <motion.div
-                key="form"
-                className="min-h-0"
-                initial={reduceMotion ? false : { opacity: 0, x: modeDir * 8, filter: 'blur(3px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : {
-                        opacity: 0,
-                        x: modeDir * -8,
-                        filter: 'blur(3px)',
-                        position: 'absolute',
-                        width: '100%',
-                        top: 0,
-                        left: 0,
-                        overflow: 'hidden',
-                        maxHeight: '100%',
-                        pointerEvents: 'none',
-                      }
-                }
-                transition={{
-                  duration: reduceMotion ? 0 : MORPH_MS / 1000,
-                  ease: EASE_OUT,
-                  opacity: { duration: reduceMotion ? 0 : CLOSE_MS / 1000 },
+          {mode === 'form' ? (
+            <div className="animate-in fade-in duration-150 ease-out">
+              <CourseForm
+                code={code}
+                name={name}
+                section={section}
+                instructor={instructor}
+                credits={credits}
+                color={color}
+                patterns={patterns}
+                detailsOpen={detailsOpen}
+                detailsSummary={detailsSummary}
+                shakeField={shakeField}
+                isCustomColor={isCustomColor}
+                codeInputRef={codeInputRef}
+                nameInputRef={nameInputRef}
+                startTimeInputRef={startTimeInputRef}
+                onCodeChange={setCode}
+                onNameChange={setName}
+                onSectionChange={setSection}
+                onInstructorChange={setInstructor}
+                onCreditsChange={setCredits}
+                onColorChange={setColor}
+                onToggleDetails={() => setDetailsOpen((open) => !open)}
+                onSubmit={handleFormSubmit}
+                onAddPattern={addPattern}
+                onRemovePattern={removePattern}
+                onUpdatePattern={updatePattern}
+                onTogglePatternDay={togglePatternDay}
+                onApplyDayPreset={applyDayPreset}
+                onSetPatternDuration={setPatternDuration}
+              />
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-150 ease-out">
+              <QuickAddPanel
+                rawText={rawText}
+                recognizedItems={recognizedItems}
+                selectedCount={selectedCourses.length}
+                potentialConflicts={potentialConflicts}
+                pasteInputRef={pasteInputRef}
+                onRawTextChange={(v) => {
+                  setRawText(v);
+                  setError(null);
                 }}
-              >
-                <CourseForm
-                  incomingRef={incomingRef}
-                  code={code}
-                  name={name}
-                  section={section}
-                  instructor={instructor}
-                  credits={credits}
-                  color={color}
-                  patterns={patterns}
-                  detailsOpen={detailsOpen}
-                  detailsSummary={detailsSummary}
-                  shakeField={shakeField}
-                  isCustomColor={isCustomColor}
-                  codeInputRef={codeInputRef}
-                  nameInputRef={nameInputRef}
-                  startTimeInputRef={startTimeInputRef}
-                  onCodeChange={setCode}
-                  onNameChange={setName}
-                  onSectionChange={setSection}
-                  onInstructorChange={setInstructor}
-                  onCreditsChange={setCredits}
-                  onColorChange={setColor}
-                  onToggleDetails={() => setDetailsOpen((open) => !open)}
-                  onSubmit={handleFormSubmit}
-                  onAddPattern={addPattern}
-                  onRemovePattern={removePattern}
-                  onUpdatePattern={updatePattern}
-                  onTogglePatternDay={togglePatternDay}
-                  onApplyDayPreset={applyDayPreset}
-                  onSetPatternDuration={setPatternDuration}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="quick"
-                className="min-h-0"
-                initial={reduceMotion ? false : { opacity: 0, x: modeDir * 8, filter: 'blur(3px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : {
-                        opacity: 0,
-                        x: modeDir * -8,
-                        filter: 'blur(3px)',
-                        position: 'absolute',
-                        width: '100%',
-                        top: 0,
-                        left: 0,
-                        overflow: 'hidden',
-                        maxHeight: '100%',
-                        pointerEvents: 'none',
-                      }
-                }
-                transition={{
-                  duration: reduceMotion ? 0 : MORPH_MS / 1000,
-                  ease: EASE_OUT,
-                  opacity: { duration: reduceMotion ? 0 : CLOSE_MS / 1000 },
-                }}
-              >
-                <QuickAddPanel
-                  incomingRef={incomingRef}
-                  rawText={rawText}
-                  recognizedItems={recognizedItems}
-                  selectedCount={selectedCourses.length}
-                  potentialConflicts={potentialConflicts}
-                  pasteInputRef={pasteInputRef}
-                  onRawTextChange={(v) => {
-                    setRawText(v);
-                    setError(null);
-                  }}
-                  onPasteClipboard={handlePasteClipboard}
-                  onToggleSelect={handleToggleSelectItem}
-                  onToggleEdit={handleToggleEditItem}
-                  onDeleteItem={handleDeleteItem}
-                  onUpdateItemCourse={handleUpdateItemCourse}
-                  onUpdateItemSessionDays={handleUpdateItemSessionDays}
-                  onUpdateItemTimes={handleUpdateItemTimes}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+                onPasteClipboard={handlePasteClipboard}
+                onToggleSelect={handleToggleSelectItem}
+                onToggleEdit={handleToggleEditItem}
+                onDeleteItem={handleDeleteItem}
+                onUpdateItemCourse={handleUpdateItemCourse}
+                onUpdateItemSessionDays={handleUpdateItemSessionDays}
+                onUpdateItemTimes={handleUpdateItemTimes}
+              />
+            </div>
+          )}
         </div>
 
         <div className="pt-4 mt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">

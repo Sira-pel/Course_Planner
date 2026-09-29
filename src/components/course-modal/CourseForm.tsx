@@ -18,7 +18,7 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
 
 export interface CourseFormProps {
-  incomingRef: Ref<HTMLDivElement>;
+  incomingRef?: Ref<HTMLDivElement>;
   code: string;
   name: string;
   section: string;

@@ -1933,25 +1933,8 @@ html.dark .course-input:focus-visible {
 }
 
 #course-paste {
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-#course-paste::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-#course-paste.has-scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-}
-
-#course-paste.has-scroll::-webkit-scrollbar {
-  display: block !important;
-  width: 8px !important;
 }
 
 .course-morph {
@@ -1961,23 +1944,6 @@ html.dark .course-input:focus-visible {
   overflow-y: auto;
   overflow-anchor: none;
   overscroll-behavior: contain;
-}
-
-.course-morph.is-morphing {
-  overflow: hidden;
-  transition: height var(--dur-open) var(--ease-out);
-}
-
-.course-morph.is-morphing,
-.course-morph.is-morphing * {
-  overflow: hidden !important;
-  scrollbar-width: none !important;
-}
-
-.course-morph.is-morphing *::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
 }
 
 .course-acc {
