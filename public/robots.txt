@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://uniplan-course-schedule-planner.vercel.app/sitemap.xml
