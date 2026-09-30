@@ -130,8 +130,14 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
         <span className="truncate">
           Target <strong>{activePlanName}</strong>
         </span>
-        <span className="font-mono text-[11px] tabular-nums shrink-0">
-          {totalInPlan} in plan
+        <span
+          className={`up-pool-in-plan-badge ${totalInPlan > 0 ? 'is-active' : 'is-zero'}`}
+          title={`${totalInPlan} course section${totalInPlan === 1 ? '' : 's'} currently enrolled in ${activePlanName || 'target plan'}`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80 shrink-0" aria-hidden="true" />
+          <span>
+            <strong>{totalInPlan}</strong> in plan
+          </span>
         </span>
       </div>
 

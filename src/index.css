@@ -1233,6 +1233,36 @@ body[data-up-pool-open] .up-fab-cluster {
   color: var(--up-ink);
 }
 
+.up-pool-in-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  transition-property: background-color, border-color, color;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+}
+
+.up-pool-in-plan-badge.is-active {
+  background: color-mix(in srgb, var(--up-accent) 14%, transparent);
+  color: var(--up-accent);
+  border-color: color-mix(in srgb, var(--up-accent) 30%, transparent);
+}
+
+.up-pool-in-plan-badge.is-zero {
+  background: color-mix(in srgb, var(--up-ink) 5%, transparent);
+  color: var(--up-muted);
+  border-color: var(--up-line);
+}
+
 .up-pool-controls {
   display: flex;
   flex-direction: column;
