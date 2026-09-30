@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   Download,
+  HelpCircle,
   Keyboard,
   Moon,
   RotateCcw,
@@ -34,6 +35,7 @@ interface SettingsMenuProps {
   onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
+  onOpenHelp: () => void;
   onLoadDemo: () => void;
   onClearAll: () => void;
 }
@@ -59,6 +61,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onOpenImport,
   onOpenExport,
   onOpenShortcuts,
+  onOpenHelp,
   onLoadDemo,
   onClearAll,
 }) => {
@@ -188,6 +191,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               >
                 <Keyboard />
                 Keyboard shortcuts
+              </button>
+              <button
+                type="button"
+                id="btn-open-help"
+                onClick={onOpenHelp}
+                className="up-settings-item up-chrome-btn"
+              >
+                <HelpCircle />
+                Help & Guide
               </button>
             </div>
 

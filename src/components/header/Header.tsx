@@ -13,6 +13,7 @@ import {
   Undo2,
   Redo2,
   X,
+  HelpCircle,
 } from 'lucide-react';
 import { parseIcsContent } from '../../utils/icsImport';
 import { useIsPhone } from '../../utils/usePoolLayout';
@@ -27,6 +28,7 @@ interface HeaderProps {
   onOpenExport: () => void;
   onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
   onOpenShortcuts: () => void;
+  onOpenHelp: () => void;
   onOpenCatalog: () => void;
 }
 
@@ -35,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExport,
   onOpenImport,
   onOpenShortcuts,
+  onOpenHelp,
   onOpenCatalog,
 }) => {
   const {
@@ -429,6 +432,17 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
+          <button
+            type="button"
+            id="btn-help"
+            onClick={onOpenHelp}
+            className="up-icon-btn up-chrome-btn"
+            title="Help & Quick Guide"
+            aria-label="Help & Quick Guide"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
           <SettingsMenu
             isPhone={isPhone}
             menuEnter={menuEnter}
@@ -472,6 +486,10 @@ export const Header: React.FC<HeaderProps> = ({
             onOpenShortcuts={() => {
               setIsSettingsOpen(false);
               onOpenShortcuts();
+            }}
+            onOpenHelp={() => {
+              setIsSettingsOpen(false);
+              onOpenHelp();
             }}
             onLoadDemo={() => {
               resetToSample();

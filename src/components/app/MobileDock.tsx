@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
 import { EASE_OUT, EASE_POP } from '../../utils/motion';
 
 export interface MobileDockProps {
@@ -19,6 +19,7 @@ export interface MobileDockProps {
   onAddCourse: () => void;
   onLoadDemo: () => void;
   onOpenShortcuts: () => void;
+  onOpenHelp?: () => void;
   onRequestClear: () => void;
   onConfirmClear: () => void;
   onCancelClear: () => void;
@@ -35,6 +36,7 @@ export function MobileDock({
   onAddCourse,
   onLoadDemo,
   onOpenShortcuts,
+  onOpenHelp,
   onRequestClear,
   onConfirmClear,
   onCancelClear,
@@ -180,6 +182,20 @@ export function MobileDock({
                       <Sparkles className="w-4 h-4" />
                       Load demo
                     </button>
+                    {onOpenHelp && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="up-more-item up-chrome-btn"
+                        onClick={() => {
+                          onCloseMoreMenu();
+                          onOpenHelp();
+                        }}
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                        Help & Guide
+                      </button>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -189,7 +205,7 @@ export function MobileDock({
                         onOpenShortcuts();
                       }}
                     >
-                      <HelpCircle className="w-4 h-4" />
+                      <Keyboard className="w-4 h-4" />
                       Shortcuts
                     </button>
                     <button

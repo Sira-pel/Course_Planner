@@ -13,6 +13,7 @@ import { ExportModal } from './components/export/ExportModal';
 import { ImportModal, ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { HelpModal } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
@@ -41,6 +42,7 @@ export default function App() {
   const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -54,6 +56,7 @@ export default function App() {
   const handleCloseExport = useCallback(() => setIsExportOpen(false), []);
   const handleCloseImport = useCallback(() => setIsImportOpen(false), []);
   const handleCloseShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
+  const handleCloseHelp = useCallback(() => setIsHelpOpen(false), []);
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
@@ -108,6 +111,11 @@ export default function App() {
     setIsShortcutsOpen(true);
   }, []);
 
+  const handleOpenHelp = useCallback(() => {
+    setIsPoolCollapsed(true);
+    setIsHelpOpen(true);
+  }, []);
+
   const handleToggleMore = useCallback(() => {
     setIsConfirmingClear(false);
     setIsMoreOpen((open) => !open);
@@ -160,6 +168,7 @@ export default function App() {
           onOpenExport={handleOpenExport}
           onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
+          onOpenHelp={handleOpenHelp}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
         />
 
@@ -195,6 +204,7 @@ export default function App() {
         onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
+        onOpenHelp={handleOpenHelp}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}
@@ -225,6 +235,15 @@ export default function App() {
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={handleCloseShortcuts}
+      />
+
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={handleCloseHelp}
+        onOpenImport={handleOpenImport}
+        onOpenExport={handleOpenExport}
+        onOpenCatalog={() => setIsPoolCollapsed(false)}
+        onOpenShortcuts={handleOpenShortcuts}
       />
     </div>
   );
