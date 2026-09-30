@@ -112,7 +112,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                     aria-label="Calendar start hour"
                   >
                     {Array.from({ length: 8 }, (_, i) => i + 5).map((h) => (
-                      <option key={`start-${h}`} value={h}>{h}:00</option>
+                      <option key={`start-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
                     ))}
                   </select>
                   <span className="up-settings-range-sep">to</span>
@@ -124,7 +124,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                     aria-label="Calendar end hour"
                   >
                     {Array.from({ length: 9 }, (_, i) => i + 16).map((h) => (
-                      <option key={`end-${h}`} value={h}>{h}:00</option>
+                      <option key={`end-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
                     ))}
                   </select>
                 </div>

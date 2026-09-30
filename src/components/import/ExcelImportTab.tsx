@@ -414,7 +414,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                     className="text-xs font-semibold px-2 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200"
                   >
                     {sheetData.sheets.map((s) => (
-                      <option key={s} value={s}>
+                      <option key={s} value={s} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                         {s}
                       </option>
                     ))}
@@ -489,9 +489,9 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                         onChange={(e) => handleMappingChange(f.field, e.target.value)}
                         className="text-xs px-2 py-1.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 w-full truncate font-mono"
                       >
-                        <option value="">(None / Skip)</option>
+                        <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">(None / Skip)</option>
                         {sheetData.columns.map((col) => (
-                          <option key={col.key} value={col.key}>
+                          <option key={col.key} value={col.key} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                             {col.label}
                           </option>
                         ))}
