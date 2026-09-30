@@ -5,7 +5,7 @@ import { CourseBlock } from './CourseBlock';
 import { DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
 import { computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { collectDaySessions } from '../utils/collectDaySessions';
-import { Plus, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 const DAY_INDEX_MAP: DayOfWeek[] = [
   'sunday',
@@ -20,77 +20,6 @@ const DAY_INDEX_MAP: DayOfWeek[] = [
 function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
 }
-
-interface CurrentTimeIndicatorProps {
-  effectiveStartHour: number;
-  totalMinutes: number;
-}
-
-const CurrentTimeIndicator = memo(function CurrentTimeIndicator({
-  effectiveStartHour,
-  totalMinutes,
-}: CurrentTimeIndicatorProps) {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    let timer: number | null = null;
-
-    const tick = () => {
-      if (!document.hidden) {
-        setNow(new Date());
-      }
-    };
-
-    const startTimer = () => {
-      if (!timer) {
-        timer = window.setInterval(tick, 60000);
-      }
-    };
-
-    const stopTimer = () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        setNow(new Date());
-        startTimer();
-      } else {
-        stopTimer();
-      }
-    };
-
-    if (!document.hidden) {
-      startTimer();
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      stopTimer();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  const currentMinutesFromGridStart =
-    now.getHours() * 60 + now.getMinutes() - effectiveStartHour * 60;
-  if (currentMinutesFromGridStart < 0 || currentMinutesFromGridStart > totalMinutes) {
-    return null;
-  }
-  const nowPercent = (currentMinutesFromGridStart / totalMinutes) * 100;
-
-  return (
-    <div
-      className="absolute left-0 right-0 z-40 flex items-center pointer-events-none"
-      style={{ top: `${nowPercent}%` }}
-    >
-      <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-xs" />
-      <div className="flex-1 border-t-2 border-red-500 shadow-xs" />
-    </div>
-  );
-});
 
 interface CalendarGridProps {
   onEditCourse: (courseId: string) => void;
@@ -421,14 +350,6 @@ export const CalendarGrid = memo(function CalendarGrid({
                     onAddCourseAtTime(day.id, timeFormatted);
                   }}
                 >
-                  {/* Current Time Indicator on today's column */}
-                  {isToday && (
-                    <CurrentTimeIndicator
-                      effectiveStartHour={effectiveStartHour}
-                      totalMinutes={totalMinutes}
-                    />
-                  )}
-
                   {/* Course Sessions on this Day */}
                   {sessions.map((layoutItem) => (
                     <CourseBlock
