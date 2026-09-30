@@ -74,6 +74,23 @@ export function formatIcsUntil(date: Date): string {
   return `${year}${month}${day}T235959`;
 }
 
+/**
+ * Format local semester end date for Google Calendar recurrence rule UNTIL.
+ * Google Calendar API requires UNTIL to be a UTC date-time string ending with 'Z' (e.g. 20261218T235959Z)
+ * when start/end times are dateTimes with timezone.
+ * We take the local end-of-day (23:59:59) of the target date and output UTC YYYYMMDDTHHmmssZ.
+ */
+export function formatGoogleCalendarUntil(date: Date): string {
+  const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+  const year = endOfDay.getUTCFullYear();
+  const month = pad2(endOfDay.getUTCMonth() + 1);
+  const day = pad2(endOfDay.getUTCDate());
+  const hours = pad2(endOfDay.getUTCHours());
+  const minutes = pad2(endOfDay.getUTCMinutes());
+  const seconds = pad2(endOfDay.getUTCSeconds());
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+}
+
 /** ICS local datetime: YYYYMMDDTHHmmss (no Z). */
 export function formatIcsDateTime(date: Date, timeStr: string): string | null {
   const parsed = parseSessionTime(timeStr);

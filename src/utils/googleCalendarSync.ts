@@ -2,7 +2,7 @@ import { SchedulePlan } from '../types/schedule';
 import { clearAccessToken, getUsableAccessToken } from './authToken';
 import {
   formatFloatingDateTime,
-  formatIcsUntil,
+  formatGoogleCalendarUntil,
   getFirstDayOccurrence,
   getIcsDayInfo,
   parseLocalDate,
@@ -123,7 +123,7 @@ export function prepareCalendarEvents(
     });
   }
 
-  const untilStr = formatIcsUntil(endDate);
+  const untilStr = formatGoogleCalendarUntil(endDate);
   const events: PreparedCalendarEvent[] = [];
   let skippedCount = 0;
 
