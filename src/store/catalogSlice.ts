@@ -13,6 +13,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
   | 'addCourseFromPool'
   | 'removeCourseFromPlanByCatalog'
   | 'toggleCourseInPlan'
+  | 'clearUnusedCatalogCourses'
 > {
   return {
     addToCatalog: (course: Course) => {
@@ -49,17 +50,61 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
 
     removeFromCatalog: (courseId: string) => {
       const state = get();
-      if (!state.catalogCourses.some((c) => c.id === courseId)) return;
+      const catCourse = state.catalogCourses.find((c) => c.id === courseId);
+      if (!catCourse) return;
+
+      const catKey = courseIdentityKey(catCourse.code, catCourse.section);
+
+      // Also remove from plans so plans never contain orphaned courses deleted from pool
+      const updatedPlans = state.plans.map((p) => ({
+        ...p,
+        courses: p.courses.filter(
+          (c) =>
+            courseIdentityKey(c.code, c.section) !== catKey &&
+            c.id !== courseId &&
+            `cat_${c.id}` !== courseId
+        ),
+      }));
+
       commitWithHistory(set, get, {
         catalogCourses: state.catalogCourses.filter((c) => c.id !== courseId),
+        plans: updatedPlans,
       });
     },
 
     updateCatalogCourse: (updatedCourse: Course) => {
       const state = get();
-      if (!state.catalogCourses.some((c) => c.id === updatedCourse.id)) return;
+      const oldCat = state.catalogCourses.find((c) => c.id === updatedCourse.id);
+      if (!oldCat) return;
+
+      const oldKey = courseIdentityKey(oldCat.code, oldCat.section);
+
+      const updatedCatalog = state.catalogCourses.map((c) =>
+        c.id === updatedCourse.id ? updatedCourse : c
+      );
+
+      // Keep enrolled courses in any plans in sync with edited catalog details
+      const updatedPlans = state.plans.map((p) => ({
+        ...p,
+        courses: p.courses.map((c) => {
+          if (
+            courseIdentityKey(c.code, c.section) === oldKey ||
+            c.id === updatedCourse.id ||
+            `cat_${c.id}` === updatedCourse.id
+          ) {
+            return {
+              ...updatedCourse,
+              id: c.id,
+              color: c.color || updatedCourse.color,
+            };
+          }
+          return c;
+        }),
+      }));
+
       commitWithHistory(set, get, {
-        catalogCourses: state.catalogCourses.map((c) => c.id === updatedCourse.id ? updatedCourse : c),
+        catalogCourses: updatedCatalog,
+        plans: updatedPlans,
       });
     },
 
@@ -136,6 +181,43 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       } else {
         state.addCourseFromPool(catalogCourseId, targetId);
       }
+    },
+
+    clearUnusedCatalogCourses: () => {
+      const state = get();
+      if (state.catalogCourses.length === 0) return;
+
+      const usedIdentityKeys = new Set<string>();
+      const usedIds = new Set<string>();
+
+      for (const plan of state.plans) {
+        for (const c of plan.courses) {
+          usedIdentityKeys.add(courseIdentityKey(c.code, c.section));
+          usedIds.add(c.id);
+          if (c.id.startsWith('cat_')) {
+            usedIds.add(c.id.substring(4));
+          } else {
+            usedIds.add(`cat_${c.id}`);
+          }
+        }
+      }
+
+      const keptCourses = state.catalogCourses.filter((cat) => {
+        const key = courseIdentityKey(cat.code, cat.section);
+        if (usedIdentityKeys.has(key)) return true;
+        if (usedIds.has(cat.id)) return true;
+        const strippedId = cat.id.startsWith('cat_') ? cat.id.substring(4) : cat.id;
+        if (usedIds.has(strippedId)) return true;
+        return false;
+      });
+
+      if (keptCourses.length === state.catalogCourses.length) {
+        return; // All catalog courses are currently in use in at least one plan
+      }
+
+      commitWithHistory(set, get, {
+        catalogCourses: keptCourses,
+      });
     },
   };
 }

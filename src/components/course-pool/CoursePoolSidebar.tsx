@@ -33,6 +33,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     removeFromCatalog,
     addCourseFromPool,
     removeCourseFromPlanByCatalog,
+    clearUnusedCatalogCourses,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -41,6 +42,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       removeFromCatalog: state.removeFromCatalog,
       addCourseFromPool: state.addCourseFromPool,
       removeCourseFromPlanByCatalog: state.removeCourseFromPlanByCatalog,
+      clearUnusedCatalogCourses: state.clearUnusedCatalogCourses,
     }))
   );
 
@@ -65,11 +67,32 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     return new Set(activePlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
   }, [activePlan?.courses]);
 
+  const activePlanCourseIds = useMemo(() => {
+    if (!activePlan) return new Set<string>();
+    const ids = new Set<string>();
+    for (const c of activePlan.courses) {
+      ids.add(c.id);
+      if (c.id.startsWith('cat_')) {
+        ids.add(c.id.substring(4));
+      } else {
+        ids.add(`cat_${c.id}`);
+      }
+    }
+    return ids;
+  }, [activePlan?.courses]);
+
   const isEnrolledInActivePlan = useCallback(
     (catalogItem: Course): boolean => {
-      return activeCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section));
+      if (activeCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
+        return true;
+      }
+      if (activePlanCourseIds.has(catalogItem.id)) {
+        return true;
+      }
+      const strippedId = catalogItem.id.startsWith('cat_') ? catalogItem.id.substring(4) : catalogItem.id;
+      return activePlanCourseIds.has(strippedId);
     },
-    [activeCourseKeys]
+    [activeCourseKeys, activePlanCourseIds]
   );
 
   const activeSessionsByDay = useMemo(() => {
@@ -134,8 +157,33 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   }, [catalogCourses, searchQuery, filterMode, isEnrolledInActivePlan]);
 
   const totalInPlan = useMemo(() => {
-    return catalogCourses.filter(isEnrolledInActivePlan).length;
-  }, [catalogCourses, isEnrolledInActivePlan]);
+    return activePlan ? activePlan.courses.length : 0;
+  }, [activePlan]);
+
+  const usedInAnyPlanCount = useMemo(() => {
+    const usedKeys = new Set<string>();
+    const usedIds = new Set<string>();
+    for (const p of plans) {
+      for (const c of p.courses) {
+        usedKeys.add(courseIdentityKey(c.code, c.section));
+        usedIds.add(c.id);
+        if (c.id.startsWith('cat_')) {
+          usedIds.add(c.id.substring(4));
+        } else {
+          usedIds.add(`cat_${c.id}`);
+        }
+      }
+    }
+
+    return catalogCourses.filter((cat) => {
+      if (usedKeys.has(courseIdentityKey(cat.code, cat.section))) return true;
+      if (usedIds.has(cat.id)) return true;
+      const strippedId = cat.id.startsWith('cat_') ? cat.id.substring(4) : cat.id;
+      return usedIds.has(strippedId);
+    }).length;
+  }, [plans, catalogCourses]);
+
+  const unusedInAnyPlanCount = catalogCourses.length - usedInAnyPlanCount;
 
   const panelOpenTransition = reduceMotion
     ? { duration: 0 }
@@ -174,7 +222,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
           'transform var(--dur-chrome) var(--ease-out), width var(--dur-chrome) var(--ease-out)';
       }
     }
-  }, [reduceMotion, filterMode, catalogCourses.length, totalInPlan]);
+  }, [reduceMotion, filterMode]);
 
   useLayoutEffect(() => {
     updatePill();
@@ -305,6 +353,9 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       findConflict={findConflictInActivePlan}
       onAddToPlan={handleAddToPlan}
       onRemoveFromPlan={handleRemoveFromPlan}
+      unusedInAnyPlanCount={unusedInAnyPlanCount}
+      usedInAnyPlanCount={usedInAnyPlanCount}
+      onClearUnusedCatalogCourses={clearUnusedCatalogCourses}
     />
   );
 

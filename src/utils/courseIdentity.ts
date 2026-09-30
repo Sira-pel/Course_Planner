@@ -1,5 +1,7 @@
 export function courseIdentityKey(code: string, section?: string): string {
-  return `${code.trim().toUpperCase()}__${(section || '').trim().toUpperCase()}`;
+  const normCode = (code || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const normSec = (section || '').trim().toUpperCase();
+  return `${normCode}__${normSec}`;
 }
 
 export function sameCourseIdentity(

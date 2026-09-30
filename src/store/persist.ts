@@ -1,4 +1,6 @@
 import { createJSONStorage, type PersistOptions, type PersistStorage, type StorageValue } from 'zustand/middleware';
+import type { Course } from '../types/schedule';
+import { courseIdentityKey } from '../utils/courseIdentity';
 import { applyDomTheme, isThemeName, persistTheme, readStoredTheme } from '../utils/theme';
 import { sanitizeCatalog, sanitizePlans } from './sanitize';
 import { clearStorageWriteFailure, reportStorageWriteFailure } from './storageWrite';
@@ -159,6 +161,27 @@ export function rehydratePersistedState(state: ScheduleState): void {
     state.catalogCourses = [];
   } else {
     state.catalogCourses = sanitizeCatalog(state.catalogCourses);
+  }
+
+  // Ensure all courses across all plans are represented in the course pool (catalogCourses)
+  const existingCatalogKeys = new Set(
+    state.catalogCourses.map((c) => courseIdentityKey(c.code, c.section))
+  );
+  const missingCatalogCourses: Course[] = [];
+  for (const plan of state.plans) {
+    for (const c of plan.courses) {
+      const key = courseIdentityKey(c.code, c.section);
+      if (!existingCatalogKeys.has(key)) {
+        existingCatalogKeys.add(key);
+        missingCatalogCourses.push({
+          ...c,
+          id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}`,
+        });
+      }
+    }
+  }
+  if (missingCatalogCourses.length > 0) {
+    state.catalogCourses = [...state.catalogCourses, ...missingCatalogCourses];
   }
 
   state.semesterStart = isIsoDate(state.semesterStart) ? state.semesterStart : DEFAULT_SEMESTER_START;

@@ -1317,6 +1317,7 @@ body[data-up-pool-open] .up-fab-cluster {
   border: 1px solid var(--up-line);
   border-radius: 8px;
   background: color-mix(in srgb, var(--up-ink) 4%, transparent);
+  overflow: hidden;
 }
 
 .up-pool-tab-pill {
@@ -1350,6 +1351,12 @@ body[data-up-pool-open] .up-fab-cluster {
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition-property: color;
   transition-duration: var(--dur-chrome);
   transition-timing-function: var(--ease-out);

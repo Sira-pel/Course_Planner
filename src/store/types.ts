@@ -48,6 +48,7 @@ export interface ScheduleState {
   toggleCourseInPlan: (catalogCourseId: string, targetPlanId?: string) => void;
   addCourseFromPool: (catalogCourseId: string, targetPlanId?: string) => void;
   removeCourseFromPlanByCatalog: (catalogCourseId: string, targetPlanId?: string) => void;
+  clearUnusedCatalogCourses: () => void;
 
   // Undo / Redo
   undo: () => void;

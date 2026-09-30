@@ -1,4 +1,6 @@
 import { SAMPLE_CATALOG, SAMPLE_PLANS } from '../data/sampleSemester';
+import type { Course } from '../types/schedule';
+import { courseIdentityKey } from '../utils/courseIdentity';
 import { applyDomTheme, isThemeName, persistTheme } from '../utils/theme';
 import { commitWithHistory } from './history';
 import { isIsoDate, PERSIST_SCHEMA_VERSION, resolvePersistedVersion } from './persist';
@@ -123,9 +125,26 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
 
         // If backup includes catalogCourses (even an empty array), restore it.
         // If the key is missing, keep the current catalog.
-        const sanitizedCatalog = Object.prototype.hasOwnProperty.call(backup, 'catalogCourses')
+        const baseCatalog = Object.prototype.hasOwnProperty.call(backup, 'catalogCourses')
           ? (Array.isArray(backup.catalogCourses) ? sanitizeCatalog(backup.catalogCourses) : [])
           : state.catalogCourses;
+
+        // Ensure all plan courses are in catalog
+        const catKeys = new Set(baseCatalog.map((c) => courseIdentityKey(c.code, c.section)));
+        const missingFromCat: Course[] = [];
+        for (const p of sanitizedPlans) {
+          for (const c of p.courses) {
+            const k = courseIdentityKey(c.code, c.section);
+            if (!catKeys.has(k)) {
+              catKeys.add(k);
+              missingFromCat.push({
+                ...c,
+                id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}`,
+              });
+            }
+          }
+        }
+        const sanitizedCatalog = [...baseCatalog, ...missingFromCat];
 
         const nextTheme = isThemeName(backup.theme) ? backup.theme : state.theme;
         if (isThemeName(backup.theme)) {

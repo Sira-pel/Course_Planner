@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Course } from '../../types/schedule';
 import {
@@ -8,6 +8,7 @@ import {
   Search,
   Upload,
   X,
+  Trash2,
 } from 'lucide-react';
 import { PoolRow } from './PoolRow';
 import { EASE_OUT, EASE_POP } from '../../utils/motion';
@@ -43,6 +44,9 @@ export interface PoolPanelProps {
   findConflict: (c: Course) => Course | null;
   onAddToPlan: (catalogId: string) => void;
   onRemoveFromPlan: (catalogId: string) => void;
+  unusedInAnyPlanCount: number;
+  usedInAnyPlanCount: number;
+  onClearUnusedCatalogCourses: () => void;
 }
 
 export const PoolPanel: React.FC<PoolPanelProps> = ({
@@ -73,7 +77,11 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   findConflict,
   onAddToPlan,
   onRemoveFromPlan,
+  unusedInAnyPlanCount,
+  usedInAnyPlanCount,
+  onClearUnusedCatalogCourses,
 }) => {
+  const [isConfirmingClearPool, setIsConfirmingClearPool] = useState(false);
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="up-pool-head">
@@ -128,31 +136,77 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-controls">
-        <div className="up-pool-search-wrap">
-          <Search className="w-3.5 h-3.5" />
-          <input
-            ref={searchRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onKeyDown={onSearchKeyDown}
-            placeholder="Search code, title, professor"
-            className="up-pool-input"
-          />
-          {searchQuery && (
+        <div className="flex items-center gap-1.5">
+          <div className="up-pool-search-wrap flex-1">
+            <Search className="w-3.5 h-3.5" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={onSearchKeyDown}
+              placeholder="Search code, title, professor"
+              className="up-pool-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={onClearSearch}
+                className="up-pool-search-clear up-chrome-btn"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {onOpenImport && (
+              <button
+                type="button"
+                id="btn-pool-import"
+                onClick={onOpenImport}
+                className="up-pool-create up-chrome-btn"
+                title="Import courses (Excel / CSV / Calendar)"
+                aria-label="Import courses"
+              >
+                <Upload className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={onClearSearch}
-              className="up-pool-search-clear up-chrome-btn"
-              aria-label="Clear search"
+              id="btn-pool-add-course"
+              onClick={onOpenNewCourse}
+              className="up-pool-create up-chrome-btn"
+              title="Create course"
+              aria-label="Create course"
             >
-              <X className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
-          )}
+            <button
+              type="button"
+              id="btn-pool-clear-unused"
+              onClick={() => setIsConfirmingClearPool((prev) => !prev)}
+              disabled={unusedInAnyPlanCount === 0}
+              className={`up-pool-create up-chrome-btn transition-colors ${
+                isConfirmingClearPool
+                  ? 'bg-rose-600 text-white'
+                  : 'hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400'
+              } disabled:opacity-30 disabled:pointer-events-none`}
+              title={
+                unusedInAnyPlanCount > 0
+                  ? `Clear ${unusedInAnyPlanCount} unused course${unusedInAnyPlanCount === 1 ? '' : 's'} (keeps courses used in any plan)`
+                  : 'All courses in pool are in use in your plans'
+              }
+              aria-label="Clear unused courses from pool"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="up-pool-filters">
-          <div ref={tabsRef} className="up-pool-tabs" role="tablist" aria-label="Filter course pool">
+        <div className="up-pool-filters w-full">
+          <div ref={tabsRef} className="up-pool-tabs w-full" role="tablist" aria-label="Filter course pool">
             <span ref={pillRef} className="up-pool-tab-pill" aria-hidden="true" />
             <button
               type="button"
@@ -160,8 +214,9 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               aria-selected={filterMode === 'all'}
               onClick={() => onFilterMode('all')}
               className="up-pool-tab up-chrome-btn"
+              title="All courses in pool"
             >
-              All ({catalogCount})
+              All
             </button>
             <button
               type="button"
@@ -169,8 +224,9 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               aria-selected={filterMode === 'in_plan'}
               onClick={() => onFilterMode('in_plan')}
               className="up-pool-tab up-chrome-btn"
+              title="Courses in active plan"
             >
-              In plan ({totalInPlan})
+              In plan
             </button>
             <button
               type="button"
@@ -178,33 +234,56 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               aria-selected={filterMode === 'not_in_plan'}
               onClick={() => onFilterMode('not_in_plan')}
               className="up-pool-tab up-chrome-btn"
+              title="Courses not in active plan"
             >
-              Available ({catalogCount - totalInPlan})
+              Available
             </button>
           </div>
-
-          {onOpenImport && (
-            <button
-              type="button"
-              id="btn-pool-import"
-              onClick={onOpenImport}
-              className="up-pool-create up-chrome-btn"
-              title="Import courses (Excel / CSV / Calendar)"
-              aria-label="Import courses"
-            >
-              <Upload className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onOpenNewCourse}
-            className="up-pool-create up-chrome-btn"
-            title="Create course"
-            aria-label="Create course"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
         </div>
+
+        <AnimatePresence>
+          {isConfirmingClearPool && unusedInAnyPlanCount > 0 && (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
+              className="overflow-hidden"
+            >
+              <div className="p-2.5 rounded-lg border border-rose-300 dark:border-rose-900/80 bg-rose-50/90 dark:bg-rose-950/50 text-xs">
+                <div className="flex items-center justify-between font-semibold text-rose-800 dark:text-rose-200">
+                  <span>Clear {unusedInAnyPlanCount} unused {unusedInAnyPlanCount === 1 ? 'course' : 'courses'}?</span>
+                  <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400">
+                    Keep {usedInAnyPlanCount} in plans
+                  </span>
+                </div>
+                <p className="text-[11px] text-rose-700/90 dark:text-rose-300/80 mt-1 leading-snug">
+                  Removes all courses from the pool that are not used in any plan. You can undo this action anytime (Ctrl+Z).
+                </p>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <button
+                    type="button"
+                    id="btn-confirm-clear-pool"
+                    onClick={() => {
+                      onClearUnusedCatalogCourses();
+                      setIsConfirmingClearPool(false);
+                    }}
+                    className="flex-1 py-1 px-2.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs transition-colors up-chrome-btn"
+                  >
+                    Clear {unusedInAnyPlanCount} {unusedInAnyPlanCount === 1 ? 'course' : 'courses'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingClearPool(false)}
+                    className="py-1 px-2.5 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors up-chrome-btn"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="up-pool-list">
@@ -276,8 +355,8 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
         </motion.div>
       </div>
 
-      <div className="up-pool-foot justify-center text-center">
-        <span>Adding creates independent copies</span>
+      <div className="up-pool-foot">
+        <span className="truncate">Adding creates independent copies</span>
       </div>
     </div>
   );
