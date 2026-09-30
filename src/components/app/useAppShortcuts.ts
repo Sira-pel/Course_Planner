@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { DayOfWeek, SchedulePlan } from '../../types/schedule';
 
 export interface UseAppShortcutsArgs {
@@ -26,27 +26,34 @@ export interface UseAppShortcutsArgs {
   onCollapsePool: () => void;
 }
 
-export function useAppShortcuts({
-  plans,
-  activePlanId,
-  isMoreOpen,
-  isConfirmingClear,
-  onOpenNewCourse,
-  onOpenExport,
-  onOpenShortcuts,
-  onDuplicatePlan,
-  onUndo,
-  onRedo,
-  onSetActivePlan,
-  onSetMoreOpen,
-  onSetConfirmingClear,
-  onCloseCourseModal,
-  onCloseExport,
-  onCloseShortcuts,
-  onCollapsePool,
-}: UseAppShortcutsArgs): void {
+export function useAppShortcuts(args: UseAppShortcutsArgs): void {
+  const argsRef = useRef(args);
+  useEffect(() => {
+    argsRef.current = args;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const {
+        plans,
+        activePlanId,
+        isMoreOpen,
+        isConfirmingClear,
+        onOpenNewCourse,
+        onOpenExport,
+        onOpenShortcuts,
+        onDuplicatePlan,
+        onUndo,
+        onRedo,
+        onSetActivePlan,
+        onSetMoreOpen,
+        onSetConfirmingClear,
+        onCloseCourseModal,
+        onCloseExport,
+        onCloseShortcuts,
+        onCollapsePool,
+      } = argsRef.current;
+
       // Check if user is typing in an input or textarea
       const target = e.target as HTMLElement | null;
       const isInputFocused =
@@ -136,23 +143,5 @@ export function useAppShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    activePlanId,
-    plans,
-    onOpenNewCourse,
-    onOpenExport,
-    onOpenShortcuts,
-    onDuplicatePlan,
-    onUndo,
-    onRedo,
-    onSetActivePlan,
-    isMoreOpen,
-    isConfirmingClear,
-    onSetMoreOpen,
-    onSetConfirmingClear,
-    onCloseCourseModal,
-    onCloseExport,
-    onCloseShortcuts,
-    onCollapsePool,
-  ]);
+  }, []);
 }

@@ -5,6 +5,22 @@ import { ClassSession, Course, Conflict, DayOfWeek, LayoutSession } from '../typ
  */
 export function timeToMinutes(timeStr: string): number {
   if (!timeStr || typeof timeStr !== 'string') return 0;
+
+  // Ultra-fast path for standard 5-character 24h format "HH:mm" (e.g. "09:00", "14:30")
+  if (timeStr.length === 5 && timeStr.charCodeAt(2) === 58) {
+    const c0 = timeStr.charCodeAt(0) - 48;
+    const c1 = timeStr.charCodeAt(1) - 48;
+    const c3 = timeStr.charCodeAt(3) - 48;
+    const c4 = timeStr.charCodeAt(4) - 48;
+    if (c0 >= 0 && c0 <= 9 && c1 >= 0 && c1 <= 9 && c3 >= 0 && c3 <= 9 && c4 >= 0 && c4 <= 9) {
+      const h = c0 * 10 + c1;
+      const m = c3 * 10 + c4;
+      if (h < 24 && m < 60) {
+        return h * 60 + m;
+      }
+    }
+  }
+
   const clean = timeStr.trim().toLowerCase();
   const isPM = clean.includes('pm') || clean.endsWith('p');
   const isAM = clean.includes('am') || clean.endsWith('a');
@@ -105,10 +121,10 @@ export function detectPlanConflicts(courses: Course[]): Conflict[] {
       const c2 = courses[j];
       if (!c2 || !Array.isArray(c2.sessions)) continue;
 
-      const pairKey = `${c1.id}__${c2.id}`;
-      if (checkedPairs.has(pairKey)) continue;
-
       for (const s1 of c1.sessions) {
+        const pairKey = `${c1.id}__${c2.id}__${s1.day}`;
+        if (checkedPairs.has(pairKey)) continue;
+
         for (const s2 of c2.sessions) {
           if (checkSessionCollision(s1, s2)) {
             const startM = Math.max(timeToMinutes(s1.startTime), timeToMinutes(s2.startTime));
@@ -239,11 +255,15 @@ export function computeDayLayout(
   }));
 }
 
+const contrastCache = new Map<string, 'text-white' | 'text-slate-900'>();
+
 /**
  * Computes contrast text color (black or white) for a given hex or rgb background.
  */
 export function getContrastTextColor(hexColor: string): 'text-white' | 'text-slate-900' {
   if (!hexColor || typeof hexColor !== 'string') return 'text-white';
+  const cached = contrastCache.get(hexColor);
+  if (cached) return cached;
 
   let r = 0, g = 0, b = 0;
 
@@ -268,5 +288,7 @@ export function getContrastTextColor(hexColor: string): 'text-white' | 'text-sla
 
   // Perceived luminance formula (YIQ)
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 145 ? 'text-slate-900' : 'text-white';
+  const result = yiq >= 145 ? 'text-slate-900' : 'text-white';
+  contrastCache.set(hexColor, result);
+  return result;
 }

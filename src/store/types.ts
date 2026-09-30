@@ -42,6 +42,7 @@ export interface ScheduleState {
 
   // Catalog Pool actions
   addToCatalog: (course: Course) => void;
+  bulkAddToCatalog: (courses: Course[]) => void;
   removeFromCatalog: (courseId: string) => void;
   updateCatalogCourse: (course: Course) => void;
   toggleCourseInPlan: (catalogCourseId: string, targetPlanId?: string) => void;

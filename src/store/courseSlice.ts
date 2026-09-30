@@ -26,7 +26,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       const inCatalog = state.catalogCourses.some(c => sameCourseIdentity(c, course));
       const updatedCatalog = inCatalog
         ? state.catalogCourses
-        : [...state.catalogCourses, { ...course, id: `cat_${course.id}` }];
+        : [...state.catalogCourses, { ...course, id: course.id.startsWith('cat_') ? course.id : `cat_${course.id}` }];
 
       commitWithHistory(set, get, {
         plans: updatedPlans,
@@ -96,7 +96,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
         const key = courseIdentityKey(c.code, c.section);
         if (!catalogKeys.has(key)) {
           catalogKeys.add(key);
-          currentCatalog.push({ ...c, id: `cat_${c.id}` });
+          currentCatalog.push({ ...c, id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}` });
         }
       }
 

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useReducedMotion } from 'motion/react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../../types/schedule';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -32,7 +31,6 @@ interface CourseModalProps {
 }
 
 const CLOSE_MS = 150;
-const MORPH_MS = 250;
 
 function isTabbable(el: HTMLElement): boolean {
   if (el.closest('[inert]')) return false;
@@ -130,7 +128,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       };
     }
 
-    setPhase((current) => (current === 'open' ? 'closing' : current));
+    setPhase((current) => {
+      if (current === 'hidden') return 'hidden';
+      return 'closing';
+    });
     const timeout = window.setTimeout(() => setPhase('hidden'), CLOSE_MS);
     return () => window.clearTimeout(timeout);
   }, [isOpen]);

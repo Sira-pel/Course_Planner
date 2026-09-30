@@ -37,6 +37,7 @@
 html {
   height: 100%;
   color-scheme: light;
+  background-color: #f7f8fb;
 }
 
 html,
@@ -48,13 +49,18 @@ body,
   width: 100%;
 }
 
-body,
+body {
+  height: 100%;
+  background-color: #f7f8fb;
+}
+
 #root {
   height: 100%;
 }
 
 html.dark {
   color-scheme: dark;
+  background-color: #121826;
   --up-raised: #121826;
   --up-ink: #e8edf4;
   --up-muted: #8b959e;
@@ -62,6 +68,14 @@ html.dark {
   --up-accent: #5b6cf0;
   --up-accent-ink: #f4f5ff;
   --up-focus: #8b96ff;
+}
+
+html.dark body {
+  background-color: #121826;
+}
+
+::view-transition {
+  background: transparent !important;
 }
 
 @layer base {
@@ -1645,6 +1659,10 @@ html.is-theme-to-dark::view-transition-new(theme-dark) {
 }
 
 html.is-theme-to-light::view-transition-image-pair(theme-dark) {
+  transform: scale(1);
+}
+
+html.is-theme-to-light::view-transition-old(theme-dark) {
   transform: scale(1);
 }
 

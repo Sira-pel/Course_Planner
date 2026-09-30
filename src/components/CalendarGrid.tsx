@@ -195,11 +195,15 @@ export const CalendarGrid = memo(function CalendarGrid({
     return arr;
   }, [effectiveStartHour, effectiveEndHour]);
 
+  const planIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    plans.forEach((p, idx) => map.set(p.id, idx));
+    return map;
+  }, [plans]);
+
   // Pre-calculate day layout sessions
   const dayLayoutMap = useMemo(() => {
     const map = new Map<DayOfWeek, LayoutSession[]>();
-    const planIndexMap = new Map<string, number>();
-    plans.forEach((p, idx) => planIndexMap.set(p.id, idx));
 
     days.forEach(dayObj => {
       const layout = computeDayLayout(
@@ -209,7 +213,7 @@ export const CalendarGrid = memo(function CalendarGrid({
     });
 
     return map;
-  }, [days, activePlan, ghostPlans, conflictingCourseIds, plans]);
+  }, [days, activePlan, ghostPlans, conflictingCourseIds, planIndexMap]);
 
   // Day highlight: updates when midnight passes or tab becomes visible again
   const [currentDayOfWeek, setCurrentDayOfWeek] = useState<DayOfWeek>(getTodayDayOfWeek);
@@ -428,7 +432,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   {/* Course Sessions on this Day */}
                   {sessions.map((layoutItem) => (
                     <CourseBlock
-                      key={`${layoutItem.course.id}_${layoutItem.session.id}_${layoutItem.isGhost ? 'g' : 'a'}`}
+                      key={`${layoutItem.planId}_${layoutItem.course.id}_${layoutItem.session.id}_${layoutItem.isGhost ? 'g' : 'a'}`}
                       layout={layoutItem}
                       startHour={effectiveStartHour}
                       totalMinutes={totalMinutes}

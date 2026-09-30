@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { applyDomTheme, persistTheme } from '../../utils/theme';
-import { isPointerClick, runThemeReveal } from '../../utils/themeTransition';
+import { isPointerClick, isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
 import { detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
@@ -25,6 +25,7 @@ import { EASE_OUT, EASE_POP } from '../../utils/motion';
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
   onOpenExport: () => void;
+  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
   onOpenShortcuts: () => void;
   onOpenCatalog: () => void;
 }
@@ -32,6 +33,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenNewCourse,
   onOpenExport,
+  onOpenImport,
   onOpenShortcuts,
   onOpenCatalog,
 }) => {
@@ -239,20 +241,16 @@ export const Header: React.FC<HeaderProps> = ({
 
   // closeSettings stays false for #btn-theme and Settings Light/Dark so the sheet stays open.
   const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
+    if (isThemeRevealing()) return;
     const goingToDark = theme !== 'dark';
     const next = goingToDark ? 'dark' : 'light';
 
-    if (!isPointerClick(event) || reduceMotion) {
-      if (closeSettings) setIsSettingsOpen(false);
-      setTheme(next);
-      return;
-    }
+    if (closeSettings) setIsSettingsOpen(false);
 
     runThemeReveal({
       event,
       goingToDark,
       apply: () => {
-        if (closeSettings) setIsSettingsOpen(false);
         applyDomTheme(next);
         persistTheme(next);
       },
@@ -460,7 +458,12 @@ export const Header: React.FC<HeaderProps> = ({
             onToggleTheme={(event) => handleToggleTheme(event, false)}
             onImportIcsClick={() => {
               setIsSettingsOpen(false);
-              fileInputRef.current?.click();
+              if (onOpenImport) onOpenImport('ics');
+              else fileInputRef.current?.click();
+            }}
+            onOpenImport={(tab) => {
+              setIsSettingsOpen(false);
+              onOpenImport?.(tab);
             }}
             onOpenExport={() => {
               setIsSettingsOpen(false);

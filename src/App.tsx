@@ -10,6 +10,7 @@ import { Header } from './components/header/Header';
 import { CalendarGrid } from './components/CalendarGrid';
 import { CourseModal } from './components/course-modal/CourseModal';
 import { ExportModal } from './components/export/ExportModal';
+import { ImportModal, ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
@@ -36,6 +37,8 @@ export default function App() {
   const [modalInitialStartTime, setModalInitialStartTime] = useState<string>('09:00');
   const [modalInitialMode, setModalInitialMode] = useState<'form' | 'quick'>('form');
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
@@ -49,6 +52,7 @@ export default function App() {
 
   const handleCloseCourseModal = useCallback(() => setIsCourseModalOpen(false), []);
   const handleCloseExport = useCallback(() => setIsExportOpen(false), []);
+  const handleCloseImport = useCallback(() => setIsImportOpen(false), []);
   const handleCloseShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
@@ -91,6 +95,12 @@ export default function App() {
   const handleOpenExport = useCallback(() => {
     setIsPoolCollapsed(true);
     setIsExportOpen(true);
+  }, []);
+
+  const handleOpenImport = useCallback((tab: ImportTabType = 'excel') => {
+    setIsPoolCollapsed(true);
+    setImportInitialTab(tab);
+    setIsImportOpen(true);
   }, []);
 
   const handleOpenShortcuts = useCallback(() => {
@@ -148,6 +158,7 @@ export default function App() {
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
           onOpenExport={handleOpenExport}
+          onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
         />
@@ -168,6 +179,7 @@ export default function App() {
             isCollapsed={isPoolCollapsed}
             onToggleCollapse={() => setIsPoolCollapsed((prev) => !prev)}
             onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+            onOpenImport={() => handleOpenImport('excel')}
             onEditCourse={handleEditCourse}
           />
         </div>
@@ -202,6 +214,12 @@ export default function App() {
       <ExportModal
         isOpen={isExportOpen}
         onClose={handleCloseExport}
+      />
+
+      <ImportModal
+        isOpen={isImportOpen}
+        initialTab={importInitialTab}
+        onClose={handleCloseImport}
       />
 
       <KeyboardShortcutsModal

@@ -15,6 +15,7 @@ interface CoursePoolSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onOpenNewCourse: (mode?: 'form' | 'quick') => void;
+  onOpenImport?: () => void;
   onEditCourse: (courseId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   onOpenNewCourse,
+  onOpenImport,
   onEditCourse,
 }) => {
   const {
@@ -294,6 +296,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       onFilterMode={setFilterMode}
       onToggleCollapse={onToggleCollapse}
       onOpenNewCourse={openNewCourse}
+      onOpenImport={onOpenImport}
       onEditCourse={onEditCourse}
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}

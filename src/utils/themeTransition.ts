@@ -297,9 +297,13 @@ function publishRevealGeometry(event: ThemeRevealOptions['event'], startRadiusPx
   const y = devicePx(origin.y);
   const width = devicePx(bodyRect.width);
   const height = devicePx(bodyRect.height);
-  const radius = devicePxCeil(
-    Math.max(1, farthestCornerRadius(x, y, Math.max(width, viewport.width), Math.max(height, viewport.height)))
+  const rawRadius = Math.max(
+    1,
+    farthestCornerRadius(x, y, Math.max(width, viewport.width), Math.max(height, viewport.height))
   );
+  // Pad the radius by 32px so the circular mask antialiased perimeter extends completely
+  // off-screen, eliminating any edge lighting/flashing at viewport boundaries.
+  const radius = devicePxCeil(rawRadius + 32);
   const start = devicePx(Math.max(MIN_START_RADIUS_PX, startRadiusPx));
   const startScale = Math.min(1, start / radius);
   setRevealGeometry(x, y, radius, width, height, startScale, start);
@@ -352,6 +356,10 @@ function cancelAnimations(animations: Animation[]): void {
   }
 }
 
+export function isThemeRevealing(): boolean {
+  return activeReveal !== null;
+}
+
 /**
  * Pointer-origin circular swap on View Transition bitmaps.
  * Capture light/dark as named body groups, then scale a rounded-clip wrapper
@@ -361,22 +369,14 @@ function cancelAnimations(animations: Animation[]): void {
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { event, goingToDark, apply, commit } = options;
 
-  if (prefersReducedMotion() || !canStartViewTransition(document)) {
-    apply();
-    commit();
+  // Ignore rapid repeated clicks or double clicks while an active transition is animating.
+  if (activeReveal) {
     return;
   }
 
-  if (activeReveal) {
-    if (activeReveal.transition && typeof activeReveal.transition.skipTransition === 'function') {
-      try {
-        activeReveal.transition.skipTransition();
-      } catch {
-        activeReveal.finish();
-      }
-      return;
-    }
-    activeReveal.finish();
+  if (!canStartViewTransition(document)) {
+    apply();
+    commit();
     return;
   }
 
@@ -387,7 +387,6 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   publishRevealGeometry(event, startRadiusPx);
 
   let applied = false;
-  let committed = false;
   let released = false;
   const animations: Animation[] = [];
 
@@ -397,33 +396,19 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     apply();
   };
 
-  const runCommit = () => {
-    runApply();
-    if (committed) return;
-    committed = true;
-    commit();
-  };
-
   const finish = () => {
     if (released) return;
     released = true;
     window.clearTimeout(failsafe);
+    failsafe = 0;
     window.cancelAnimationFrame(pendingFrame);
     pendingFrame = 0;
     clearRevealClasses();
     cancelAnimations(animations);
     clearRevealGeometry();
-    const idle = window.requestIdleCallback;
-    const deferCommit =
-      typeof idle === 'function'
-        ? (task: () => void) => idle(task, { timeout: 250 })
-        : (task: () => void) => window.setTimeout(task, 0);
-    deferCommit(() => {
-      runCommit();
-      if (activeReveal?.finish === finish) {
-        activeReveal = null;
-      }
-    });
+    runApply();
+    commit();
+    activeReveal = null;
   };
 
   activeReveal = {
@@ -468,6 +453,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
             ? readDurationMs('--dur-scene', 620)
             : readDurationMs('--dur-emphasis', 500);
           const easeCss = readEase('--ease-reveal');
+
           if (root.classList.contains('is-gecko-reveal')) {
             const full = parseFloat(root.style.getPropertyValue('--up-reveal-r'));
             const start = parseFloat(root.style.getPropertyValue('--up-reveal-start'));

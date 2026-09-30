@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   Plus,
   Search,
+  Upload,
   X,
 } from 'lucide-react';
 import { PoolRow } from './PoolRow';
@@ -33,6 +34,7 @@ export interface PoolPanelProps {
   onFilterMode: (mode: FilterMode) => void;
   onToggleCollapse: () => void;
   onOpenNewCourse: () => void;
+  onOpenImport?: () => void;
   onEditCourse: (id: string) => void;
   onRequestDelete: (id: string) => void;
   onConfirmDelete: (id: string) => void;
@@ -62,6 +64,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   onFilterMode,
   onToggleCollapse,
   onOpenNewCourse,
+  onOpenImport,
   onEditCourse,
   onRequestDelete,
   onConfirmDelete,
@@ -180,6 +183,18 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
             </button>
           </div>
 
+          {onOpenImport && (
+            <button
+              type="button"
+              id="btn-pool-import"
+              onClick={onOpenImport}
+              className="up-pool-create up-chrome-btn"
+              title="Import courses (Excel / CSV / Calendar)"
+              aria-label="Import courses"
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenNewCourse}
@@ -206,17 +221,30 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               <span>
                 {searchQuery
                   ? 'Clear search or switch filters.'
-                  : 'Create a course to save it here.'}
+                  : 'Create a course or import an Excel spreadsheet.'}
               </span>
-              <button
-                type="button"
-                onClick={onOpenNewCourse}
-                className="up-pool-add up-chrome-btn mt-1"
-                style={{ width: 'auto', paddingInline: 16 }}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Create course
-              </button>
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={onOpenNewCourse}
+                  className="up-pool-add up-chrome-btn"
+                  style={{ width: 'auto', paddingInline: 14 }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Create course
+                </button>
+                {onOpenImport && (
+                  <button
+                    type="button"
+                    onClick={onOpenImport}
+                    className="up-pool-add up-chrome-btn"
+                    style={{ width: 'auto', paddingInline: 14 }}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Import Excel
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             filteredCourses.map((item, index) => {
@@ -248,15 +276,8 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
         </motion.div>
       </div>
 
-      <div className="up-pool-foot">
+      <div className="up-pool-foot justify-center text-center">
         <span>Adding creates independent copies</span>
-        <button
-          type="button"
-          onClick={onOpenNewCourse}
-          className="up-pool-text-btn up-chrome-btn"
-        >
-          Create course
-        </button>
       </div>
     </div>
   );

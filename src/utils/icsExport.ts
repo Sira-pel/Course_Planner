@@ -161,7 +161,7 @@ export function generateIcsCalendar(
       if (!dtStart || !dtEnd) return;
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
-      const colorPrefix = '';
+      const colorPrefix = includeColorEmoji && course.color ? `${getColorEmoji(course.color)} ` : '';
       const summary = escapeIcsText(`${colorPrefix}${codeSec} ${course.name}`.trim());
 
       const descParts: string[] = [];

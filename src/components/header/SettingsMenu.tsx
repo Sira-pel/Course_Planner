@@ -31,6 +31,7 @@ interface SettingsMenuProps {
   onOpenCatalog: () => void;
   onToggleTheme: (event: React.MouseEvent<HTMLElement>) => void;
   onImportIcsClick: () => void;
+  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
   onLoadDemo: () => void;
@@ -55,6 +56,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onOpenCatalog,
   onToggleTheme,
   onImportIcsClick,
+  onOpenImport,
   onOpenExport,
   onOpenShortcuts,
   onLoadDemo,
@@ -161,11 +163,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               </button>
               <button
                 type="button"
-                onClick={onImportIcsClick}
+                id="btn-open-import"
+                onClick={() => {
+                  if (onOpenImport) onOpenImport('excel');
+                  else onImportIcsClick();
+                }}
                 className="up-settings-item up-chrome-btn"
               >
                 <Upload />
-                Import calendar (.ics)
+                Import courses & schedule
               </button>
               <button
                 type="button"

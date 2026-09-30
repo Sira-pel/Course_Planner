@@ -1,5 +1,5 @@
 import type { Course } from '../types/schedule';
-import { sameCourseIdentity } from '../utils/courseIdentity';
+import { courseIdentityKey, sameCourseIdentity } from '../utils/courseIdentity';
 import { prefixedId } from '../utils/id';
 import { commitWithHistory } from './history';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
@@ -7,6 +7,7 @@ import type { ScheduleState, StoreGet, StoreSet } from './types';
 export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
   | 'addToCatalog'
+  | 'bulkAddToCatalog'
   | 'removeFromCatalog'
   | 'updateCatalogCourse'
   | 'addCourseFromPool'
@@ -20,6 +21,29 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       if (exists) return;
       commitWithHistory(set, get, {
         catalogCourses: [{ ...course, id: course.id.startsWith('cat_') ? course.id : `cat_${course.id}` }, ...state.catalogCourses],
+      });
+    },
+
+    bulkAddToCatalog: (courses: Course[]) => {
+      if (courses.length === 0) return;
+      const state = get();
+      const existingKeys = new Set(
+        state.catalogCourses.map(c => courseIdentityKey(c.code, c.section))
+      );
+      const newItems: Course[] = [];
+      for (const course of courses) {
+        const key = courseIdentityKey(course.code, course.section);
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          newItems.push({
+            ...course,
+            id: course.id.startsWith('cat_') ? course.id : `cat_${course.id}`,
+          });
+        }
+      }
+      if (newItems.length === 0) return;
+      commitWithHistory(set, get, {
+        catalogCourses: [...newItems, ...state.catalogCourses],
       });
     },
 
