@@ -313,8 +313,8 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
 
 
-          <div className="up-enrolled" title="Total enrolled credit hours in active plan">
-            <span className="up-enrolled-label hidden sm:inline">Enrolled</span>
+          <div className="up-enrolled" title={`Total enrolled: ${totalCredits} credit hours · ${classCount} ${classCount === 1 ? 'class' : 'classes'}`}>
+            <span className="up-enrolled-label hidden lg:inline">Enrolled</span>
             <span className="font-mono text-[12px] tabular-nums leading-none">
               <span className="up-credit-stage" aria-live="polite">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -336,10 +336,10 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <span className="up-enrolled-label"> cr</span>
             </span>
-            <span className="hidden sm:inline up-enrolled-label" aria-hidden="true">
+            <span className="hidden md:inline up-enrolled-label" aria-hidden="true">
               ·
             </span>
-            <span className="hidden sm:inline text-[12px] tabular-nums" style={{ color: 'var(--up-muted)' }}>
+            <span className="hidden md:inline text-[12px] tabular-nums" style={{ color: 'var(--up-muted)' }}>
               {classCount} {classCount === 1 ? 'class' : 'classes'}
             </span>
           </div>
@@ -352,20 +352,21 @@ export const Header: React.FC<HeaderProps> = ({
                 key="conflict-mark"
                 onClick={() => setConflictModalOpen(true)}
                 className="up-conflict up-chrome-btn"
+                title={`${conflicts.length} schedule ${conflicts.length === 1 ? 'collision' : 'collisions'} detected`}
                 aria-label={`${conflicts.length} ${conflicts.length === 1 ? 'collision' : 'collisions'}`}
-                initial={reduceMotion ? { opacity: 0 } : { y: 8, x: 8, scale: 0.92, opacity: 0 }}
-                animate={{ y: 0, x: 0, scale: 1, opacity: 1 }}
+                initial={reduceMotion ? { opacity: 0 } : { y: 6, scale: 0.94, opacity: 0 }}
+                animate={{ y: 0, scale: 1, opacity: 1 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, scale: 0.99, y: 0, x: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+                    : { opacity: 0, scale: 0.99, y: 0, transition: { duration: 0.15, ease: EASE_OUT } }
                 }
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: EASE_POP }}
               >
                 <AlertTriangle className="up-conflict-icon w-3.5 h-3.5 shrink-0" />
-                <span className="inline-flex items-baseline gap-1 leading-none tabular-nums">
+                <span className="inline-flex items-baseline gap-1 leading-none tabular-nums font-semibold">
                   <span>{conflicts.length}</span>
-                  <span className="hidden sm:inline">
+                  <span className="hidden lg:inline font-normal">
                     {conflicts.length === 1 ? 'collision' : 'collisions'}
                   </span>
                 </span>
@@ -404,9 +405,10 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onOpenNewCourse('form')}
             aria-label="Add course"
             className="up-add-course up-chrome-btn"
+            title="Add course"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Add course</span>
+            <span className="hidden md:inline">Add course</span>
           </button>
 
           <input

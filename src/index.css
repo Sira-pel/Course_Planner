@@ -192,7 +192,15 @@ html.dark body {
   }
 }
 
-.up-header-brand,
+.up-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
 .up-header-plan {
   display: flex;
   align-items: center;
@@ -240,10 +248,10 @@ html.dark body {
 
 .up-enrolled {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  padding-left: 12px;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-left: 10px;
   margin-left: 2px;
   border-left: 1px solid var(--up-line);
   white-space: nowrap;
@@ -720,15 +728,15 @@ html.dark .up-settings-select option,
 .up-conflict {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 8px;
-  border: 0;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, #c42b4a 24%, transparent);
   border-radius: 6px;
-  background: transparent;
+  background: color-mix(in srgb, #c42b4a 8%, transparent);
   color: #c42b4a;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
@@ -736,11 +744,19 @@ html.dark .up-settings-select option,
 }
 
 .dark .up-conflict {
+  background: color-mix(in srgb, #f4a4b2 12%, transparent);
+  border-color: color-mix(in srgb, #f4a4b2 26%, transparent);
   color: #f4a4b2;
 }
 
 .up-conflict:hover {
-  background: color-mix(in srgb, #c42b4a 10%, transparent);
+  background: color-mix(in srgb, #c42b4a 16%, transparent);
+  border-color: color-mix(in srgb, #c42b4a 36%, transparent);
+}
+
+.dark .up-conflict:hover {
+  background: color-mix(in srgb, #f4a4b2 20%, transparent);
+  border-color: color-mix(in srgb, #f4a4b2 40%, transparent);
 }
 
 @keyframes up-conflict-pulse {

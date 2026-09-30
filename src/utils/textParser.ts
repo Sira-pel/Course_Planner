@@ -9,52 +9,98 @@ export interface ParseResult {
   warnings?: string[];
 }
 
+// Words that must NEVER be treated as course subject prefixes (they indicate section, type, room, etc.)
+const RESERVED_PREFIXES = new Set([
+  'SEC',
+  'SECT',
+  'SECTION',
+  'LEC',
+  'LECT',
+  'LECTURE',
+  'LAB',
+  'LABORATORY',
+  'REC',
+  'RECITATION',
+  'DISC',
+  'DISCUSSION',
+  'SEM',
+  'SEMINAR',
+  'TUT',
+  'TUTORIAL',
+  'ACT',
+  'ACTIVITY',
+  'STU',
+  'STUDIO',
+  'RM',
+  'ROOM',
+  'BLDG',
+  'BUILDING',
+  'HALL',
+  'AUD',
+  'AUDITORIUM',
+  'CR',
+  'CRS',
+  'CRSE',
+  'UNIT',
+  'UNITS',
+  'CREDIT',
+  'CREDITS',
+  'PROF',
+  'DR',
+  'PERIOD',
+  'TIME',
+  'DAY',
+  'DAYS',
+]);
+
 // Regex to capture course codes with hyphenated sections e.g. CS 101-001, CS101-001, ITM 380-002, COSC-340-01
 const COURSE_CODE_WITH_SECTION_REGEX = /\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\s*[-_]\s*([0-9A-Za-z]{1,4})\b/i;
 
-// Regex to capture course codes like CS101, CS 101, ITM 380, COSC-340, CYBR 351, MATH 201A
+// Regex to capture standard course codes like CS 101, CS101, ITM 380, COSC-340, CYBR 351, MATH 201A
 const COURSE_CODE_REGEX = /\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\b/i;
 
-// Regex to detect days including MW, TF, WF, TR, TTH, TUTH, MTH, MWF, M/W, T/F, W/F, T/R, MoWe, TuFr, etc.
-const DAYS_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|MTWTHF|MTWRF|MOWEFR|MOWE|TUFR|WEFR|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|M|T|W|TH|R|F|S|SU)\b/gi;
+// Regex to detect days including slash/dash/space compound combinations e.g. MW, TF, WF, TR, TTH, TuTh, T/F, M/W, Mon/Wed, Tu/Fr, etc.
+const DAYS_COMPOUND_REGEX = /\b(?:MWF|MOWEFR|TTH|TUTH|TR|T\/R|TU\/TH|TUE\/THU|TF|T\/F|TU\/FR|TUE\/FRI|WF|W\/F|WE\/FR|WED\/FRI|MW|M\/W|MO\/WE|MON\/WED|MTH|MOTH|M\/TH|MON\/THU|MTWTHF|MTWRF|M-F|MON-FRI)\b/gi;
+const DAYS_SINGLE_TOKEN_REGEX = /\b(MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|M|T|W|TH|R|F|S|SU|TU|WE|FR|SA)\b/gi;
 
 /**
- * Normalizes day tokens into standard DayOfWeek array.
+ * Normalizes raw day tokens into standard DayOfWeek array.
  */
 export function normalizeDays(tokens: string[]): DayOfWeek[] {
   const days = new Set<DayOfWeek>();
 
   for (const rawToken of tokens) {
-    // Clean token
+    if (!rawToken) continue;
+    // Normalize slashes, commas, dashes
     const token = rawToken.replace(/[/\\,-]/g, '').trim();
     const upper = token.toUpperCase();
 
-    if (upper === 'MWF' || upper === 'MOWEFR') {
+    if (upper === 'MWF' || upper === 'MOWEFR' || upper === 'MONWEDFRI') {
       days.add('monday');
       days.add('wednesday');
       days.add('friday');
-    } else if (upper === 'TTH' || upper === 'TUTH' || upper === 'TR') {
+    } else if (upper === 'TTH' || upper === 'TUTH' || upper === 'TR' || upper === 'TUR' || upper === 'TUETHU') {
       days.add('tuesday');
       days.add('thursday');
-    } else if (upper === 'MTH' || upper === 'MOTH') {
+    } else if (upper === 'MTH' || upper === 'MOTH' || upper === 'MONTHU') {
       days.add('monday');
       days.add('thursday');
-    } else if (upper === 'TF' || upper === 'TUFR') {
+    } else if (upper === 'TF' || upper === 'TUFR' || upper === 'TUEFRI') {
       days.add('tuesday');
       days.add('friday');
-    } else if (upper === 'WF' || upper === 'WEFR') {
+    } else if (upper === 'WF' || upper === 'WEFR' || upper === 'WEDFRI') {
       days.add('wednesday');
       days.add('friday');
-    } else if (upper === 'MW' || upper === 'MOWE') {
+    } else if (upper === 'MW' || upper === 'MOWE' || upper === 'MONWED') {
       days.add('monday');
       days.add('wednesday');
-    } else if (upper === 'MTWTHF' || upper === 'MTWRF' || upper === 'MF' || upper === 'DAILY') {
+    } else if (upper === 'MTWTHF' || upper === 'MTWRF' || upper === 'MF' || upper === 'MONFRI' || upper === 'DAILY') {
       days.add('monday');
       days.add('tuesday');
       days.add('wednesday');
       days.add('thursday');
       days.add('friday');
-    } else if (upper.startsWith('MON') || upper === 'M') {
+    } else if (upper.startsWith('MON') || upper === 'M' || upper === 'MO') {
       days.add('monday');
     } else if (upper.startsWith('TUE') || upper === 'T' || upper === 'TU') {
       days.add('tuesday');
@@ -164,7 +210,7 @@ export function parseSingleTimeToken(
 }
 
 /**
- * Parses time string like "8:30–10:00", "12:00–1:30", "1:45-3:15", "10:15–11:45", "9:00 AM - 10:15 AM".
+ * Parses time string like "8:30–10:00", "12:00–1:30", "1:45-3:15", "10:15–12:45", "9:00 AM - 10:15 AM".
  * Returns [startTime24h, endTime24h] e.g. ["08:30", "10:00"]
  */
 export function parseTimeRange(timeStr: string): { start: string; end: string } | null {
@@ -192,12 +238,10 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
   );
   if (!startParsed) return null;
 
-  // If start is e.g. 12:00 (noon) and end is 1:30 (13:30), startMinutes < endMinutes is true!
-  // If user typed 11:00 - 1:00 (11:00 AM to 13:00 PM), ensure start is AM and end is PM:
   let startMinutes = startParsed.h * 60 + startParsed.m;
   let endMinutes = endParsed.h * 60 + endParsed.m;
 
-  // Auto-correct if start is 11 or 10 and end is 1 or 2
+  // Auto-correct if start is 11 or 10 and end is 1 or 2 (crosses noon)
   if (startMinutes >= endMinutes && startParsed.h >= 12 && !startHasPM) {
     startParsed.h -= 12;
     startMinutes = startParsed.h * 60 + startParsed.m;
@@ -223,21 +267,103 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
 }
 
 /**
- * Derives a short course code fallback from a title (e.g. "Operating Systems" -> "OS 101", "Networking Essentials" -> "NET 101").
+ * Derives a clean, recognizable course code from a course title when no formal course code is provided.
+ * e.g. "Operating Systems" -> "OS 301"
+ * e.g. "Networking Essentials" -> "NET 101"
+ * e.g. "Computer Science B" -> "CS 102"
+ * e.g. "Calculus I" -> "CALC 101"
+ * e.g. "Intro to cyber" -> "CYBR 101"
  */
-function generateCodeFromTitle(title: string): string {
-  const words = title
-    .replace(/[^A-Za-z0-9\s]/g, '')
+export function generateCodeFromTitle(title: string): string {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return 'COURSE 101';
+
+  const lower = cleanTitle.toLowerCase();
+
+  // Determine course level / sequence suffix
+  let levelSuffix = '101';
+  if (/\b(?:iii|3|c)\b/i.test(lower)) levelSuffix = '201';
+  else if (/\b(?:ii|2|b)\b/i.test(lower)) levelSuffix = '102';
+  else if (/\b(?:iv|4|d)\b/i.test(lower)) levelSuffix = '301';
+  else if (/\b(?:advanced|adv|grad)\b/i.test(lower)) levelSuffix = '401';
+  else if (/\b(?:intermediate|inter)\b/i.test(lower)) levelSuffix = '201';
+
+  // Specific domain shortcuts
+  if (/\boperating\s*systems?\b/i.test(lower) || /\bos\b/i.test(lower)) {
+    return `OS ${levelSuffix === '101' ? '301' : levelSuffix}`;
+  }
+  if (/\bnetwork(?:ing)?\b/i.test(lower)) return `NET ${levelSuffix}`;
+  if (/\bcyber(?:security)?\b/i.test(lower) || /\binformation\s*sec(?:urity)?\b/i.test(lower)) return `CYBR ${levelSuffix}`;
+  if (/\bcalculus\b/i.test(lower)) return `CALC ${levelSuffix}`;
+  if (/\bcomputer\s*sci(?:ence)?\b/i.test(lower)) {
+    if (/\bb\b/i.test(lower)) return 'CS 102';
+    if (/\ba\b/i.test(lower)) return 'CS 101';
+    return `CS ${levelSuffix}`;
+  }
+  if (/\bdata\s*struct(?:ures)?\b/i.test(lower)) return 'CS 201';
+  if (/\balgorithm(?:s)?\b/i.test(lower)) return 'CS 301';
+  if (/\bsoftware\s*eng(?:ineering)?\b/i.test(lower)) return 'SE 101';
+  if (/\bdatabase\b/i.test(lower)) return 'DB 101';
+  if (/\bweb\s*dev(?:elopment)?\b/i.test(lower)) return 'WEB 101';
+  if (/\bartificial\s*intel(?:ligence)?\b/i.test(lower) || /\bai\b/i.test(lower)) return 'AI 101';
+  if (/\bmachine\s*learn(?:ing)?\b/i.test(lower) || /\bml\b/i.test(lower)) return 'ML 101';
+  if (/\bphysics\b/i.test(lower)) return `PHYS ${levelSuffix}`;
+  if (/\bchem(?:istry)?\b/i.test(lower)) return `CHEM ${levelSuffix}`;
+  if (/\bbio(?:logy)?\b/i.test(lower)) return `BIO ${levelSuffix}`;
+  if (/\bmath(?:ematics)?\b/i.test(lower)) return `MATH ${levelSuffix}`;
+  if (/\bstat(?:istics)?\b/i.test(lower)) return `STAT ${levelSuffix}`;
+  if (/\becon(?:omics)?\b/i.test(lower)) return `ECON ${levelSuffix}`;
+  if (/\bpsyc(?:hology)?\b/i.test(lower)) return `PSYC ${levelSuffix}`;
+  if (/\bsoc(?:iology)?\b/i.test(lower)) return `SOC ${levelSuffix}`;
+  if (/\bhist(?:ory)?\b/i.test(lower)) return `HIST ${levelSuffix}`;
+  if (/\beng(?:lish)?\b/i.test(lower) || /\blit(?:erature)?\b/i.test(lower)) return `ENG ${levelSuffix}`;
+  if (/\bphil(?:osophy)?\b/i.test(lower)) return `PHIL ${levelSuffix}`;
+  if (/\bfin(?:ance)?\b/i.test(lower)) return `FIN ${levelSuffix}`;
+  if (/\bacct|accounting\b/i.test(lower)) return `ACCT ${levelSuffix}`;
+  if (/\bmktg|marketing\b/i.test(lower)) return `MKTG ${levelSuffix}`;
+  if (/\bmgmt|management\b/i.test(lower)) return `MGMT ${levelSuffix}`;
+
+  // Filter stop words
+  const stopWords = new Set([
+    'intro',
+    'introduction',
+    'fundamentals',
+    'principles',
+    'to',
+    'of',
+    'and',
+    'the',
+    'in',
+    'for',
+    'a',
+    'an',
+    'basic',
+    'basics',
+    'foundations',
+    'with',
+    'on',
+  ]);
+
+  const words = cleanTitle
+    .replace(/[^A-Za-z0-9\s]/g, ' ')
     .trim()
     .split(/\s+/)
     .filter(Boolean);
 
-  if (words.length === 0) return 'COURSE 101';
-  if (words.length === 1) {
-    return `${words[0].substring(0, 4).toUpperCase()} 101`;
+  const significantWords = words.filter((w) => !stopWords.has(w.toLowerCase()));
+  const candidateWords = significantWords.length > 0 ? significantWords : words;
+
+  if (candidateWords.length === 0) return 'COURSE 101';
+
+  if (candidateWords.length === 1) {
+    const w = candidateWords[0].toUpperCase();
+    const prefix = w.length <= 4 ? w : w.substring(0, 4);
+    return `${prefix} ${levelSuffix}`;
   }
-  const acronym = words.map((w) => w[0]).join('').substring(0, 4).toUpperCase();
-  return `${acronym} 101`;
+
+  // Generate acronym from first letter of each significant word (up to 4 chars)
+  const acronym = candidateWords.map((w) => w[0]).join('').substring(0, 4).toUpperCase();
+  return `${acronym} ${levelSuffix}`;
 }
 
 /**
@@ -256,8 +382,15 @@ export function isPlanHeaderLine(line: string): boolean {
 
 /**
  * Universal Course Line Parser
- * Handles standard formats, portal copy-pastes, dash-separated lines,
- * parenthesized course titles, section cohorts, and tabbed tables.
+ * Handles:
+ * - "Operating Systems\tSec001 (12:00–1:30 MW)"
+ * - "Networking Essentials\tSec001 (8:30–10:00 MW)"
+ * - "Computer Science B\tSec001 (1:45–3:15 TF)"
+ * - "Calculus I\tSec002 (10:15–12:45 TF)"
+ * - "Intro to cyber (1:45-3:15 MW)"
+ * - "CS 101-001 Intro to CS MWF 09:00-10:00 Rm 204"
+ * - "ITM 380 (Cloud Computing) - Sec 001, 8:30-10:00 MW, Vanndy You"
+ * - Tab-separated spreadsheets and portal copy-pastes
  */
 export function parseCourseLine(line: string, colorIndex: number = 0): ParseResult {
   try {
@@ -270,74 +403,124 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       return { success: false, rawText: line, error: 'Plan header line ignored' };
     }
 
-    // Strip formatting tags like **Optional**, [Elective], etc.
+    // Strip markdown formatting tags like **Optional**, [Elective], etc.
     raw = raw.replace(/\*\*[^*]+\*\*/g, ' ').replace(/\[[^\]]+\]/g, ' ');
 
-    let lineWorking = raw;
-    const warnings: string[] = [];
+    // Normalize unicode dashes throughout the entire line
+    let lineWorking = raw.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-');
 
-    // -------------------------------------------------------------
-    // STEP 1: Extract Course Code (with optional section or title)
-    // -------------------------------------------------------------
+    const warnings: string[] = [];
     let section: string | undefined = undefined;
     let code = '';
     let name = '';
+    let room: string | undefined = undefined;
+    let instructor: string | undefined = undefined;
+    let credits = 3;
 
-    // Pattern 1: Code followed by parenthesized title e.g. "ITM 380 (Cloud Computing)"
-    const codeWithParenTitleMatch = lineWorking.match(/\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\s*\(\s*([^)]+)\s*\)/i);
-    if (codeWithParenTitleMatch) {
-      code = `${codeWithParenTitleMatch[1].toUpperCase()} ${codeWithParenTitleMatch[2].toUpperCase()}`;
-      name = codeWithParenTitleMatch[3].trim();
-      lineWorking = lineWorking.replace(codeWithParenTitleMatch[0], ' ');
-    } else {
-      // Pattern 2: Course Code with Hyphenated Section e.g. "CS 101-001", "CS101-001", "COSC 340-02"
-      const codeWithSectionMatch = lineWorking.match(COURSE_CODE_WITH_SECTION_REGEX);
-      if (codeWithSectionMatch) {
-        code = `${codeWithSectionMatch[1].toUpperCase()} ${codeWithSectionMatch[2].toUpperCase()}`;
-        section = codeWithSectionMatch[3];
-        lineWorking = lineWorking.replace(codeWithSectionMatch[0], ' ');
+    let startTime = '09:00';
+    let endTime = '10:15';
+    let timeDetected = false;
+    let days: DayOfWeek[] = [];
+
+    // Time range matching regex: e.g. "8:30-10:00", "12:00-1:30", "1:45-3:15", "10:15-12:45", "9:00 AM - 10:15 AM"
+    const timeRangeRegex = /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
+
+    // -------------------------------------------------------------
+    // STEP 1: Process parenthesized / bracketed segments: ( ... )
+    // Checks if the bracket contains a schedule (e.g. "(12:00–1:30 MW)", "(1:45-3:15 TF)"),
+    // a course code (e.g. "(CS 101)"), or a title.
+    // -------------------------------------------------------------
+    const parenMatches = Array.from(lineWorking.matchAll(/\(([^)]+)\)/g));
+    for (const match of parenMatches) {
+      const inside = match[1].trim();
+
+      // Check if bracket contains time range
+      const tMatch = inside.match(timeRangeRegex);
+      // Check if bracket contains days
+      const dCompound = inside.match(DAYS_COMPOUND_REGEX);
+      const dSingle = inside.match(DAYS_SINGLE_TOKEN_REGEX);
+      const dTokens = dCompound || dSingle;
+
+      if (tMatch || dTokens) {
+        // This parenthesized block is a schedule!
+        if (tMatch && !timeDetected) {
+          const parsed = parseTimeRange(tMatch[0]);
+          if (parsed) {
+            startTime = parsed.start;
+            endTime = parsed.end;
+            timeDetected = true;
+          }
+        }
+
+        if (dTokens && days.length === 0) {
+          const detected = normalizeDays(dTokens);
+          if (detected.length > 0) {
+            days = detected;
+          }
+        }
+
+        // Check if room is inside schedule parentheses e.g. "(12:00-1:30 MW, Rm 301)"
+        const rMatch = inside.match(/\b(?:room|rm|hall|auditorium|bldg)\.?\s*([A-Za-z0-9-]+)\b/i);
+        if (rMatch && !room) {
+          room = rMatch[0].trim();
+        }
+
+        // Remove the schedule parenthesis from lineWorking
+        lineWorking = lineWorking.replace(match[0], ' ');
       } else {
-        // Pattern 3: Standard Course Code e.g. "CS 101", "CS101", "ITM 380"
-        const codeMatch = lineWorking.match(COURSE_CODE_REGEX);
-        if (codeMatch) {
+        // Check if parenthesis contains a course code e.g. "Operating Systems (CS 301)"
+        const codeMatch = inside.match(COURSE_CODE_REGEX);
+        if (codeMatch && !RESERVED_PREFIXES.has(codeMatch[1].toUpperCase())) {
           code = `${codeMatch[1].toUpperCase()} ${codeMatch[2].toUpperCase()}`;
-          lineWorking = lineWorking.replace(codeMatch[0], ' ');
+          lineWorking = lineWorking.replace(match[0], ' ');
         }
       }
     }
 
     // -------------------------------------------------------------
-    // STEP 2: Extract Time Range & Days
+    // STEP 2: Extract Section (Sec001, Sec 001, Section 02, -001)
+    // Must be done before course code regex to avoid treating "Sec001" as course code "SEC 001"
     // -------------------------------------------------------------
-    // Normalize unicode dashes in the entire line for uniform matching
-    lineWorking = lineWorking.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-');
-
-    // Time range regex: e.g. "8:30-10:00", "12:00-1:30", "1:45-3:15", "10:15-11:45", "9:00 AM - 10:15 AM"
-    const timeRangeRegex = /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
-    const timeRangeMatch = lineWorking.match(timeRangeRegex);
-
-    let startTime = '09:00';
-    let endTime = '10:15';
-    let timeDetected = false;
-
-    if (timeRangeMatch) {
-      const parsed = parseTimeRange(timeRangeMatch[0]);
-      if (parsed) {
-        startTime = parsed.start;
-        endTime = parsed.end;
-        timeDetected = true;
-        lineWorking = lineWorking.replace(timeRangeMatch[0], ' ');
+    const explicitSectionMatch = lineWorking.match(/\b(?:sec(?:tion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i);
+    if (explicitSectionMatch) {
+      section = explicitSectionMatch[1];
+      lineWorking = lineWorking.replace(explicitSectionMatch[0], ' ');
+    } else {
+      const lectureSectionMatch = lineWorking.match(/\b(?:lec(?:ture)?\.?|lab(?:oratory)?\.?|rec(?:itation)?\.?|disc(?:ussion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i);
+      if (lectureSectionMatch) {
+        section = lectureSectionMatch[1];
+        lineWorking = lineWorking.replace(lectureSectionMatch[0], ' ');
       }
     }
 
-    // Days Extraction
-    // First, look for days attached right next to time or in parenthesized schedule
-    const dayMatches = lineWorking.match(DAYS_TOKEN_REGEX);
-    let days: DayOfWeek[] = [];
+    // -------------------------------------------------------------
+    // STEP 3: Extract Time Range & Days from remaining text if not yet detected
+    // -------------------------------------------------------------
+    if (!timeDetected) {
+      const tMatch = lineWorking.match(timeRangeRegex);
+      if (tMatch) {
+        const parsed = parseTimeRange(tMatch[0]);
+        if (parsed) {
+          startTime = parsed.start;
+          endTime = parsed.end;
+          timeDetected = true;
+          lineWorking = lineWorking.replace(tMatch[0], ' ');
+        }
+      }
+    }
 
-    if (dayMatches && dayMatches.length > 0) {
-      days = normalizeDays(dayMatches);
-      lineWorking = lineWorking.replace(DAYS_TOKEN_REGEX, ' ');
+    if (days.length === 0) {
+      const dCompound = lineWorking.match(DAYS_COMPOUND_REGEX);
+      if (dCompound && dCompound.length > 0) {
+        days = normalizeDays(dCompound);
+        lineWorking = lineWorking.replace(DAYS_COMPOUND_REGEX, ' ');
+      } else {
+        const dSingle = lineWorking.match(DAYS_SINGLE_TOKEN_REGEX);
+        if (dSingle && dSingle.length > 0) {
+          days = normalizeDays(dSingle);
+          lineWorking = lineWorking.replace(DAYS_SINGLE_TOKEN_REGEX, ' ');
+        }
+      }
     }
 
     if (days.length === 0) {
@@ -350,22 +533,12 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // -------------------------------------------------------------
-    // STEP 3: Extract Section (if not yet found), Single-Letter Cohorts, Credits, Room
+    // STEP 4: Extract Credits, Room, Instructor
     // -------------------------------------------------------------
-    if (!section) {
-      // Standard Section keyword matching e.g. "Sec 001", "Section 02", "-001"
-      const sectionMatch = lineWorking.match(/\b(?:sec|section)\.?\s*([0-9A-Za-z]+)\b/i) || lineWorking.match(/(?:^|\s)[-_]\s*([0-9A-Za-z]{1,4})\b/i);
-      if (sectionMatch) {
-        section = sectionMatch[1];
-        lineWorking = lineWorking.replace(sectionMatch[0], ' ');
-      }
-    }
-
     // Single/Double-letter cohort codes in parentheses like (A), (B), (DD), (L)
     lineWorking = lineWorking.replace(/\(\s*[A-Z]{1,3}\s*\)/g, ' ');
 
     // Extract Credits if present (e.g. 3 credits, 4.0 cr, 3 units)
-    let credits = 3;
     const creditsMatch = lineWorking.match(/\b([1-6](?:\.[05])?)\s*(?:credits?|cr|units?)\b/i);
     if (creditsMatch) {
       credits = parseFloat(creditsMatch[1]);
@@ -373,18 +546,15 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // Extract Room if present (e.g. "Room 302", "Rm 101", "Hall 101", "Gates G01")
-    let room: string | undefined = undefined;
-    const roomMatch = lineWorking.match(/\b(?:room|rm|hall|auditorium)\.?\s*([A-Za-z0-9-]+)\b/i);
-    if (roomMatch) {
-      room = roomMatch[0].trim();
-      lineWorking = lineWorking.replace(roomMatch[0], ' ');
+    if (!room) {
+      const roomMatch = lineWorking.match(/\b(?:room|rm|hall|auditorium|bldg)\.?\s*([A-Za-z0-9-]+)\b/i);
+      if (roomMatch) {
+        room = roomMatch[0].trim();
+        lineWorking = lineWorking.replace(roomMatch[0], ' ');
+      }
     }
 
-    // -------------------------------------------------------------
-    // STEP 4: Extract Instructor
-    // -------------------------------------------------------------
-    let instructor: string | undefined = undefined;
-
+    // Extract Instructor
     // Pattern A: "Prof. John Doe", "Dr. Turing"
     const profMatch = lineWorking.match(/\b(?:prof(?:essor)?\.?|dr\.?)\s+([A-Za-z\s.'-]+)\b/i);
     if (profMatch) {
@@ -400,13 +570,53 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     }
 
     // -------------------------------------------------------------
-    // STEP 5: Course Title (and parenthesized title if not yet extracted)
+    // STEP 5: Extract Course Code (with optional hyphenated section)
+    // -------------------------------------------------------------
+    if (!code) {
+      // Pattern 1: Code followed by parenthesized title e.g. "ITM 380 (Cloud Computing)"
+      const codeWithParenTitleMatch = lineWorking.match(/\b([A-Za-z]{2,5})\s*[-_]?\s*([0-9]{2,4}[A-Za-z]?)\s*\(\s*([^)]+)\s*\)/i);
+      if (codeWithParenTitleMatch && !RESERVED_PREFIXES.has(codeWithParenTitleMatch[1].toUpperCase())) {
+        code = `${codeWithParenTitleMatch[1].toUpperCase()} ${codeWithParenTitleMatch[2].toUpperCase()}`;
+        name = codeWithParenTitleMatch[3].trim();
+        lineWorking = lineWorking.replace(codeWithParenTitleMatch[0], ' ');
+      } else {
+        // Pattern 2: Course Code with Hyphenated Section e.g. "CS 101-001", "CS101-001", "COSC 340-02"
+        const codeWithSectionMatch = lineWorking.match(COURSE_CODE_WITH_SECTION_REGEX);
+        if (codeWithSectionMatch && !RESERVED_PREFIXES.has(codeWithSectionMatch[1].toUpperCase())) {
+          code = `${codeWithSectionMatch[1].toUpperCase()} ${codeWithSectionMatch[2].toUpperCase()}`;
+          if (!section) section = codeWithSectionMatch[3];
+          lineWorking = lineWorking.replace(codeWithSectionMatch[0], ' ');
+        } else {
+          // Pattern 3: Standard Course Code e.g. "CS 101", "CS101", "ITM 380"
+          const codeMatch = lineWorking.match(COURSE_CODE_REGEX);
+          if (codeMatch && !RESERVED_PREFIXES.has(codeMatch[1].toUpperCase())) {
+            code = `${codeMatch[1].toUpperCase()} ${codeMatch[2].toUpperCase()}`;
+            lineWorking = lineWorking.replace(codeMatch[0], ' ');
+          }
+        }
+      }
+    }
+
+    // If section still not found, check for trailing standalone section number e.g. "- 001" or "- 02"
+    if (!section) {
+      const hyphenSectionMatch = lineWorking.match(/(?:^|\s)[-_]\s*([0-9A-Za-z]{1,4})\b/i);
+      if (hyphenSectionMatch) {
+        section = hyphenSectionMatch[1];
+        lineWorking = lineWorking.replace(hyphenSectionMatch[0], ' ');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // STEP 6: Course Title Extraction & Code Derivation
     // -------------------------------------------------------------
     if (!name) {
       const parenTitleMatch = lineWorking.match(/\(\s*([^)]+)\s*\)/);
       if (parenTitleMatch) {
-        name = parenTitleMatch[1].trim();
-        lineWorking = lineWorking.replace(parenTitleMatch[0], ' ');
+        const potentialName = parenTitleMatch[1].trim();
+        if (potentialName) {
+          name = potentialName;
+          lineWorking = lineWorking.replace(parenTitleMatch[0], ' ');
+        }
       }
     }
 
@@ -416,6 +626,9 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       .replace(/[|,\\/\-_–—\t]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+
+    // Strip trailing or leading punctuation
+    cleanedRemaining = cleanedRemaining.replace(/^[:;,\-–—\s]+|[:;,\-–—\s]+$/g, '').trim();
 
     if (!name) {
       if (cleanedRemaining.length > 0) {
