@@ -32,10 +32,10 @@ export const DURATION_CHIPS = [
 export const DEFAULT_DURATION_MINUTES = 90;
 
 export const SAMPLE_CHIPS = [
+  { label: 'Schedule Export', text: 'MY SCHEDULE (Plan A)\n----------------------------------------\nITM 380-001: Cloud Computing | Mon, Wed 8:30 AM - 10:00 AM\nCOSC 340-002: Networking Essentials | Mon, Wed 10:15 AM - 11:45 AM\nCYBR 351-001: Intro to Cybersecurity | Mon, Wed 1:45 PM - 3:15 PM\nCOSC 331-002: Operating Systems | Tue, Fri 1:45 PM - 3:15 PM\nCOSC 221-003: Computer Science B | Wed, Fri 12:00 PM - 1:30 PM\n----------------------------------------\nTotal Courses: 5 | Total Credits: 15' },
   { label: 'OS & Cyber', text: 'Operating Systems\tSec001 (12:00–1:30 MW)\nIntro to cyber (1:45-3:15 MW)' },
   { label: 'CS 101', text: 'CS 101 Computer science MWF 09:00-10:00' },
   { label: 'ITM 380', text: 'ITM 380 (Cloud Computing) - Sec 001, 8:30-10:00 MW, Vanndy You' },
-  { label: 'Calculus I', text: 'Calculus I\tSec002 (10:15–12:45 TF)' },
 ] as const;
 
 export const MWF: DayOfWeek[] = ['monday', 'wednesday', 'friday'];
