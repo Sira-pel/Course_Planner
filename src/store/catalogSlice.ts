@@ -61,8 +61,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
         courses: p.courses.filter(
           (c) =>
             courseIdentityKey(c.code, c.section) !== catKey &&
-            c.id !== courseId &&
-            `cat_${c.id}` !== courseId
+            c.id !== courseId
         ),
       }));
 
@@ -89,8 +88,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
         courses: p.courses.map((c) => {
           if (
             courseIdentityKey(c.code, c.section) === oldKey ||
-            c.id === updatedCourse.id ||
-            `cat_${c.id}` === updatedCourse.id
+            c.id === updatedCourse.id
           ) {
             return {
               ...updatedCourse,
@@ -118,7 +116,9 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       if (!catalogItem) return;
 
       // Check if already in active plan
-      const alreadyInPlan = targetPlan.courses.some(c => sameCourseIdentity(c, catalogItem));
+      const alreadyInPlan = targetPlan.courses.some(
+        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
+      );
       if (alreadyInPlan) return;
 
       // Deep copy with fresh unique IDs
@@ -151,7 +151,9 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       const catalogItem = state.catalogCourses.find(c => c.id === catalogCourseId);
       if (!catalogItem) return;
 
-      const existingInPlan = targetPlan.courses.find(c => sameCourseIdentity(c, catalogItem));
+      const existingInPlan = targetPlan.courses.find(
+        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
+      );
       if (!existingInPlan) return;
 
       const updatedPlans = state.plans.map(p =>
@@ -174,7 +176,9 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       const catalogItem = state.catalogCourses.find(c => c.id === catalogCourseId);
       if (!catalogItem) return;
 
-      const existingInPlan = targetPlan.courses.find(c => sameCourseIdentity(c, catalogItem));
+      const existingInPlan = targetPlan.courses.find(
+        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
+      );
 
       if (existingInPlan) {
         state.removeCourseFromPlanByCatalog(catalogCourseId, targetId);
@@ -194,21 +198,13 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
         for (const c of plan.courses) {
           usedIdentityKeys.add(courseIdentityKey(c.code, c.section));
           usedIds.add(c.id);
-          if (c.id.startsWith('cat_')) {
-            usedIds.add(c.id.substring(4));
-          } else {
-            usedIds.add(`cat_${c.id}`);
-          }
         }
       }
 
       const keptCourses = state.catalogCourses.filter((cat) => {
         const key = courseIdentityKey(cat.code, cat.section);
         if (usedIdentityKeys.has(key)) return true;
-        if (usedIds.has(cat.id)) return true;
-        const strippedId = cat.id.startsWith('cat_') ? cat.id.substring(4) : cat.id;
-        if (usedIds.has(strippedId)) return true;
-        return false;
+        return usedIds.has(cat.id);
       });
 
       if (keptCourses.length === state.catalogCourses.length) {

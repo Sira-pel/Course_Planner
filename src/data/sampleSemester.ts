@@ -33,7 +33,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         ],
       },
       {
-        id: 'phys105_01',
+        id: 'phys105_02',
         code: 'PHYS 105',
         name: 'General Physics & Lab',
         section: '02',
@@ -46,7 +46,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         ],
       },
       {
-        id: 'eng102_01',
+        id: 'eng102_04',
         code: 'ENG 102',
         name: 'Academic Writing & Rhetoric',
         section: '04',
@@ -105,7 +105,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         ],
       },
       {
-        id: 'phys105_02',
+        id: 'phys105_03',
         code: 'PHYS 105',
         name: 'General Physics & Lab',
         section: '03',
@@ -151,7 +151,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         ],
       },
       {
-        id: 'econ101_01',
+        id: 'econ101_02',
         code: 'ECON 101',
         name: 'Principles of Microeconomics',
         section: '02',

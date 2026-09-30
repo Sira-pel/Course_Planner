@@ -65,34 +65,22 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const activeCourseKeys = useMemo(() => {
     if (!activePlan) return new Set<string>();
     return new Set(activePlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
-  }, [activePlan?.courses]);
+  }, [activePlan]);
 
-  const activePlanCourseIds = useMemo(() => {
+  const activePlanDirectIds = useMemo(() => {
     if (!activePlan) return new Set<string>();
-    const ids = new Set<string>();
-    for (const c of activePlan.courses) {
-      ids.add(c.id);
-      if (c.id.startsWith('cat_')) {
-        ids.add(c.id.substring(4));
-      } else {
-        ids.add(`cat_${c.id}`);
-      }
-    }
-    return ids;
-  }, [activePlan?.courses]);
+    return new Set(activePlan.courses.map((c) => c.id));
+  }, [activePlan]);
 
   const isEnrolledInActivePlan = useCallback(
     (catalogItem: Course): boolean => {
+      if (!activePlan) return false;
       if (activeCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
         return true;
       }
-      if (activePlanCourseIds.has(catalogItem.id)) {
-        return true;
-      }
-      const strippedId = catalogItem.id.startsWith('cat_') ? catalogItem.id.substring(4) : catalogItem.id;
-      return activePlanCourseIds.has(strippedId);
+      return activePlanDirectIds.has(catalogItem.id);
     },
-    [activeCourseKeys, activePlanCourseIds]
+    [activePlan, activeCourseKeys, activePlanDirectIds]
   );
 
   const activeSessionsByDay = useMemo(() => {
@@ -167,19 +155,12 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       for (const c of p.courses) {
         usedKeys.add(courseIdentityKey(c.code, c.section));
         usedIds.add(c.id);
-        if (c.id.startsWith('cat_')) {
-          usedIds.add(c.id.substring(4));
-        } else {
-          usedIds.add(`cat_${c.id}`);
-        }
       }
     }
 
     return catalogCourses.filter((cat) => {
       if (usedKeys.has(courseIdentityKey(cat.code, cat.section))) return true;
-      if (usedIds.has(cat.id)) return true;
-      const strippedId = cat.id.startsWith('cat_') ? cat.id.substring(4) : cat.id;
-      return usedIds.has(strippedId);
+      return usedIds.has(cat.id);
     }).length;
   }, [plans, catalogCourses]);
 

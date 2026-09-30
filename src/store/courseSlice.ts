@@ -59,8 +59,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
         (cat) =>
           (oldKey && courseIdentityKey(cat.code, cat.section) === oldKey) ||
           courseIdentityKey(cat.code, cat.section) === newKey ||
-          cat.id === updatedCourse.id ||
-          cat.id === `cat_${updatedCourse.id}`
+          cat.id === updatedCourse.id
       );
 
       if (catalogIdx !== -1) {

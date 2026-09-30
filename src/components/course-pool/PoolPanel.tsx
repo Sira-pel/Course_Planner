@@ -302,31 +302,57 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
           {filteredCourses.length === 0 ? (
             <div className="up-pool-empty">
               <ShoppingBag className="w-6 h-6" style={{ color: 'var(--up-line)' }} />
-              <p>{searchQuery ? 'No matching courses' : 'Course pool is empty'}</p>
+              <p>
+                {searchQuery
+                  ? 'No matching courses'
+                  : filterMode === 'in_plan'
+                  ? `No courses in ${activePlanName || 'this plan'}`
+                  : filterMode === 'not_in_plan'
+                  ? 'All courses in pool are in this plan'
+                  : 'Course pool is empty'}
+              </p>
               <span>
                 {searchQuery
                   ? 'Clear search or switch filters.'
+                  : filterMode === 'in_plan'
+                  ? 'Switch to All or Available to add courses to this plan.'
+                  : filterMode === 'not_in_plan'
+                  ? 'All sections in the pool have been added to this plan.'
                   : 'Create a course or import an Excel spreadsheet.'}
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={onOpenNewCourse}
-                  className="up-pool-add up-chrome-btn"
-                  style={{ width: 'auto', paddingInline: 14 }}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Create course
-                </button>
-                {onOpenImport && (
+                {(!filterMode || filterMode === 'all') && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onOpenNewCourse}
+                      className="up-pool-add up-chrome-btn"
+                      style={{ width: 'auto', paddingInline: 14 }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Create course
+                    </button>
+                    {onOpenImport && (
+                      <button
+                        type="button"
+                        onClick={onOpenImport}
+                        className="up-pool-add up-chrome-btn"
+                        style={{ width: 'auto', paddingInline: 14 }}
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        Import Excel
+                      </button>
+                    )}
+                  </>
+                )}
+                {filterMode !== 'all' && !searchQuery && (
                   <button
                     type="button"
-                    onClick={onOpenImport}
+                    onClick={() => onFilterMode('all')}
                     className="up-pool-add up-chrome-btn"
                     style={{ width: 'auto', paddingInline: 14 }}
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    Import Excel
+                    View all courses
                   </button>
                 )}
               </div>
