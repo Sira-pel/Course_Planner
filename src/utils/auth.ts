@@ -99,6 +99,10 @@ export function mapFirebaseAuthError(error: unknown): string {
   if (code === 'auth/network-request-failed') {
     return 'Network error during Google sign-in. Check your connection and try again.';
   }
+  if (code === 'auth/unauthorized-domain') {
+    const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+    return `This domain (${domain}) is not authorized in Firebase Console -> Authentication -> Settings -> Authorized domains. Add "${domain}" to enable Google Sign-In.`;
+  }
   if (error instanceof Error && error.message) {
     return error.message;
   }
