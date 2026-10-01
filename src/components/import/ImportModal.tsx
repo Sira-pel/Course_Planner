@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import type { Course } from '../../types/schedule';
-import { X, FileSpreadsheet, Calendar, Database, Check } from 'lucide-react';
+import type { Course, SchedulePlan } from '../../types/schedule';
+import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
 import { ExcelImportTab } from './ExcelImportTab';
 import { IcsImportTab } from './IcsImportTab';
 import { BackupRestoreTab } from './BackupRestoreTab';
+import { FriendShareImportTab } from './FriendShareImportTab';
 
-export type ImportTabType = 'excel' | 'ics' | 'backup';
+export type ImportTabType = 'excel' | 'share' | 'ics' | 'backup';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   initialTab,
   onClose,
 }) => {
-  const { plans, activePlanId, catalogCourses, bulkAddToCatalog, bulkAddCourses } =
+  const { plans, activePlanId, catalogCourses, bulkAddToCatalog, bulkAddCourses, importPlan } =
     useScheduleStore(
       useShallow((state) => ({
         plans: state.plans,
@@ -36,8 +37,21 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         catalogCourses: state.catalogCourses,
         bulkAddToCatalog: state.bulkAddToCatalog,
         bulkAddCourses: state.bulkAddCourses,
+        importPlan: state.importPlan,
       }))
     );
+
+  // Close modal when user presses Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const activePlan = useMemo(
     () => plans.find((p) => p.id === activePlanId) || plans[0],
@@ -65,12 +79,22 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-modal-title"
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
+            <h2 id="import-modal-title" className="text-base font-bold text-slate-900 dark:text-white truncate">
               Import Courses & Schedule
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
@@ -87,8 +111,8 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
           </button>
         </div>
 
-        {/* Tab Switcher - Responsive 3-col grid */}
-        <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
+        {/* Tab Switcher - Responsive 4-col grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('excel')}
@@ -100,6 +124,18 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
           >
             <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Excel / CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('share')}
+            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+              activeTab === 'share'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Friend Link</span>
           </button>
           <button
             type="button"
@@ -145,6 +181,19 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
               onImportToPool={handleImportToPool}
               onImportToPlanAndPool={handleImportToPlanAndPool}
               onSuccess={handleSuccess}
+            />
+          )}
+
+          {activeTab === 'share' && (
+            <FriendShareImportTab
+              onCompareWithSchedule={(plan) => {
+                importPlan(plan, true);
+                onClose();
+              }}
+              onOpenAsActivePlan={(plan) => {
+                importPlan(plan, false);
+                onClose();
+              }}
             />
           )}
 

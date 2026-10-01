@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
-import { Layers, Plus, Copy, ChevronDown } from 'lucide-react';
+import { Layers, Plus, Copy, ChevronDown, Share2, UserPlus } from 'lucide-react';
 import { getPlanGhostColor } from '../../types/schedule';
 import type { SchedulePlan } from '../../types/schedule';
 
@@ -22,6 +22,8 @@ interface CompareMenuProps {
   onClearGhosts: () => void;
   onDuplicateAndOverlay: () => void;
   onCreateAndOverlay: () => void;
+  onOpenShare?: () => void;
+  onImportFriendLink?: () => void;
 }
 
 export const CompareMenu: React.FC<CompareMenuProps> = ({
@@ -40,6 +42,8 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
   onClearGhosts,
   onDuplicateAndOverlay,
   onCreateAndOverlay,
+  onOpenShare,
+  onImportFriendLink,
 }) => {
   return (
     <div className="up-header-compare relative shrink-0" ref={ghostDropdownRef}>
@@ -184,6 +188,31 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                   )}
                 </div>
               </>
+            )}
+
+            {(onOpenShare || onImportFriendLink) && (
+              <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-1">
+                {onOpenShare && (
+                  <button
+                    type="button"
+                    onClick={onOpenShare}
+                    className="w-full text-left px-2 py-1.5 rounded text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 flex items-center gap-2 up-chrome-btn transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Copy share link (Active Plan)</span>
+                  </button>
+                )}
+                {onImportFriendLink && (
+                  <button
+                    type="button"
+                    onClick={onImportFriendLink}
+                    className="w-full text-left px-2 py-1.5 rounded text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 up-chrome-btn transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                    <span>Import friend's link to compare...</span>
+                  </button>
+                )}
+              </div>
             )}
           </motion.div>
         )}

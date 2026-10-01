@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { DayOfWeek, SchedulePlan } from '../../types/schedule';
+import { useScheduleStore } from '../../store/useScheduleStore';
 
 export interface UseAppShortcutsArgs {
   plans: SchedulePlan[];
@@ -13,7 +14,12 @@ export interface UseAppShortcutsArgs {
   isConfirmingClear: boolean;
   onOpenNewCourse: (day?: DayOfWeek, startTime?: string, mode?: 'form' | 'quick') => void;
   onOpenExport: () => void;
-  onOpenShortcuts: () => void;
+  onOpenImport?: () => void;
+  onOpenShare?: () => void;
+  onTogglePool?: () => void;
+  onToggleTheme?: () => void;
+  onOpenHelp?: (initialTab?: 'workflow' | 'shortcuts') => void;
+  onOpenShortcuts?: () => void;
   onDuplicatePlan: (planId: string) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -22,8 +28,46 @@ export interface UseAppShortcutsArgs {
   onSetConfirmingClear: (open: boolean) => void;
   onCloseCourseModal: () => void;
   onCloseExport: () => void;
-  onCloseShortcuts: () => void;
+  onCloseImport?: () => void;
+  onCloseHelp?: () => void;
+  onCloseShortcuts?: () => void;
+  onCloseShareImport?: () => void;
   onCollapsePool: () => void;
+}
+
+function isKeyMatch(e: KeyboardEvent, combo: string): boolean {
+  if (combo === '?') {
+    return e.key === '?';
+  }
+  if (combo === 'Escape') {
+    return e.key === 'Escape';
+  }
+
+  const parts = combo.toLowerCase().split('+').map((p) => p.trim());
+  const hasAlt = parts.includes('alt');
+  const hasCtrl = parts.includes('ctrl') || parts.includes('cmd');
+  const hasShift = parts.includes('shift');
+  const keyPart = parts.find((p) => !['alt', 'ctrl', 'cmd', 'shift'].includes(p));
+
+  if (Boolean(e.altKey) !== hasAlt) return false;
+  if (Boolean(e.ctrlKey || e.metaKey) !== hasCtrl) return false;
+  if (Boolean(e.shiftKey) !== hasShift) return false;
+
+  if (!keyPart) return true;
+
+  const eventKey = e.key.toLowerCase();
+  const eventCode = e.code.toLowerCase();
+
+  return (
+    eventKey === keyPart ||
+    eventCode === `key${keyPart}` ||
+    eventCode === `digit${keyPart}`
+  );
+}
+
+function getBinding(actionId: string, defaultKey: string): string {
+  const custom = useScheduleStore.getState().customShortcuts;
+  return custom?.[actionId] || defaultKey;
 }
 
 export function useAppShortcuts(args: UseAppShortcutsArgs): void {
@@ -41,6 +85,11 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         isConfirmingClear,
         onOpenNewCourse,
         onOpenExport,
+        onOpenImport,
+        onOpenShare,
+        onTogglePool,
+        onToggleTheme,
+        onOpenHelp,
         onOpenShortcuts,
         onDuplicatePlan,
         onUndo,
@@ -50,11 +99,13 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         onSetConfirmingClear,
         onCloseCourseModal,
         onCloseExport,
+        onCloseImport,
+        onCloseHelp,
         onCloseShortcuts,
+        onCloseShareImport,
         onCollapsePool,
       } = argsRef.current;
 
-      // Check if user is typing in an input or textarea
       const target = e.target as HTMLElement | null;
       const isInputFocused =
         target &&
@@ -62,8 +113,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable);
 
-      // Escape always closes any open modal. If pool search has text, the
-      // input handler clears it and stops this listener.
+      // Escape always closes any open modal or menu
       if (e.key === 'Escape') {
         if (
           target instanceof HTMLInputElement &&
@@ -79,58 +129,114 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         }
         onCloseCourseModal();
         onCloseExport();
-        onCloseShortcuts();
+        onCloseImport?.();
+        onCloseHelp?.();
+        onCloseShortcuts?.();
+        onCloseShareImport?.();
         onCollapsePool();
         return;
       }
 
-      // Alt + N (or Option + N on Mac): Open Add Course dialog (works everywhere, even in text fields)
-      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key.toLowerCase() === 'n' || e.code === 'KeyN')) {
+      // Check customizable shortcuts with Alt modifier
+      // 1. Add Course
+      const addCourseKey = getBinding('add_course', 'Alt+N');
+      if (isKeyMatch(e, addCourseKey)) {
         e.preventDefault();
         onOpenNewCourse('monday', '09:00', 'form');
         return;
       }
 
-      // If user is actively typing in a text field, do not trigger single-key or Ctrl shortcuts (except undo in text)
+      // 2. Quick Add Course
+      const quickAddKey = getBinding('quick_add', 'Alt+K');
+      if (isKeyMatch(e, quickAddKey)) {
+        e.preventDefault();
+        onOpenNewCourse('monday', '09:00', 'quick');
+        return;
+      }
+
+      // 3. Export
+      const exportKey = getBinding('export', 'Alt+E');
+      if (isKeyMatch(e, exportKey)) {
+        e.preventDefault();
+        onOpenExport();
+        return;
+      }
+
+      // 4. Import
+      const importKey = getBinding('import', 'Alt+I');
+      if (isKeyMatch(e, importKey)) {
+        e.preventDefault();
+        onOpenImport?.();
+        return;
+      }
+
+      // 5. Share
+      const shareKey = getBinding('share', 'Alt+S');
+      if (isKeyMatch(e, shareKey)) {
+        e.preventDefault();
+        onOpenShare?.();
+        return;
+      }
+
+      // 6. Course Pool
+      const poolKey = getBinding('pool', 'Alt+P');
+      if (isKeyMatch(e, poolKey)) {
+        e.preventDefault();
+        onTogglePool?.();
+        return;
+      }
+
+      // 7. Duplicate Plan
+      const duplicateKey = getBinding('duplicate_plan', 'Alt+D');
+      if (isKeyMatch(e, duplicateKey)) {
+        e.preventDefault();
+        onDuplicatePlan(activePlanId);
+        return;
+      }
+
+      // 8. Toggle Theme
+      const themeKey = getBinding('theme', 'Alt+T');
+      if (isKeyMatch(e, themeKey)) {
+        e.preventDefault();
+        onToggleTheme?.();
+        return;
+      }
+
+      // 9. Help & Guide
+      const helpKey = getBinding('help', 'Alt+H');
+      if (isKeyMatch(e, helpKey)) {
+        e.preventDefault();
+        if (onOpenHelp) onOpenHelp('workflow');
+        else onOpenShortcuts?.();
+        return;
+      }
+
+      // 10. Help Cheatsheet / Shortcuts: '?'
+      if (e.key === '?') {
+        if (!isInputFocused) {
+          e.preventDefault();
+          if (onOpenHelp) onOpenHelp('shortcuts');
+          else onOpenShortcuts?.();
+          return;
+        }
+      }
+
+      // If user is actively typing in a text field, do not trigger single-key or Ctrl navigation shortcuts
       if (isInputFocused) return;
 
-      // Ctrl/Cmd shortcuts
+      // Undo / Redo
       if (e.ctrlKey || e.metaKey) {
-        if (e.key.toLowerCase() === 'k') {
+        if (e.key.toLowerCase() === 'z') {
           e.preventDefault();
-          onOpenNewCourse('monday', '09:00', 'quick');
-        } else if (e.key.toLowerCase() === 'd') {
-          e.preventDefault();
-          onDuplicatePlan(activePlanId);
-        } else if (e.key.toLowerCase() === 'e') {
-          e.preventDefault();
-          onOpenExport();
-        } else if (e.key.toLowerCase() === 'z') {
-          e.preventDefault();
-          if (e.shiftKey) {
-            onRedo();
-          } else {
-            onUndo();
-          }
-        } else if (e.key.toLowerCase() === 'y') {
+          if (e.shiftKey) onRedo();
+          else onUndo();
+          return;
+        }
+        if (e.key.toLowerCase() === 'y') {
           e.preventDefault();
           onRedo();
+          return;
         }
-        return;
-      }
-
-      // Help cheatsheet: '?'
-      if (e.key === '?') {
-        e.preventDefault();
-        onOpenShortcuts();
-        return;
-      }
-
-      // Quick key 'A' for add course
-      if (e.key.toLowerCase() === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        onOpenNewCourse('monday', '09:00', 'form');
-        return;
       }
 
       // Number keys 1-9 to switch plans

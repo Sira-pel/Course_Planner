@@ -41,7 +41,7 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
             exit={reduceMotion ? undefined : { scale: 0.96, transition: { duration: 0.15, ease: EASE_OUT } }}
             transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: EASE_OUT }}
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-white dark:bg-slate-900 rounded-lg border border-rose-200 dark:border-rose-900/60 shadow-[0_8px_24px_rgb(15_23_42/0.18)] max-w-md w-full p-5"
+            className="relative bg-white dark:bg-slate-900 rounded-lg border border-rose-200 dark:border-rose-900/60 shadow-[0_8px_24px_rgb(15_23_42/0.18)] max-w-md w-full min-w-0 p-5"
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
@@ -88,7 +88,7 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-medium rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 up-chrome-btn"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 up-chrome-btn text-center"
               >
                 Close and adjust
               </button>

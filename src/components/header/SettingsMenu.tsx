@@ -32,7 +32,7 @@ interface SettingsMenuProps {
   onOpenCatalog: () => void;
   onToggleTheme: (event: React.MouseEvent<HTMLElement>) => void;
   onImportIcsClick: () => void;
-  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
+  onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
@@ -186,20 +186,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               </button>
               <button
                 type="button"
-                onClick={onOpenShortcuts}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Keyboard />
-                Keyboard shortcuts
-              </button>
-              <button
-                type="button"
                 id="btn-open-help"
                 onClick={onOpenHelp}
                 className="up-settings-item up-chrome-btn"
               >
                 <HelpCircle />
-                Help & Guide
+                Help & Shortcuts
               </button>
             </div>
 

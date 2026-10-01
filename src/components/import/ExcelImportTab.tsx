@@ -574,7 +574,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               type="button"
               disabled={selectedCourseIds.size === 0 || isImporting}
               onClick={handleImport}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                 selectedCourseIds.size > 0 && !isImporting
                   ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
                   : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'
