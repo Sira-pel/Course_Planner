@@ -12,7 +12,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '01',
         instructor: 'Prof. Alan Turing',
         credits: 4,
-        color: COURSE_COLORS[0], // Blue
+        color: COURSE_COLORS[0], // Cobalt Blue
         sessions: [
           { id: 's_cs1_1', day: 'monday', startTime: '09:00', endTime: '10:15', room: 'Turing Hall 101' },
           { id: 's_cs1_2', day: 'wednesday', startTime: '09:00', endTime: '10:15', room: 'Turing Hall 101' },
@@ -26,7 +26,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '01',
         instructor: 'Dr. Leonhard Euler',
         credits: 4,
-        color: COURSE_COLORS[1], // Emerald
+        color: COURSE_COLORS[1], // Emerald Green
         sessions: [
           { id: 's_m2_1', day: 'tuesday', startTime: '10:30', endTime: '12:00', room: 'Newton Bldg 204' },
           { id: 's_m2_2', day: 'thursday', startTime: '10:30', endTime: '12:00', room: 'Newton Bldg 204' },
@@ -39,7 +39,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '02',
         instructor: 'Dr. Marie Curie',
         credits: 4,
-        color: COURSE_COLORS[2], // Amber
+        color: COURSE_COLORS[2], // Tangerine Orange
         sessions: [
           { id: 's_p1_1', day: 'monday', startTime: '13:30', endTime: '15:00', room: 'Science Ctr 310' },
           { id: 's_p1_2', day: 'wednesday', startTime: '13:30', endTime: '15:00', room: 'Science Ctr 310' },
@@ -52,7 +52,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '04',
         instructor: 'Prof. Virginia Woolf',
         credits: 3,
-        color: COURSE_COLORS[4], // Violet
+        color: COURSE_COLORS[3], // Royal Purple
         sessions: [
           { id: 's_e1_1', day: 'tuesday', startTime: '14:00', endTime: '15:15', room: 'Humanities 108' },
           { id: 's_e1_2', day: 'thursday', startTime: '14:00', endTime: '15:15', room: 'Humanities 108' },
@@ -98,7 +98,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '01',
         instructor: 'Dr. Carl Jung',
         credits: 3,
-        color: COURSE_COLORS[6], // Cyan
+        color: COURSE_COLORS[5], // Golden Amber
         sessions: [
           { id: 's_psy_1', day: 'tuesday', startTime: '15:30', endTime: '17:00', room: 'Social Sci 12' },
           { id: 's_psy_2', day: 'thursday', startTime: '15:30', endTime: '17:00', room: 'Social Sci 12' },
@@ -144,7 +144,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '01',
         instructor: 'Dr. Shannon',
         credits: 3,
-        color: COURSE_COLORS[7], // Orange
+        color: COURSE_COLORS[2], // Tangerine Orange
         sessions: [
           { id: 's_dat_1', day: 'monday', startTime: '10:00', endTime: '11:30', room: 'Tech Lab 4B' },
           { id: 's_dat_2', day: 'wednesday', startTime: '10:00', endTime: '11:30', room: 'Tech Lab 4B' },
@@ -157,7 +157,7 @@ export const SAMPLE_PLANS: SchedulePlan[] = [
         section: '02',
         instructor: 'Prof. Adam Smith',
         credits: 3,
-        color: COURSE_COLORS[5], // Pink
+        color: COURSE_COLORS[7], // Rose Pink
         sessions: [
           { id: 's_ec_1', day: 'monday', startTime: '13:00', endTime: '14:30', room: 'Business Hall 105' },
           { id: 's_ec_2', day: 'wednesday', startTime: '13:00', endTime: '14:30', room: 'Business Hall 105' },
@@ -282,7 +282,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '04',
     instructor: 'Prof. Virginia Woolf',
     credits: 3,
-    color: COURSE_COLORS[4],
+    color: COURSE_COLORS[3],
     sessions: [
       { id: 's_cat_e1_1', day: 'tuesday', startTime: '14:00', endTime: '15:15', room: 'Humanities 108' },
       { id: 's_cat_e1_2', day: 'thursday', startTime: '14:00', endTime: '15:15', room: 'Humanities 108' },
@@ -295,7 +295,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '01',
     instructor: 'Dr. Carl Jung',
     credits: 3,
-    color: COURSE_COLORS[6],
+    color: COURSE_COLORS[5],
     sessions: [
       { id: 's_cat_psy_1', day: 'tuesday', startTime: '15:30', endTime: '17:00', room: 'Social Sci 12' },
       { id: 's_cat_psy_2', day: 'thursday', startTime: '15:30', endTime: '17:00', room: 'Social Sci 12' },
@@ -308,7 +308,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '01',
     instructor: 'Dr. Shannon',
     credits: 3,
-    color: COURSE_COLORS[7],
+    color: COURSE_COLORS[2],
     sessions: [
       { id: 's_cat_dat_1', day: 'monday', startTime: '10:00', endTime: '11:30', room: 'Tech Lab 4B' },
       { id: 's_cat_dat_2', day: 'wednesday', startTime: '10:00', endTime: '11:30', room: 'Tech Lab 4B' },
@@ -321,7 +321,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '02',
     instructor: 'Prof. Adam Smith',
     credits: 3,
-    color: COURSE_COLORS[5],
+    color: COURSE_COLORS[7],
     sessions: [
       { id: 's_cat_ec_1', day: 'monday', startTime: '13:00', endTime: '14:30', room: 'Business Hall 105' },
       { id: 's_cat_ec_2', day: 'wednesday', startTime: '13:00', endTime: '14:30', room: 'Business Hall 105' },
@@ -334,7 +334,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '01',
     instructor: 'Dr. Charles Darwin',
     credits: 4,
-    color: COURSE_COLORS[8],
+    color: COURSE_COLORS[6],
     sessions: [
       { id: 's_bio_1', day: 'tuesday', startTime: '09:00', endTime: '10:15', room: 'Bio Wing 201' },
       { id: 's_bio_2', day: 'thursday', startTime: '09:00', endTime: '10:15', room: 'Bio Wing 201' },
@@ -347,7 +347,7 @@ export const SAMPLE_CATALOG: Course[] = [
     section: '01',
     instructor: 'Prof. Frida Kahlo',
     credits: 3,
-    color: COURSE_COLORS[11],
+    color: COURSE_COLORS[8],
     sessions: [
       { id: 's_art_1', day: 'friday', startTime: '13:00', endTime: '16:00', room: 'Art Studio 3' },
     ],

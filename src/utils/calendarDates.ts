@@ -59,9 +59,30 @@ export function sessionTimesAreValid(
   return start.hours * 60 + start.minutes < end.hours * 60 + end.minutes;
 }
 
-function pad2(n: number): string {
+export function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
+
+/**
+ * Returns time string normalized to standard HH:MM format (e.g. "9:00" -> "09:00").
+ * Returns null if the time string does not parse.
+ */
+export function formatNormalizedTime(timeStr: string | undefined | null): string | null {
+  const parsed = parseSessionTime(timeStr);
+  if (!parsed) return null;
+  return `${pad2(parsed.hours)}:${pad2(parsed.minutes)}`;
+}
+
+/** Standard weekly order for BYDAY recurrence codes (Monday-first) */
+export const ICS_DAY_ORDER: Record<string, number> = {
+  MO: 1,
+  TU: 2,
+  WE: 3,
+  TH: 4,
+  FR: 5,
+  SA: 6,
+  SU: 7,
+};
 
 /**
  * RFC 5545 floating local UNTIL. DTSTART is floating local, so UNTIL must not

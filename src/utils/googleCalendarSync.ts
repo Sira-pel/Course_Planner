@@ -1,10 +1,12 @@
-import { SchedulePlan } from '../types/schedule';
+import { SchedulePlan, Course } from '../types/schedule';
 import { clearAccessToken, getUsableAccessToken } from './authToken';
 import {
   formatFloatingDateTime,
   formatGoogleCalendarUntil,
+  formatNormalizedTime,
   getFirstDayOccurrence,
   getIcsDayInfo,
+  ICS_DAY_ORDER,
   parseLocalDate,
   sessionTimesAreValid,
   uniplanCalendarSummary,
@@ -63,28 +65,74 @@ const GOOGLE_CALENDAR_COLORS = [
   { id: '11', hex: '#d60000', r: 214, g: 0, b: 0 },
 ];
 
-export function getClosestGoogleColorId(hexColor?: string): string {
-  if (!hexColor) return '9';
-  const hex = hexColor.replace('#', '');
-  if (hex.length !== 6) return '9';
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return '9';
+export function rankGoogleColorsForHex(hexColor?: string): { id: string; dist: number }[] {
+  if (!hexColor) {
+    return GOOGLE_CALENDAR_COLORS.map((gc) => ({ id: gc.id, dist: 0 }));
+  }
+  const cleanHex = hexColor.replace('#', '').trim();
+  let r = 63, g = 81, b = 181;
+  if (cleanHex.length === 6) {
+    const pr = parseInt(cleanHex.substring(0, 2), 16);
+    const pg = parseInt(cleanHex.substring(2, 4), 16);
+    const pb = parseInt(cleanHex.substring(4, 6), 16);
+    if (!Number.isNaN(pr) && !Number.isNaN(pg) && !Number.isNaN(pb)) {
+      r = pr;
+      g = pg;
+      b = pb;
+    }
+  }
 
-  let bestId = '9';
-  let bestDist = Infinity;
-  for (const gc of GOOGLE_CALENDAR_COLORS) {
+  return GOOGLE_CALENDAR_COLORS.map((gc) => {
+    // Perceptually weighted Euclidean color distance (red 0.3, green 0.59, blue 0.11)
     const dr = r - gc.r;
     const dg = g - gc.g;
     const db = b - gc.b;
-    const dist = dr * dr + dg * dg + db * db;
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestId = gc.id;
-    }
+    const dist = 0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db;
+    return { id: gc.id, dist };
+  }).sort((a, b) => a.dist - b.dist);
+}
+
+export function getClosestGoogleColorId(hexColor?: string): string {
+  const ranked = rankGoogleColorsForHex(hexColor);
+  return ranked[0]?.id || '9';
+}
+
+/**
+ * Assigns a unique Google Calendar colorId (1-11) to each course in the schedule plan.
+ * Guarantees that no two courses in the same plan share the same Google Calendar color,
+ * while picking the visually closest available Google color for each course.
+ */
+export function assignUniqueGoogleColorIds(courses: Course[]): Map<string, string> {
+  const courseColorMap = new Map<string, string>();
+  if (!courses || courses.length === 0) return courseColorMap;
+
+  // Track usage count of each of the 11 Google Calendar colors
+  const usageCount: Record<string, number> = {};
+  for (const gc of GOOGLE_CALENDAR_COLORS) {
+    usageCount[gc.id] = 0;
   }
-  return bestId;
+
+  // Pre-rank Google colors for all courses based on their Uniplan course color
+  const courseRankings = courses.map((course) => ({
+    course,
+    rankings: rankGoogleColorsForHex(course.color),
+  }));
+
+  for (const item of courseRankings) {
+    // Find highest ranked Google color with 0 usage so far
+    let candidate = item.rankings.find((r) => usageCount[r.id] === 0);
+    // If all 11 Google colors are already assigned (e.g. >11 courses in a single plan),
+    // assign the least-used color with lowest distance
+    if (!candidate) {
+      const minUsage = Math.min(...item.rankings.map((r) => usageCount[r.id]));
+      candidate = item.rankings.find((r) => usageCount[r.id] === minUsage) || item.rankings[0];
+    }
+
+    usageCount[candidate.id] = (usageCount[candidate.id] || 0) + 1;
+    courseColorMap.set(item.course.id, candidate.id);
+  }
+
+  return courseColorMap;
 }
 
 export type PreparedCalendarEvent = {
@@ -126,11 +174,34 @@ export function prepareCalendarEvents(
   const untilStr = formatGoogleCalendarUntil(endDate);
   const events: PreparedCalendarEvent[] = [];
   let skippedCount = 0;
+  const uniqueColorMap = assignUniqueGoogleColorIds(plan.courses || []);
 
   for (const course of plan.courses || []) {
+    interface DayOccurrence {
+      dayCode: string;
+      jsDay: number;
+      firstDate: Date;
+    }
+
+    interface SessionBundle {
+      startTime: string;
+      endTime: string;
+      room: string;
+      days: Map<string, DayOccurrence>;
+    }
+
+    const bundles = new Map<string, SessionBundle>();
+
     for (const session of course.sessions || []) {
       const dayInfo = getIcsDayInfo(session.day);
       if (!dayInfo || !sessionTimesAreValid(session.startTime, session.endTime)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const normStart = formatNormalizedTime(session.startTime);
+      const normEnd = formatNormalizedTime(session.endTime);
+      if (!normStart || !normEnd) {
         skippedCount += 1;
         continue;
       }
@@ -141,10 +212,52 @@ export function prepareCalendarEvents(
         continue;
       }
 
-      const startDateTime = formatFloatingDateTime(firstSessionDate, session.startTime);
-      const endDateTime = formatFloatingDateTime(firstSessionDate, session.endTime);
+      const room = (session.room || '').trim();
+      // Multi-day recurrence grouping: bundle sessions in the same course
+      // that share the exact same start time, end time, and room.
+      const bundleKey = `${normStart}|${normEnd}|${room.toLowerCase()}`;
+
+      let bundle = bundles.get(bundleKey);
+      if (!bundle) {
+        bundle = {
+          startTime: normStart,
+          endTime: normEnd,
+          room,
+          days: new Map(),
+        };
+        bundles.set(bundleKey, bundle);
+      }
+
+      if (!bundle.days.has(dayInfo.code)) {
+        bundle.days.set(dayInfo.code, {
+          dayCode: dayInfo.code,
+          jsDay: dayInfo.jsDay,
+          firstDate: firstSessionDate,
+        });
+      }
+    }
+
+    for (const bundle of bundles.values()) {
+      if (bundle.days.size === 0) continue;
+
+      // Sort days in standard week order: MO, TU, WE, TH, FR, SA, SU
+      const sortedDays = Array.from(bundle.days.values()).sort(
+        (a, b) => (ICS_DAY_ORDER[a.dayCode] ?? 99) - (ICS_DAY_ORDER[b.dayCode] ?? 99)
+      );
+
+      // In RFC 5545 and Google Calendar API, DTSTART must be the earliest occurrence
+      // among all the bundled days on or after startDate.
+      let earliestFirstDate = sortedDays[0].firstDate;
+      for (const d of sortedDays) {
+        if (d.firstDate.getTime() < earliestFirstDate.getTime()) {
+          earliestFirstDate = d.firstDate;
+        }
+      }
+
+      const startDateTime = formatFloatingDateTime(earliestFirstDate, bundle.startTime);
+      const endDateTime = formatFloatingDateTime(earliestFirstDate, bundle.endTime);
       if (!startDateTime || !endDateTime) {
-        skippedCount += 1;
+        skippedCount += bundle.days.size;
         continue;
       }
 
@@ -153,14 +266,16 @@ export function prepareCalendarEvents(
       if (course.instructor) descParts.push(`Instructor: ${course.instructor}`);
       if (course.credits) descParts.push(`Credits: ${course.credits}`);
 
+      const byDayStr = sortedDays.map((d) => d.dayCode).join(',');
+
       events.push({
         summary: `${codeSec} ${course.name}`.trim(),
-        location: session.room || '',
+        location: bundle.room,
         description: descParts.join('\n'),
-        colorId: getClosestGoogleColorId(course.color),
+        colorId: uniqueColorMap.get(course.id) || getClosestGoogleColorId(course.color),
         start: { dateTime: startDateTime, timeZone },
         end: { dateTime: endDateTime, timeZone },
-        recurrence: [`RRULE:FREQ=WEEKLY;UNTIL=${untilStr};BYDAY=${dayInfo.code}`],
+        recurrence: [`RRULE:FREQ=WEEKLY;UNTIL=${untilStr};BYDAY=${byDayStr}`],
         extendedProperties: { private: { uniplan: UNIPLAN_EVENT_FLAG } },
       });
     }

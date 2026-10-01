@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { AlertCircle, Calendar, CheckCircle2, RefreshCw, X } from 'lucide-react';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { SchedulePlan } from '../types/schedule';
 import { getAccessToken, googleSignIn, initAuth, logout, mapFirebaseAuthError } from '../utils/auth';
 import {
@@ -191,7 +192,7 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
           Direct Google Calendar Sync
         </h3>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-          Create or reuse a dedicated calendar named like "{calendarName}" and copy class sessions with native Google Calendar colors.
+          Create or reuse a dedicated calendar named like &ldquo;{calendarName}&rdquo; with native Google Calendar colors. Sessions sharing the same times and room are automatically bundled into multi-day recurring events (e.g. Mon, Thu).
         </p>
       </div>
 
@@ -316,9 +317,32 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
         )}
 
         {syncError && (
-          <div className="mt-3 flex items-start gap-2 p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <p className="flex-1">{syncError}</p>
+          <div className="mt-3 flex flex-col gap-2 p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p className="flex-1 leading-relaxed">{syncError}</p>
+            </div>
+            {syncError.includes('Authorized domains') && typeof window !== 'undefined' && (
+              <div className="flex flex-wrap items-center gap-2 pl-6 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.hostname);
+                  }}
+                  className="px-2 py-1 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-900/60 text-rose-800 dark:text-rose-200 rounded font-medium text-[11px] transition-colors"
+                >
+                  Copy &quot;{window.location.hostname}&quot;
+                </button>
+                <a
+                  href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-medium text-[11px] transition-colors inline-flex items-center gap-1 shadow-sm"
+                >
+                  Open Firebase Settings &rarr;
+                </a>
+              </div>
+            )}
           </div>
         )}
 

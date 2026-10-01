@@ -54,21 +54,53 @@ export interface LayoutSession {
   hasConflict: boolean;
 }
 
-// 12 distinct, high-contrast, accessible course colors
-export const COURSE_COLORS = [
-  '#3B82F6', // Blue
-  '#10B981', // Emerald
-  '#F59E0B', // Amber
-  '#EF4444', // Red
-  '#8B5CF6', // Violet
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-  '#F97316', // Orange
-  '#14B8A6', // Teal
-  '#6366F1', // Indigo
-  '#84CC16', // Lime
-  '#D946EF', // Fuchsia
+// 12 uniquely distinct, high-contrast, non-overlapping course colors across separate color families.
+// Maximally distinguishable so automated color assignments never confuse users between courses.
+export const COURSE_COLORS: string[] = [
+  '#2563EB', // Cobalt Blue (single dedicated blue)
+  '#059669', // Emerald Green
+  '#EA580C', // Tangerine Orange
+  '#7C3AED', // Royal Purple
+  '#DC2626', // Crimson Red
+  '#D97706', // Golden Amber
+  '#0F766E', // Pine Teal
+  '#DB2777', // Rose Pink
+  '#65A30D', // Lime Green
+  '#9F1239', // Burgundy Wine
+  '#475569', // Slate Grey
+  '#92400E', // Cinnamon Bronze
 ];
+
+export const COURSE_COLOR_NAMES: Record<string, string> = {
+  '#2563EB': 'Cobalt Blue',
+  '#059669': 'Emerald Green',
+  '#EA580C': 'Tangerine Orange',
+  '#7C3AED': 'Royal Purple',
+  '#DC2626': 'Crimson Red',
+  '#D97706': 'Golden Amber',
+  '#0F766E': 'Pine Teal',
+  '#DB2777': 'Rose Pink',
+  '#65A30D': 'Lime Green',
+  '#9F1239': 'Burgundy Wine',
+  '#475569': 'Slate Grey',
+  '#92400E': 'Cinnamon Bronze',
+};
+
+// Maps legacy ambiguous/duplicate shades to distinct new palette colors
+export const LEGACY_COURSE_COLOR_MAP: Record<string, string> = {
+  '#3b82f6': '#2563EB', // Old Blue -> Cobalt Blue
+  '#10b981': '#059669', // Old Emerald -> Emerald Green
+  '#f59e0b': '#D97706', // Old Amber -> Golden Amber
+  '#ef4444': '#DC2626', // Old Red -> Crimson Red
+  '#8b5cf6': '#7C3AED', // Old Violet -> Royal Purple
+  '#ec4899': '#DB2777', // Old Pink -> Rose Pink
+  '#06b6d4': '#EA580C', // Old Cyan (was blue-like!) -> Tangerine Orange
+  '#f97316': '#92400E', // Old Orange (was duplicate amber!) -> Cinnamon Bronze
+  '#14b8a6': '#0F766E', // Old Teal (was blue-green!) -> Pine Teal
+  '#6366f1': '#9F1239', // Old Indigo (was blue-like!) -> Burgundy Wine
+  '#84cc16': '#65A30D', // Old Lime -> Lime Green
+  '#d946ef': '#475569', // Old Fuchsia (was purple-pink!) -> Slate Grey
+};
 
 // Distinct styling accents for ghost plans comparison
 export const GHOST_PLAN_COLORS = [

@@ -1,4 +1,4 @@
-import { COURSE_COLORS, type Course } from '../types/schedule';
+import { COURSE_COLORS, LEGACY_COURSE_COLOR_MAP, type Course } from '../types/schedule';
 import { courseIdentityKey, sameCourseIdentity } from '../utils/courseIdentity';
 import { commitWithHistory } from './history';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
@@ -169,13 +169,18 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
     getNextColor: (targetPlanId?: string) => {
       const state = get();
       const targetId = targetPlanId || state.activePlanId;
-      const targetPlan = state.plans.find(p => p.id === targetId);
-      const usedColors = new Set(targetPlan?.courses.map(c => c.color) || []);
+      const targetPlan = state.plans.find((p) => p.id === targetId);
+      const usedColors = new Set(
+        (targetPlan?.courses || []).map((c) => {
+          const raw = (c.color || '').trim().toLowerCase();
+          return (LEGACY_COURSE_COLOR_MAP[raw] || raw).toLowerCase();
+        })
+      );
 
       for (const color of COURSE_COLORS) {
-        if (!usedColors.has(color)) return color;
+        if (!usedColors.has(color.toLowerCase())) return color;
       }
-      // If all colors used, return random or modular
+      // If all colors used, loop back deterministically
       const idx = (targetPlan?.courses.length || 0) % COURSE_COLORS.length;
       return COURSE_COLORS[idx];
     },

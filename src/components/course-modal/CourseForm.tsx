@@ -1,6 +1,6 @@
 import React, { type FormEvent, type Ref, type RefObject } from 'react';
 import { Check, ChevronDown, Clock, Plus, Trash2 } from 'lucide-react';
-import { COURSE_COLORS, DAYS_LIST, DayOfWeek } from '../../types/schedule';
+import { COURSE_COLORS, COURSE_COLOR_NAMES, DAYS_LIST, DayOfWeek } from '../../types/schedule';
 import { timeToMinutes } from '../../utils/timeUtils';
 import {
   DAY_PRESETS,
@@ -359,19 +359,21 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                   <div className="flex items-center gap-2 flex-wrap px-2 py-2">
                     {COURSE_COLORS.map((swatch) => {
                       const selected = color.toLowerCase() === swatch.toLowerCase();
+                      const colorName = COURSE_COLOR_NAMES[swatch] || swatch;
                       return (
                         <button
                           key={swatch}
                           type="button"
-                          aria-label={`Use color ${swatch}`}
+                          title={colorName}
+                          aria-label={`Use color ${colorName} (${swatch})`}
                           aria-pressed={selected}
                           onClick={() => onColorChange(swatch)}
-                          className={`course-swatch w-6 h-6 rounded-full flex items-center justify-center ${
-                            selected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900' : ''
+                          className={`course-swatch w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-xs ${
+                            selected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900 scale-105' : ''
                           }`}
                           style={{ backgroundColor: swatch }}
                         >
-                          {selected && <Check className="w-3 h-3 text-white" />}
+                          {selected && <Check className="w-3.5 h-3.5 text-white drop-shadow-xs" />}
                         </button>
                       );
                     })}

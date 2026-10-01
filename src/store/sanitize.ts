@@ -1,4 +1,4 @@
-import { SchedulePlan, Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { SchedulePlan, Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../types/schedule';
 import { parseSessionTime } from '../utils/calendarDates';
 import { prefixedId } from '../utils/id';
 
@@ -69,7 +69,13 @@ export function sanitizeCourse(c: any, index: number): Course {
   const name = rawName || `${code} Course`;
 
   const rawColor = safeTrim(c.color, 32);
-  const color = rawColor || COURSE_COLORS[index % COURSE_COLORS.length];
+  let color = rawColor || COURSE_COLORS[index % COURSE_COLORS.length];
+  if (color) {
+    const normalized = color.toLowerCase();
+    if (LEGACY_COURSE_COLOR_MAP[normalized]) {
+      color = LEGACY_COURSE_COLOR_MAP[normalized];
+    }
+  }
 
   const credits = typeof c?.credits === 'number' && !isNaN(c.credits) ? Math.max(0, Math.min(30, c.credits)) : 3;
 

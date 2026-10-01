@@ -2,8 +2,10 @@ import { SchedulePlan, Course } from '../types/schedule';
 import {
   formatIcsDateTime,
   formatIcsUntil,
+  formatNormalizedTime,
   getFirstDayOccurrence,
   getIcsDayInfo,
+  ICS_DAY_ORDER,
   parseLocalDate,
   sessionTimesAreValid,
 } from './calendarDates';
@@ -148,17 +150,77 @@ export function generateIcsCalendar(
   const dtStamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   targetCourses.forEach((course) => {
+    interface DayOccurrence {
+      dayCode: string;
+      jsDay: number;
+      firstDate: Date;
+    }
+
+    interface SessionBundle {
+      startTime: string;
+      endTime: string;
+      room: string;
+      days: Map<string, DayOccurrence>;
+    }
+
+    const bundles = new Map<string, SessionBundle>();
+
     (course.sessions || []).forEach((session) => {
       if (!startDate || !endDate) return;
       const dayInfo = getIcsDayInfo(session.day);
       if (!dayInfo) return;
       if (!sessionTimesAreValid(session.startTime, session.endTime)) return;
 
+      const normStart = formatNormalizedTime(session.startTime);
+      const normEnd = formatNormalizedTime(session.endTime);
+      if (!normStart || !normEnd) return;
+
       const firstSessionDate = getFirstDayOccurrence(startDate, dayInfo.jsDay);
       if (firstSessionDate.getTime() > endDate.getTime()) return;
-      const dtStart = formatIcsDateTime(firstSessionDate, session.startTime);
-      const dtEnd = formatIcsDateTime(firstSessionDate, session.endTime);
-      if (!dtStart || !dtEnd) return;
+
+      const room = (session.room || '').trim();
+      const bundleKey = `${normStart}|${normEnd}|${room.toLowerCase()}`;
+
+      let bundle = bundles.get(bundleKey);
+      if (!bundle) {
+        bundle = {
+          startTime: normStart,
+          endTime: normEnd,
+          room,
+          days: new Map(),
+        };
+        bundles.set(bundleKey, bundle);
+      }
+
+      if (!bundle.days.has(dayInfo.code)) {
+        bundle.days.set(dayInfo.code, {
+          dayCode: dayInfo.code,
+          jsDay: dayInfo.jsDay,
+          firstDate: firstSessionDate,
+        });
+      }
+    });
+
+    let bundleIdx = 0;
+    for (const bundle of bundles.values()) {
+      if (bundle.days.size === 0) continue;
+      bundleIdx += 1;
+
+      // Sort days in standard week order: MO, TU, WE, TH, FR, SA, SU
+      const sortedDays = Array.from(bundle.days.values()).sort(
+        (a, b) => (ICS_DAY_ORDER[a.dayCode] ?? 99) - (ICS_DAY_ORDER[b.dayCode] ?? 99)
+      );
+
+      let earliestFirstDate = sortedDays[0].firstDate;
+      for (const d of sortedDays) {
+        if (d.firstDate.getTime() < earliestFirstDate.getTime()) {
+          earliestFirstDate = d.firstDate;
+        }
+      }
+
+      const dtStart = formatIcsDateTime(earliestFirstDate, bundle.startTime);
+      const dtEnd = formatIcsDateTime(earliestFirstDate, bundle.endTime);
+      if (!dtStart || !dtEnd) continue;
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
       const colorPrefix = includeColorEmoji && course.color ? `${getColorEmoji(course.color)} ` : '';
@@ -167,21 +229,21 @@ export function generateIcsCalendar(
       const descParts: string[] = [];
       if (course.instructor) descParts.push(`Instructor: ${course.instructor}`);
       if (course.credits) descParts.push(`Credits: ${course.credits}`);
-      if (session.room) descParts.push(`Room: ${session.room}`);
+      if (bundle.room) descParts.push(`Room: ${bundle.room}`);
       if (course.color) descParts.push(`Color: ${course.color}`);
       const description = escapeIcsText(descParts.join(' | '));
-      const location = escapeIcsText(session.room || '');
+      const location = escapeIcsText(bundle.room);
 
+      const byDayStr = sortedDays.map((d) => d.dayCode).join(',');
       const safeCourseId = String(course.id).replace(/[^a-zA-Z0-9_-]/g, '');
-      const safeSessionId = String(session.id).replace(/[^a-zA-Z0-9_-]/g, '');
-      const uid = `event_${safeCourseId || 'c'}_${safeSessionId || 's'}_${randomId()}@uniplan.app`;
+      const uid = `event_${safeCourseId || 'c'}_b${bundleIdx}_${randomId()}@uniplan.app`;
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);
       lines.push(`DTSTAMP:${dtStamp}`);
       lines.push(`DTSTART:${dtStart}`);
       lines.push(`DTEND:${dtEnd}`);
-      lines.push(`RRULE:FREQ=WEEKLY;UNTIL=${untilStr};BYDAY=${dayInfo.code}`);
+      lines.push(`RRULE:FREQ=WEEKLY;UNTIL=${untilStr};BYDAY=${byDayStr}`);
       lines.push(`SUMMARY:${summary}`);
 
       // Full cross-platform color preservation (RFC 7986, Apple Calendar, Outlook, generic)
@@ -198,7 +260,7 @@ export function generateIcsCalendar(
       lines.push('STATUS:CONFIRMED');
       lines.push('TRANSP:OPAQUE');
       lines.push('END:VEVENT');
-    });
+    }
   });
 
   lines.push('END:VCALENDAR');

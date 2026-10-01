@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../../types/schedule';
+import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../../types/schedule';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
@@ -247,7 +247,8 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setSection(existingCourse.section || '');
       setInstructor(existingCourse.instructor || '');
       setCredits(existingCourse.credits || 0);
-      setColor(existingCourse.color);
+      const existingNormalized = (existingCourse.color || '').toLowerCase();
+      setColor(LEGACY_COURSE_COLOR_MAP[existingNormalized] || existingCourse.color);
       setPatterns(sessionsToPatterns(existingCourse.sessions));
       setDetailsOpen(
         Boolean(existingCourse.section || existingCourse.instructor || (existingCourse.credits && existingCourse.credits !== 3))

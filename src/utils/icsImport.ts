@@ -1,4 +1,4 @@
-import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
+import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../types/schedule';
 import { prefixedId } from './id';
 
 const dayMap: Record<string, DayOfWeek> = {
@@ -323,7 +323,10 @@ export function parseIcsContent(icsContent: string): Course[] {
         section,
         instructor: descFields.instructor,
         credits: descFields.credits ?? 3,
-        color: eventColor || COURSE_COLORS[courses.length % COURSE_COLORS.length],
+        color:
+          (eventColor && LEGACY_COURSE_COLOR_MAP[eventColor.toLowerCase()]) ||
+          eventColor ||
+          COURSE_COLORS[courses.length % COURSE_COLORS.length],
         sessions,
       });
     }

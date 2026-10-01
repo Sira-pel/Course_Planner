@@ -1,4 +1,4 @@
-import { DayOfWeek, SchedulePlan, Course, ClassSession, COURSE_COLORS } from '../types/schedule';
+import { DayOfWeek, SchedulePlan, Course, ClassSession, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../types/schedule';
 import { prefixedId } from './id';
 
 interface CompactSession {
@@ -149,7 +149,10 @@ export function decodePlanFromSharePayload(payload: string): {
         section: compactCourse.sc || undefined,
         instructor: compactCourse.in || undefined,
         credits: Number(compactCourse.cr) || 0,
-        color: compactCourse.co || COURSE_COLORS[cIdx % COURSE_COLORS.length],
+        color:
+          (compactCourse.co && LEGACY_COURSE_COLOR_MAP[compactCourse.co.toLowerCase()]) ||
+          compactCourse.co ||
+          COURSE_COLORS[cIdx % COURSE_COLORS.length],
         sessions,
       };
     });
