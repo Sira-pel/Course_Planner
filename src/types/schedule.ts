@@ -54,52 +54,58 @@ export interface LayoutSession {
   hasConflict: boolean;
 }
 
-// 12 uniquely distinct, high-contrast, non-overlapping course colors across separate color families.
-// Maximally distinguishable so automated color assignments never confuse users between courses.
+// 12 uniquely distinct, visually pleasing, non-overlapping course colors across separate color families.
+// Softer and lighter with balanced saturation for comfortable viewing on calendar grids and cards.
 export const COURSE_COLORS: string[] = [
-  '#2563EB', // Cobalt Blue (single dedicated blue)
-  '#059669', // Emerald Green
-  '#EA580C', // Tangerine Orange
-  '#7C3AED', // Royal Purple
-  '#DC2626', // Crimson Red
-  '#D97706', // Golden Amber
-  '#0F766E', // Pine Teal
-  '#DB2777', // Rose Pink
-  '#65A30D', // Lime Green
-  '#9F1239', // Burgundy Wine
-  '#475569', // Slate Grey
-  '#92400E', // Cinnamon Bronze
+  '#3B82F6', // Blue
+  '#10B981', // Emerald Green
+  '#F97316', // Tangerine Orange
+  '#8B5CF6', // Royal Purple
+  '#EF4444', // Coral Red
+  '#F59E0B', // Golden Amber
+  '#14B8A6', // Pine Teal
+  '#EC4899', // Rose Pink
+  '#84CC16', // Lime Green
+  '#F43F5E', // Warm Rose
+  '#64748B', // Slate Grey
+  '#C07D3E', // Caramel Bronze
 ];
 
 export const COURSE_COLOR_NAMES: Record<string, string> = {
-  '#2563EB': 'Cobalt Blue',
-  '#059669': 'Emerald Green',
-  '#EA580C': 'Tangerine Orange',
-  '#7C3AED': 'Royal Purple',
-  '#DC2626': 'Crimson Red',
-  '#D97706': 'Golden Amber',
-  '#0F766E': 'Pine Teal',
-  '#DB2777': 'Rose Pink',
-  '#65A30D': 'Lime Green',
-  '#9F1239': 'Burgundy Wine',
-  '#475569': 'Slate Grey',
-  '#92400E': 'Cinnamon Bronze',
+  '#3B82F6': 'Blue',
+  '#10B981': 'Emerald Green',
+  '#F97316': 'Tangerine Orange',
+  '#8B5CF6': 'Royal Purple',
+  '#EF4444': 'Coral Red',
+  '#F59E0B': 'Golden Amber',
+  '#14B8A6': 'Pine Teal',
+  '#EC4899': 'Rose Pink',
+  '#84CC16': 'Lime Green',
+  '#F43F5E': 'Warm Rose',
+  '#64748B': 'Slate Grey',
+  '#C07D3E': 'Caramel Bronze',
 };
 
-// Maps legacy ambiguous/duplicate shades to distinct new palette colors
+// Maps legacy darker / overly saturated shades to the lighter, softer palette colors
 export const LEGACY_COURSE_COLOR_MAP: Record<string, string> = {
-  '#3b82f6': '#2563EB', // Old Blue -> Cobalt Blue
-  '#10b981': '#059669', // Old Emerald -> Emerald Green
-  '#f59e0b': '#D97706', // Old Amber -> Golden Amber
-  '#ef4444': '#DC2626', // Old Red -> Crimson Red
-  '#8b5cf6': '#7C3AED', // Old Violet -> Royal Purple
-  '#ec4899': '#DB2777', // Old Pink -> Rose Pink
-  '#06b6d4': '#EA580C', // Old Cyan (was blue-like!) -> Tangerine Orange
-  '#f97316': '#92400E', // Old Orange (was duplicate amber!) -> Cinnamon Bronze
-  '#14b8a6': '#0F766E', // Old Teal (was blue-green!) -> Pine Teal
-  '#6366f1': '#9F1239', // Old Indigo (was blue-like!) -> Burgundy Wine
-  '#84cc16': '#65A30D', // Old Lime -> Lime Green
-  '#d946ef': '#475569', // Old Fuchsia (was purple-pink!) -> Slate Grey
+  // Heavy / overly saturated previous palette
+  '#2563eb': '#3B82F6', // Cobalt Blue -> Blue
+  '#059669': '#10B981', // Dark Emerald -> Emerald Green
+  '#ea580c': '#F97316', // Intense Orange -> Tangerine Orange
+  '#7c3aed': '#8B5CF6', // Deep Purple -> Royal Purple
+  '#dc2626': '#EF4444', // Dark Red -> Coral Red
+  '#d97706': '#F59E0B', // Dark Amber -> Golden Amber
+  '#0f766e': '#14B8A6', // Dark Pine Teal -> Pine Teal
+  '#db2777': '#EC4899', // Deep Magenta -> Rose Pink
+  '#65a30d': '#84CC16', // Dark Lime -> Lime Green
+  '#9f1239': '#F43F5E', // Dark Burgundy -> Warm Rose
+  '#475569': '#64748B', // Dark Slate -> Slate Grey
+  '#92400e': '#C07D3E', // Dark Brown -> Caramel Bronze
+  '#b45309': '#C07D3E', // Cinnamon -> Caramel Bronze
+  // Additional previous legacy values
+  '#06b6d4': '#14B8A6',
+  '#6366f1': '#8B5CF6',
+  '#d946ef': '#EC4899',
 };
 
 // Distinct styling accents for ghost plans comparison

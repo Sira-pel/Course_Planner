@@ -1,7 +1,7 @@
 import React, { type FormEvent, type Ref, type RefObject } from 'react';
 import { Check, ChevronDown, Clock, Plus, Trash2 } from 'lucide-react';
 import { COURSE_COLORS, COURSE_COLOR_NAMES, DAYS_LIST, DayOfWeek } from '../../types/schedule';
-import { timeToMinutes } from '../../utils/timeUtils';
+import { getContrastTextColor, timeToMinutes } from '../../utils/timeUtils';
 import {
   DAY_PRESETS,
   DEFAULT_DURATION_MINUTES,
@@ -360,6 +360,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                     {COURSE_COLORS.map((swatch) => {
                       const selected = color.toLowerCase() === swatch.toLowerCase();
                       const colorName = COURSE_COLOR_NAMES[swatch] || swatch;
+                      const isDarkText = getContrastTextColor(swatch) === 'text-slate-900';
                       return (
                         <button
                           key={swatch}
@@ -373,7 +374,13 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           }`}
                           style={{ backgroundColor: swatch }}
                         >
-                          {selected && <Check className="w-3.5 h-3.5 text-white drop-shadow-xs" />}
+                          {selected && (
+                            <Check
+                              className={`w-3.5 h-3.5 ${
+                                isDarkText ? 'text-slate-900' : 'text-white drop-shadow-xs'
+                              }`}
+                            />
+                          )}
                         </button>
                       );
                     })}
@@ -395,7 +402,13 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                         id="custom-course-color-mixer"
                       />
                       {isCustomColor ? (
-                        <Check className="w-3 h-3 text-white" />
+                        <Check
+                          className={`w-3 h-3 ${
+                            getContrastTextColor(color) === 'text-slate-900'
+                              ? 'text-slate-900'
+                              : 'text-white drop-shadow-xs'
+                          }`}
+                        />
                       ) : (
                         <Plus className="w-3 h-3 text-slate-500" />
                       )}
