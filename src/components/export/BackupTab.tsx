@@ -61,7 +61,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
           value={importJson}
           onChange={(e) => onImportJsonChange(e.target.value)}
           placeholder="Paste backup JSON content here or click Upload above..."
-          className="w-full min-w-0 p-2.5 font-mono text-base sm:text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none break-all whitespace-pre-wrap"
+          className="w-full min-w-0 p-2.5 font-mono text-base sm:text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-inset focus:ring-indigo-500 focus:outline-none break-all whitespace-pre-wrap"
         />
 
         {importError && (

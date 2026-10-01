@@ -256,7 +256,7 @@ export default function App() {
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
         <div className="up-workspace-body flex-1 flex flex-col lg:flex-row gap-3 min-h-0 min-w-0 items-stretch">
           {/* Main Weekly Calendar Grid */}
-          <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 relative overflow-x-auto">
+          <div className="up-calendar-slot flex-1 min-w-0 max-w-full flex flex-col min-h-0 relative overflow-hidden">
             <CalendarGrid
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={handleAddCourseAtTime}

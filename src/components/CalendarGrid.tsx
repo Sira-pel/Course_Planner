@@ -177,6 +177,8 @@ export const CalendarGrid = memo(function CalendarGrid({
   const responsiveDayFormat: 'short' | 'label' | 'full' =
     colWidth < 68 ? 'short' : colWidth < 135 ? 'label' : 'full';
 
+  const needsHorizontalScroll = Boolean(minGridWidth && containerWidth < minGridWidth);
+
   return (
     <div
       ref={containerRef}
@@ -184,7 +186,11 @@ export const CalendarGrid = memo(function CalendarGrid({
       className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
-      <div className="up-scroll flex-1 overflow-auto relative flex flex-col w-full max-w-full">
+      <div
+        className={`up-scroll flex-1 overflow-y-auto ${
+          needsHorizontalScroll ? 'overflow-x-auto' : 'overflow-x-hidden'
+        } relative flex flex-col w-full max-w-full`}
+      >
         <div
           className="flex flex-col flex-1 min-h-0 w-full"
           style={{ minWidth: minGridWidth ? `${minGridWidth}px` : '100%' }}
@@ -337,7 +343,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={day.id}
                   id={`day-column-${day.id}`}
-                  className={`relative h-full group/col ${
+                  className={`relative h-full overflow-x-clip group/col ${
                     isToday ? 'bg-indigo-500/[0.02] dark:bg-indigo-500/[0.03]' : ''
                   }`}
                   onDoubleClick={(e) => {

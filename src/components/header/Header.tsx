@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { parseIcsContent } from '../../utils/icsImport';
 import { useIsPhone } from '../../utils/usePoolLayout';
+import type { SchedulePlan } from '../../types/schedule';
 import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';

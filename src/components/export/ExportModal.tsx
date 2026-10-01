@@ -231,15 +231,15 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
-            <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-white truncate">
+            <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
               Export Schedule & Backup
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
+            <p className="text-xs text-slate-600 dark:text-slate-300">
               Exporting: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> ({activePlan.courses.length} courses)
             </p>
           </div>
@@ -252,43 +252,47 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           </button>
         </div>
 
-        {/* Tab Switcher - Responsive pill nav (Clean Text first, Share Link second) */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar">
+        {/* Tab Switcher - 2-col on mobile portrait, 5-col on landscape/tablets, flex row on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('text')}
-            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+            title="Clean Text"
+            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
               activeTab === 'text'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <FileText className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Clean Text</span>
+            <span className="truncate md:whitespace-nowrap">Clean Text</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('share')}
-            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+            title="Share Link"
+            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
               activeTab === 'share'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Share2 className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Share Link</span>
+            <span className="truncate md:whitespace-nowrap">Share Link</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('ics')}
-            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+            title="Google Calendar (.ics)"
+            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
               activeTab === 'ics'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Google Cal (.ics)</span>
+            <span className="md:hidden truncate">Google Cal (.ics)</span>
+            <span className="hidden md:inline md:whitespace-nowrap">Google Calendar (.ics)</span>
           </button>
           <button
             type="button"
@@ -296,31 +300,33 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
               setActiveTab('image');
               if (!imagePreviewUrl) handleGeneratePreviewImage();
             }}
-            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+            title="PNG Snapshot"
+            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
               activeTab === 'image'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Image className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">PNG Snapshot</span>
+            <span className="truncate md:whitespace-nowrap">PNG Snapshot</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('backup')}
-            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+            title="JSON Backup"
+            className={`col-span-2 sm:col-span-1 py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
               activeTab === 'backup'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Database className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">JSON Backup</span>
+            <span className="truncate md:whitespace-nowrap">JSON Backup</span>
           </button>
         </div>
 
         {/* Tab Body - Scrollable Container */}
-        <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-0.5">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-1 sm:pr-2">
           {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
           {activeTab === 'text' && (
             <TextExportTab
@@ -356,7 +362,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                     type="text"
                     readOnly
                     value={shareUrl}
-                    className="flex-1 min-w-0 px-3 py-2 text-base sm:text-xs font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all"
+                    className="flex-1 min-w-0 px-3 py-2 text-base sm:text-xs font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                   />
                   <button
                     type="button"
