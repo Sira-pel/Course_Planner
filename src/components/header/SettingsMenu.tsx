@@ -32,7 +32,7 @@ interface SettingsMenuProps {
   onOpenCatalog: () => void;
   onToggleTheme: (event: React.MouseEvent<HTMLElement>) => void;
   onImportIcsClick: () => void;
-  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
+  onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;

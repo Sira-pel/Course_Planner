@@ -26,7 +26,7 @@ import { EASE_OUT, EASE_POP } from '../../utils/motion';
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
   onOpenExport: () => void;
-  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
+  onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onOpenCatalog: () => void;

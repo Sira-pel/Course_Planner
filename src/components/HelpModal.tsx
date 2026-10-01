@@ -17,6 +17,7 @@ import {
   Keyboard,
   RotateCcw,
   Edit3,
+  Share2,
 } from 'lucide-react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
@@ -27,7 +28,7 @@ interface HelpModalProps {
   isOpen: boolean;
   initialTab?: HelpTabType;
   onClose: () => void;
-  onOpenImport?: (tab?: 'excel' | 'ics' | 'backup') => void;
+  onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenExport?: () => void;
   onOpenCatalog?: () => void;
   onOpenShortcuts?: () => void;
@@ -334,10 +335,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     <div>
                       <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
                         <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-[11px] flex items-center justify-center font-bold">3</span>
-                        <span>Compare Plans (A vs B)</span>
+                        <span>Compare & In-Grid Edit</span>
                       </div>
                       <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed text-[11px]">
-                        Duplicate your active schedule into Plan B. Use <strong>Compare</strong> to overlay "ghost" courses and see which section grants better free days.
+                        Compare alternative plans or a friend's schedule side-by-side. You can <strong>click and edit ghost course blocks directly on the calendar</strong> and target your main plan or comparison plan when adding from the Course Pool.
                       </p>
                     </div>
                   </div>
@@ -346,10 +347,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     <div>
                       <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
                         <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-[11px] flex items-center justify-center font-bold">4</span>
-                        <span>Export or Live Sync</span>
+                        <span>Share Link & Clean Export</span>
                       </div>
                       <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed text-[11px]">
-                        Save a crisp wallpaper image for your phone lockscreen, download an <code>.ics</code> file for Apple/Outlook, or sync straight to Google Calendar.
+                        Generate an instant <strong>Shareable Friend Link</strong> so classmates can compare schedules in their browser without accounts, copy <strong>Clean Text</strong> for Discord/WhatsApp, download <code>.ics</code> calendars, or export PNG images.
                       </p>
                     </div>
                   </div>
@@ -445,7 +446,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           {activeTab === 'import' && (
             <div className="space-y-3.5 animate-in fade-in duration-150">
               <p className="text-slate-600 dark:text-slate-300 text-xs">
-                You do not need to manually type in every course. Uniplan supports 3 direct import formats:
+                You do not need to manually type in every course. Uniplan supports 4 flexible import options:
               </p>
 
               <div className="space-y-2.5">
@@ -462,6 +463,23 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                     <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
                       Drop any course table downloaded from your university portal. Uniplan automatically detects columns: <strong>Course Code, Title, Day, Start/End Time, Room, and Instructor</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                        Friend's Share Link or Code
+                      </h4>
+                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">New</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
+                      Paste a shareable link or code sent by a classmate. Preview course cards and credit hours, then choose to either <strong>overlay it as a ghost schedule</strong> or <strong>open it as your own active plan</strong>.
                     </p>
                   </div>
                 </div>
@@ -521,11 +539,21 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
                   <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
-                    <Download className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    <span>HD Image (PNG / JPEG)</span>
+                    <Copy className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span>Clean Text & Markdown Agenda</span>
                   </div>
                   <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
-                    Download a clean, high-resolution rendering formatted for phone lockscreens, tablet wallpapers, or physical printing.
+                    Formatted plain text or markdown schedule you can copy-paste straight into WhatsApp/Discord class groups, Notion, or personal notes.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+                  <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
+                    <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Shareable Friend Link</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
+                    Generates a URL with your schedule encoded into it. Friends can open it to overlay your classes over theirs with zero login required.
                   </p>
                 </div>
 
@@ -541,21 +569,21 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
                   <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
-                    <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Google Calendar Sync</span>
+                    <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>HD Image (PNG Snapshot)</span>
                   </div>
                   <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
-                    Direct cloud synchronization creating a dedicated university calendar in your Google account that updates automatically.
+                    Download a clean, high-resolution rendering formatted for phone lockscreens, tablet wallpapers, or physical printing.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 sm:col-span-2">
                   <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
-                    <Copy className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span>Text & Markdown Agenda</span>
+                    <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span>Full JSON Backup</span>
                   </div>
                   <p className="text-slate-600 dark:text-slate-300 text-[11px] mt-1 leading-relaxed">
-                    Formatted text schedule you can copy-paste straight into WhatsApp/Discord class groups, Notion, or personal notes.
+                    Export your complete planner state including all plans, color preferences, and course pool drawer to restore anytime.
                   </p>
                 </div>
               </div>

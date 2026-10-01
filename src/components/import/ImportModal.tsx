@@ -1,13 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import type { Course } from '../../types/schedule';
-import { X, FileSpreadsheet, Calendar, Database, Check } from 'lucide-react';
+import type { Course, SchedulePlan } from '../../types/schedule';
+import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
 import { ExcelImportTab } from './ExcelImportTab';
 import { IcsImportTab } from './IcsImportTab';
 import { BackupRestoreTab } from './BackupRestoreTab';
+import { FriendShareImportTab } from './FriendShareImportTab';
 
-export type ImportTabType = 'excel' | 'ics' | 'backup';
+export type ImportTabType = 'excel' | 'share' | 'ics' | 'backup';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   initialTab,
   onClose,
 }) => {
-  const { plans, activePlanId, catalogCourses, bulkAddToCatalog, bulkAddCourses } =
+  const { plans, activePlanId, catalogCourses, bulkAddToCatalog, bulkAddCourses, importPlan } =
     useScheduleStore(
       useShallow((state) => ({
         plans: state.plans,
@@ -36,8 +37,20 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         catalogCourses: state.catalogCourses,
         bulkAddToCatalog: state.bulkAddToCatalog,
         bulkAddCourses: state.bulkAddCourses,
+        importPlan: state.importPlan,
       }))
     );
+
+  // Close modal when user presses Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const activePlan = useMemo(
     () => plans.find((p) => p.id === activePlanId) || plans[0],
@@ -87,8 +100,8 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
           </button>
         </div>
 
-        {/* Tab Switcher - Responsive 3-col grid */}
-        <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
+        {/* Tab Switcher - Responsive 4-col grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('excel')}
@@ -100,6 +113,18 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
           >
             <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Excel / CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('share')}
+            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+              activeTab === 'share'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Friend Link</span>
           </button>
           <button
             type="button"
@@ -145,6 +170,19 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
               onImportToPool={handleImportToPool}
               onImportToPlanAndPool={handleImportToPlanAndPool}
               onSuccess={handleSuccess}
+            />
+          )}
+
+          {activeTab === 'share' && (
+            <FriendShareImportTab
+              onCompareWithSchedule={(plan) => {
+                importPlan(plan, true);
+                onClose();
+              }}
+              onOpenAsActivePlan={(plan) => {
+                importPlan(plan, false);
+                onClose();
+              }}
             />
           )}
 

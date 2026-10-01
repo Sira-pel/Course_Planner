@@ -28,6 +28,7 @@ export interface UseAppShortcutsArgs {
   onSetConfirmingClear: (open: boolean) => void;
   onCloseCourseModal: () => void;
   onCloseExport: () => void;
+  onCloseImport?: () => void;
   onCloseHelp?: () => void;
   onCloseShortcuts?: () => void;
   onCloseShareImport?: () => void;
@@ -98,6 +99,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         onSetConfirmingClear,
         onCloseCourseModal,
         onCloseExport,
+        onCloseImport,
         onCloseHelp,
         onCloseShortcuts,
         onCloseShareImport,
@@ -127,6 +129,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         }
         onCloseCourseModal();
         onCloseExport();
+        onCloseImport?.();
         onCloseHelp?.();
         onCloseShortcuts?.();
         onCloseShareImport?.();

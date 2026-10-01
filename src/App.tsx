@@ -231,6 +231,7 @@ export default function App() {
     onSetConfirmingClear: setIsConfirmingClear,
     onCloseCourseModal: handleCloseCourseModal,
     onCloseExport: handleCloseExport,
+    onCloseImport: handleCloseImport,
     onCloseHelp: handleCloseHelp,
     onCloseShareImport: () => setIsShareImportOpen(false),
     onCollapsePool: handleCollapsePool,

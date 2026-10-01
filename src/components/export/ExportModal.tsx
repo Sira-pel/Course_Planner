@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -21,8 +21,9 @@ import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
 import { BackupTab } from './BackupTab';
+import { FriendShareImportTab } from '../import/FriendShareImportTab';
 
-export type ExportTabType = 'share' | 'text' | 'ics' | 'image' | 'backup';
+export type ExportTabType = 'text' | 'share' | 'ics' | 'image' | 'backup';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -30,12 +31,12 @@ interface ExportModalProps {
   onClose: () => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'share', onClose }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose }) => {
   if (!isOpen) return null;
   return <ExportModalBody initialTab={initialTab} onClose={onClose} />;
 };
 
-const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'share', onClose }) => {
+const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'text', onClose }) => {
   const {
     plans,
     activePlanId,
@@ -48,6 +49,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     semesterEnd,
     setSemesterDates,
     importFullState,
+    importPlan,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -61,9 +63,22 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
       semesterEnd: state.semesterEnd,
       setSemesterDates: state.setSemesterDates,
       importFullState: state.importFullState,
+      importPlan: state.importPlan,
     }))
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
+
+  // Close modal when user presses Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const [activeTab, setActiveTab] = useState<ExportTabType>(initialTab);
   const [copiedShareUrl, setCopiedShareUrl] = useState(false);
@@ -227,24 +242,12 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('share')}
-            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
-              activeTab === 'share'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Share2 className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Share Link</span>
-          </button>
+        {/* Tab Switcher - Responsive pill nav (Clean Text first, Share Link second) */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('text')}
-            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
               activeTab === 'text'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
@@ -255,8 +258,20 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('share')}
+            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
+              activeTab === 'share'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Share Link</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('ics')}
-            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
               activeTab === 'ics'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
@@ -271,7 +286,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
               setActiveTab('image');
               if (!imagePreviewUrl) handleGeneratePreviewImage();
             }}
-            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
               activeTab === 'image'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
@@ -283,7 +298,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           <button
             type="button"
             onClick={() => setActiveTab('backup')}
-            className={`py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+            className={`flex-1 min-w-[90px] sm:min-w-0 py-2 sm:py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center whitespace-nowrap ${
               activeTab === 'backup'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
@@ -296,7 +311,18 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
         {/* Tab Body - Scrollable Container */}
         <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-0.5">
-          {/* Tab: Share Link (Direct comparison with friends) */}
+          {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
+          {activeTab === 'text' && (
+            <TextExportTab
+              textFormat={textFormat}
+              copiedText={copiedText}
+              generatedText={generatedText}
+              onFormat={setTextFormat}
+              onCopy={handleCopyText}
+            />
+          )}
+
+          {/* Tab 2: Share Link (Send to friends or paste friend link) */}
           {activeTab === 'share' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
@@ -313,7 +339,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Direct Comparison URL
+                  Your Shareable Schedule Link
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -350,20 +376,24 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                 <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
                 <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
               </div>
+
+              {/* Friend's Share Link Input Space */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                <FriendShareImportTab
+                  onCompareWithSchedule={(plan) => {
+                    importPlan(plan, true);
+                    onClose();
+                  }}
+                  onOpenAsActivePlan={(plan) => {
+                    importPlan(plan, false);
+                    onClose();
+                  }}
+                />
+              </div>
             </div>
           )}
-          {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
-          {activeTab === 'text' && (
-            <TextExportTab
-              textFormat={textFormat}
-              copiedText={copiedText}
-              generatedText={generatedText}
-              onFormat={setTextFormat}
-              onCopy={handleCopyText}
-            />
-          )}
 
-          {/* Tab 2: Google Calendar / Apple Calendar (.ics) */}
+          {/* Tab 3: Google Calendar / Apple Calendar (.ics) */}
           {activeTab === 'ics' && (
             <IcsExportTab
               activePlan={activePlan}
