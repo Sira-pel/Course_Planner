@@ -75,6 +75,8 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
       const trimmed = newName.trim();
       if (!trimmed) return;
       const state = get();
+      const currentPlan = state.plans.find((p) => p.id === planId);
+      if (!currentPlan || currentPlan.name === trimmed) return;
 
       commitWithHistory(set, get, {
         plans: state.plans.map(p => p.id === planId ? { ...p, name: trimmed } : p),

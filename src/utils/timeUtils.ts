@@ -27,8 +27,24 @@ export function timeToMinutes(timeStr: string): number {
 
   const stripped = clean.replace(/[ap]m?/g, '').trim();
   const parts = stripped.split(':');
-  let h = parseInt(parts[0], 10);
-  const m = parts[1] ? parseInt(parts[1], 10) : 0;
+
+  let h = 0;
+  let m = 0;
+
+  if (parts.length === 1 && /^\d{3,4}$/.test(stripped)) {
+    // 3 or 4-digit military time e.g. "0900", "1430", "830"
+    if (stripped.length === 4) {
+      h = parseInt(stripped.slice(0, 2), 10);
+      m = parseInt(stripped.slice(2, 4), 10);
+    } else {
+      h = parseInt(stripped.slice(0, 1), 10);
+      m = parseInt(stripped.slice(1, 3), 10);
+    }
+  } else {
+    h = parseInt(parts[0], 10);
+    m = parts[1] ? parseInt(parts[1], 10) : 0;
+  }
+
   if (isNaN(h)) return 0;
 
   if (isPM && h < 12) h += 12;
@@ -289,6 +305,9 @@ export function getContrastTextColor(hexColor: string): 'text-white' | 'text-sla
   // Perceived luminance formula (YIQ)
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   const result = yiq >= 145 ? 'text-slate-900' : 'text-white';
+  if (contrastCache.size >= 128) {
+    contrastCache.clear();
+  }
   contrastCache.set(hexColor, result);
   return result;
 }

@@ -1,8 +1,7 @@
 import React, { memo } from 'react';
 import { LayoutSession, GHOST_PLAN_COLORS } from '../types/schedule';
 import { getContrastTextColor, minutesToTime, timeToMinutes } from '../utils/timeUtils';
-import { AlertTriangle, Edit2, Trash2, MapPin, User, ArrowRight } from 'lucide-react';
-import { useScheduleStore } from '../store/useScheduleStore';
+import { AlertTriangle, Edit2, Trash2, MapPin, User } from 'lucide-react';
 
 interface CourseBlockProps {
   layout: LayoutSession;

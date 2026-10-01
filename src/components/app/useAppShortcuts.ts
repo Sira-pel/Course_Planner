@@ -12,6 +12,7 @@ export interface UseAppShortcutsArgs {
   activePlanId: string;
   isMoreOpen: boolean;
   isConfirmingClear: boolean;
+  isAnyModalOpen?: boolean;
   onOpenNewCourse: (day?: DayOfWeek, startTime?: string, mode?: 'form' | 'quick') => void;
   onOpenExport: () => void;
   onOpenImport?: () => void;
@@ -83,6 +84,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         activePlanId,
         isMoreOpen,
         isConfirmingClear,
+        isAnyModalOpen,
         onOpenNewCourse,
         onOpenExport,
         onOpenImport,
@@ -239,11 +241,13 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         }
       }
 
-      // Number keys 1-9 to switch plans
-      const num = parseInt(e.key, 10);
-      if (!isNaN(num) && num >= 1 && num <= plans.length) {
-        e.preventDefault();
-        onSetActivePlan(plans[num - 1].id);
+      // Number keys 1-9 to switch plans (only when no modal is open and without modifiers)
+      if (!isAnyModalOpen && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const num = parseInt(e.key, 10);
+        if (!isNaN(num) && num >= 1 && num <= plans.length) {
+          e.preventDefault();
+          onSetActivePlan(plans[num - 1].id);
+        }
       }
     };
 

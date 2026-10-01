@@ -180,6 +180,17 @@ function matchIcsProperty(evStr: string, name: string): { params: string; value:
   return { params: match[1] || '', value: match[2].trim() };
 }
 
+function parseIcsDuration(durationStr: string): number {
+  // Returns duration in minutes (RFC 5545 duration format e.g. PT50M, PT1H15M, P1D)
+  const match = durationStr.match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?/i);
+  if (!match) return 50;
+  const days = parseInt(match[1] || '0', 10);
+  const hours = parseInt(match[2] || '0', 10);
+  const mins = parseInt(match[3] || '0', 10);
+  const total = days * 1440 + hours * 60 + mins;
+  return total > 0 ? total : 50;
+}
+
 export function parseIcsContent(icsContent: string): Course[] {
   if (!icsContent || typeof icsContent !== 'string') return [];
   // RFC 5545 line unfolding: replace CRLF followed by space/tab
@@ -192,14 +203,15 @@ export function parseIcsContent(icsContent: string): Course[] {
     const summaryMatch = evStr.match(/(?:SUMMARY|SUMMARY;[^:]*):(.+)/i);
     const startProp = matchIcsProperty(evStr, 'DTSTART');
     const endProp = matchIcsProperty(evStr, 'DTEND');
+    const durationProp = matchIcsProperty(evStr, 'DURATION');
     const rruleMatch = evStr.match(/(?:RRULE|RRULE;[^:]*):(.+)/i);
     const locationMatch = evStr.match(/(?:LOCATION|LOCATION;[^:]*):(.+)/i);
     const descriptionProp = matchIcsProperty(evStr, 'DESCRIPTION');
 
-    if (summaryMatch && startProp && endProp) {
+    if (summaryMatch && startProp && (endProp || durationProp)) {
       const rawSummary = unescapeIcsText(summaryMatch[1].trim());
       const startTzid = parseTzid(startProp.params);
-      const endTzid = parseTzid(endProp.params) ?? startTzid;
+      const endTzid = endProp ? (parseTzid(endProp.params) ?? startTzid) : startTzid;
 
       // Check for color properties in event (RFC 7986, Apple, Outlook, generic)
       const colorMatch = evStr.match(/(?:COLOR|X-APPLE-CALENDAR-COLOR|X-OUTLOOK-COLOR|X-COLOR):([^\r\n]+)/i);
@@ -228,7 +240,17 @@ export function parseIcsContent(icsContent: string): Course[] {
       }
       
       const startTime = parseIcsTime(startProp.value, '09:00', startTzid);
-      let endTime = parseIcsTime(endProp.value, '10:15', endTzid);
+      let endTime = endProp
+        ? parseIcsTime(endProp.value, '10:15', endTzid)
+        : (() => {
+            const durationMin = durationProp ? parseIcsDuration(durationProp.value) : 50;
+            const [sh, sm] = startTime.split(':').map(Number);
+            const startMin = (isNaN(sh) ? 9 : sh) * 60 + (isNaN(sm) ? 0 : sm);
+            const calcEnd = Math.min(23 * 60 + 59, startMin + durationMin);
+            const endH = Math.floor(calcEnd / 60).toString().padStart(2, '0');
+            const endM = (calcEnd % 60).toString().padStart(2, '0');
+            return `${endH}:${endM}`;
+          })();
 
       // Guarantee chronological order (end time after start time)
       const [sh, sm] = startTime.split(':').map(Number);

@@ -210,11 +210,15 @@ export default function App() {
     resetToSample();
   }, [resetToSample]);
 
+  const isAnyModalOpen =
+    isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen;
+
   useAppShortcuts({
     plans,
     activePlanId,
     isMoreOpen,
     isConfirmingClear,
+    isAnyModalOpen,
     onOpenNewCourse: handleOpenNewCourse,
     onOpenExport: () => handleOpenExport('text'),
     onOpenImport: () => handleOpenImport('excel'),

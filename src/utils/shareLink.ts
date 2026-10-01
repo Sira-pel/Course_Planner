@@ -37,8 +37,9 @@ const VALID_DAYS: Set<DayOfWeek> = new Set([
 function toBase64Url(str: string): string {
   const bytes = new TextEncoder().encode(str);
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
   }
   return btoa(binary)
     .replace(/\+/g, '-')
