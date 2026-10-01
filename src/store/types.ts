@@ -32,6 +32,7 @@ export interface ScheduleState {
   deletePlan: (planId: string) => void;
   toggleGhostPlan: (planId: string) => void;
   clearGhostPlans: () => void;
+  importPlan: (plan: SchedulePlan, asGhost?: boolean) => string;
 
   // Course actions
   addCourse: (course: Course, targetPlanId?: string) => void;
@@ -56,7 +57,10 @@ export interface ScheduleState {
   canUndo: () => boolean;
   canRedo: () => boolean;
 
-  // Settings & Reset
+  // Settings, Shortcuts & Reset
+  customShortcuts: Record<string, string>;
+  setCustomShortcut: (actionId: string, shortcut: string) => void;
+  resetCustomShortcuts: () => void;
   setTheme: (theme: 'light' | 'dark') => void;
   commitTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -79,6 +83,7 @@ export type PersistedSchedule = Pick<
   | 'theme'
   | 'semesterStart'
   | 'semesterEnd'
+  | 'customShortcuts'
 > & {
   version: number;
 };

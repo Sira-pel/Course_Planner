@@ -31,6 +31,8 @@ function migrateBackupPayload(raw: Record<string, unknown>): Record<string, unkn
 
 export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
+  | 'setCustomShortcut'
+  | 'resetCustomShortcuts'
   | 'setTheme'
   | 'commitTheme'
   | 'toggleTheme'
@@ -42,6 +44,21 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
   | 'importFullState'
 > {
   return {
+    setCustomShortcut: (actionId: string, shortcut: string) => {
+      const trimmed = shortcut.trim();
+      const current = get().customShortcuts || {};
+      if (!trimmed) {
+        const next = { ...current };
+        delete next[actionId];
+        set({ customShortcuts: next });
+        return;
+      }
+      set({ customShortcuts: { ...current, [actionId]: trimmed } });
+    },
+
+    resetCustomShortcuts: () => {
+      set({ customShortcuts: {} });
+    },
     setTheme: (theme: 'light' | 'dark') => {
       if (!isThemeName(theme)) return;
       applyDomTheme(theme);

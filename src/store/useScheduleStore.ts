@@ -31,6 +31,7 @@ export const useScheduleStore = create<ScheduleState>()(
       theme: resolveInitialTheme(),
       semesterStart: DEFAULT_SEMESTER_START,
       semesterEnd: DEFAULT_SEMESTER_END,
+      customShortcuts: {},
       past: [],
       future: [],
       ...createPlanSlice(set, get),

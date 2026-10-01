@@ -6,7 +6,7 @@ import type { ScheduleState, StoreGet, StoreSet } from './types';
 
 export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
-  'setActivePlan' | 'createPlan' | 'duplicatePlan' | 'renamePlan' | 'deletePlan' | 'toggleGhostPlan' | 'clearGhostPlans'
+  'setActivePlan' | 'createPlan' | 'duplicatePlan' | 'renamePlan' | 'deletePlan' | 'toggleGhostPlan' | 'clearGhostPlans' | 'importPlan'
 > {
   return {
     setActivePlan: (planId: string) => {
@@ -115,6 +115,31 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
 
     clearGhostPlans: () => {
       set({ ghostPlanIds: [] });
+    },
+
+    importPlan: (plan: SchedulePlan, asGhost: boolean = false) => {
+      const state = get();
+      const existingIds = new Set(state.plans.map((p) => p.id));
+      const newPlanId = existingIds.has(plan.id) ? uniquePlanId(state.plans.map((p) => p.id)) : plan.id;
+
+      const newPlan: SchedulePlan = {
+        ...plan,
+        id: newPlanId,
+      };
+
+      const nextPlans = [...state.plans, newPlan];
+      const nextGhostIds = asGhost
+        ? (state.ghostPlanIds.includes(newPlanId) ? state.ghostPlanIds : [...state.ghostPlanIds, newPlanId])
+        : state.ghostPlanIds.filter((id) => id !== newPlanId);
+      const nextActiveId = asGhost ? state.activePlanId : newPlanId;
+
+      commitWithHistory(set, get, {
+        plans: nextPlans,
+        activePlanId: nextActiveId,
+        ghostPlanIds: nextGhostIds,
+      });
+
+      return newPlanId;
     },
   };
 }

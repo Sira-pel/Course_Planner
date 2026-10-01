@@ -193,21 +193,9 @@ export function MobileDock({
                         }}
                       >
                         <HelpCircle className="w-4 h-4" />
-                        Help & Guide
+                        Help & Shortcuts
                       </button>
                     )}
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="up-more-item up-chrome-btn"
-                      onClick={() => {
-                        onCloseMoreMenu();
-                        onOpenShortcuts();
-                      }}
-                    >
-                      <Keyboard className="w-4 h-4" />
-                      Shortcuts
-                    </button>
                     <button
                       type="button"
                       role="menuitem"

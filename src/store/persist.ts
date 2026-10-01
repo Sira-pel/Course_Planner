@@ -124,10 +124,15 @@ export function partialize(state: ScheduleState): PersistedSchedule {
     theme: state.theme,
     semesterStart: state.semesterStart,
     semesterEnd: state.semesterEnd,
+    customShortcuts: state.customShortcuts || {},
   };
 }
 
 export function rehydratePersistedState(state: ScheduleState): void {
+  state.customShortcuts =
+    typeof state.customShortcuts === 'object' && state.customShortcuts !== null
+      ? state.customShortcuts
+      : {};
   // Verify plans integrity - default to a single blank Plan A if empty
   // or if sanitization filters out every entry (e.g. [null, "bad"]).
   if (!Array.isArray(state.plans) || state.plans.length === 0) {

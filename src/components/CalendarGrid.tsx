@@ -22,7 +22,7 @@ function getTodayDayOfWeek(): DayOfWeek {
 }
 
 interface CalendarGridProps {
-  onEditCourse: (courseId: string) => void;
+  onEditCourse: (courseId: string, planId?: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
   onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
 }

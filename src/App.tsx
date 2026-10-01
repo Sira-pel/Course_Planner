@@ -9,16 +9,17 @@ import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/header/Header';
 import { CalendarGrid } from './components/CalendarGrid';
 import { CourseModal } from './components/course-modal/CourseModal';
-import { ExportModal } from './components/export/ExportModal';
+import { ExportModal, ExportTabType } from './components/export/ExportModal';
 import { ImportModal, ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
-import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { HelpModal } from './components/HelpModal';
+import { HelpModal, HelpTabType } from './components/HelpModal';
+import { ShareImportModal } from './components/ShareImportModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
-import { DayOfWeek } from './types/schedule';
+import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme } from './utils/theme';
+import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
 export default function App() {
   const plans = useScheduleStore((state) => state.plans);
@@ -26,6 +27,8 @@ export default function App() {
   const catalogCount = useScheduleStore((state) => state.catalogCourses.length);
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const duplicatePlan = useScheduleStore((state) => state.duplicatePlan);
+  const importPlan = useScheduleStore((state) => state.importPlan);
+  const toggleTheme = useScheduleStore((state) => state.toggleTheme);
   const undo = useScheduleStore((state) => state.undo);
   const redo = useScheduleStore((state) => state.redo);
   const resetToBlank = useScheduleStore((state) => state.resetToBlank);
@@ -34,15 +37,25 @@ export default function App() {
   // Modals & Sidebar state
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [editingCoursePlanId, setEditingCoursePlanId] = useState<string | null>(null);
   const [modalInitialDay, setModalInitialDay] = useState<DayOfWeek>('monday');
   const [modalInitialStartTime, setModalInitialStartTime] = useState<string>('09:00');
   const [modalInitialMode, setModalInitialMode] = useState<'form' | 'quick'>('form');
+
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportInitialTab, setExportInitialTab] = useState<ExportTabType>('share');
+
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
+
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [helpInitialTab, setHelpInitialTab] = useState<HelpTabType>('workflow');
+
+  const [isShareImportOpen, setIsShareImportOpen] = useState(false);
+  const [sharedPlan, setSharedPlan] = useState<SchedulePlan | null>(null);
+  const [initialManualPaste, setInitialManualPaste] = useState(false);
+
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -55,7 +68,6 @@ export default function App() {
   const handleCloseCourseModal = useCallback(() => setIsCourseModalOpen(false), []);
   const handleCloseExport = useCallback(() => setIsExportOpen(false), []);
   const handleCloseImport = useCallback(() => setIsImportOpen(false), []);
-  const handleCloseShortcuts = useCallback(() => setIsShortcutsOpen(false), []);
   const handleCloseHelp = useCallback(() => setIsHelpOpen(false), []);
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
@@ -66,11 +78,62 @@ export default function App() {
     });
   }, []);
 
+  // Listen for #share=<payload> in URL on mount and on hash change
+  useEffect(() => {
+    const checkHash = () => {
+      const payload = extractSharePayloadFromUrl(window.location.hash);
+      if (payload) {
+        const res = decodePlanFromSharePayload(payload);
+        if (res.success && res.plan) {
+          setSharedPlan(res.plan);
+          setInitialManualPaste(false);
+          setIsShareImportOpen(true);
+        }
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
+  // Handlers for Shared Plan import
+  const handleCompareWithSharedPlan = useCallback(
+    (plan: SchedulePlan) => {
+      importPlan(plan, true);
+      setIsShareImportOpen(false);
+      setSharedPlan(null);
+      if (window.location.hash.includes('share=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    },
+    [importPlan]
+  );
+
+  const handleOpenSharedPlanAsActive = useCallback(
+    (plan: SchedulePlan) => {
+      importPlan(plan, false);
+      setIsShareImportOpen(false);
+      setSharedPlan(null);
+      if (window.location.hash.includes('share=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    },
+    [importPlan]
+  );
+
+  const handleOpenImportShare = useCallback(() => {
+    setSharedPlan(null);
+    setInitialManualPaste(true);
+    setIsShareImportOpen(true);
+  }, []);
+
   // Handler for opening new course modal
   const handleOpenNewCourse = useCallback(
-    (day: DayOfWeek = 'monday', startTime: string = '09:00', mode: 'form' | 'quick' = 'form') => {
+    (day: DayOfWeek = 'monday', startTime: string = '09:00', mode: 'form' | 'quick' = 'form', targetPlanId?: string) => {
       setIsPoolCollapsed(true);
       setEditingCourseId(null);
+      setEditingCoursePlanId(targetPlanId || null);
       setModalInitialDay(day);
       setModalInitialStartTime(startTime);
       setModalInitialMode(mode);
@@ -88,17 +151,26 @@ export default function App() {
   }, [handleOpenNewCourse]);
 
   // Handler for editing an existing course
-  const handleEditCourse = useCallback((courseId: string) => {
+  const handleEditCourse = useCallback((courseId: string, planId?: string) => {
     setIsPoolCollapsed(true);
     setEditingCourseId(courseId);
+    setEditingCoursePlanId(planId || null);
     setModalInitialMode('form');
     setIsCourseModalOpen(true);
   }, []);
 
-  const handleOpenExport = useCallback(() => {
+  const handleOpenExport = useCallback((tab: ExportTabType = 'text') => {
     setIsPoolCollapsed(true);
+    setExportInitialTab(tab);
     setIsExportOpen(true);
   }, []);
+
+  const handleOpenShareModal = useCallback((plan?: SchedulePlan) => {
+    if (plan && plan.id !== activePlanId) {
+      setActivePlan(plan.id);
+    }
+    handleOpenExport('share');
+  }, [activePlanId, handleOpenExport, setActivePlan]);
 
   const handleOpenImport = useCallback((tab: ImportTabType = 'excel') => {
     setIsPoolCollapsed(true);
@@ -106,15 +178,15 @@ export default function App() {
     setIsImportOpen(true);
   }, []);
 
-  const handleOpenShortcuts = useCallback(() => {
+  const handleOpenHelp = useCallback((tab: HelpTabType = 'workflow') => {
     setIsPoolCollapsed(true);
-    setIsShortcutsOpen(true);
-  }, []);
-
-  const handleOpenHelp = useCallback(() => {
-    setIsPoolCollapsed(true);
+    setHelpInitialTab(tab);
     setIsHelpOpen(true);
   }, []);
+
+  const handleOpenShortcuts = useCallback(() => {
+    handleOpenHelp('shortcuts');
+  }, [handleOpenHelp]);
 
   const handleToggleMore = useCallback(() => {
     setIsConfirmingClear(false);
@@ -144,7 +216,12 @@ export default function App() {
     isMoreOpen,
     isConfirmingClear,
     onOpenNewCourse: handleOpenNewCourse,
-    onOpenExport: handleOpenExport,
+    onOpenExport: () => handleOpenExport('text'),
+    onOpenImport: () => handleOpenImport('excel'),
+    onOpenShare: handleOpenShareModal,
+    onTogglePool: () => setIsPoolCollapsed((prev) => !prev),
+    onToggleTheme: toggleTheme,
+    onOpenHelp: handleOpenHelp,
     onOpenShortcuts: handleOpenShortcuts,
     onDuplicatePlan: duplicatePlan,
     onUndo: undo,
@@ -154,7 +231,8 @@ export default function App() {
     onSetConfirmingClear: setIsConfirmingClear,
     onCloseCourseModal: handleCloseCourseModal,
     onCloseExport: handleCloseExport,
-    onCloseShortcuts: handleCloseShortcuts,
+    onCloseHelp: handleCloseHelp,
+    onCloseShareImport: () => setIsShareImportOpen(false),
     onCollapsePool: handleCollapsePool,
   });
 
@@ -165,11 +243,13 @@ export default function App() {
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-          onOpenExport={handleOpenExport}
+          onOpenExport={() => handleOpenExport('text')}
           onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
-          onOpenHelp={handleOpenHelp}
+          onOpenHelp={() => handleOpenHelp('workflow')}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
+          onOpenShare={handleOpenShareModal}
+          onOpenImportShare={handleOpenImportShare}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -204,7 +284,7 @@ export default function App() {
         onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
-        onOpenHelp={handleOpenHelp}
+        onOpenHelp={() => handleOpenHelp('workflow')}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}
@@ -216,6 +296,7 @@ export default function App() {
         isOpen={isCourseModalOpen}
         onClose={handleCloseCourseModal}
         editingCourseId={editingCourseId}
+        targetPlanId={editingCoursePlanId}
         initialDay={modalInitialDay}
         initialStartTime={modalInitialStartTime}
         initialMode={modalInitialMode}
@@ -223,6 +304,7 @@ export default function App() {
 
       <ExportModal
         isOpen={isExportOpen}
+        initialTab={exportInitialTab}
         onClose={handleCloseExport}
       />
 
@@ -232,18 +314,23 @@ export default function App() {
         onClose={handleCloseImport}
       />
 
-      <KeyboardShortcutsModal
-        isOpen={isShortcutsOpen}
-        onClose={handleCloseShortcuts}
-      />
-
       <HelpModal
         isOpen={isHelpOpen}
+        initialTab={helpInitialTab}
         onClose={handleCloseHelp}
         onOpenImport={handleOpenImport}
-        onOpenExport={handleOpenExport}
+        onOpenExport={() => handleOpenExport('text')}
         onOpenCatalog={() => setIsPoolCollapsed(false)}
         onOpenShortcuts={handleOpenShortcuts}
+      />
+
+      <ShareImportModal
+        isOpen={isShareImportOpen}
+        onClose={() => setIsShareImportOpen(false)}
+        sharedPlan={sharedPlan}
+        onCompareWithSchedule={handleCompareWithSharedPlan}
+        onOpenAsActivePlan={handleOpenSharedPlanAsActive}
+        initialManualPaste={initialManualPaste}
       />
     </div>
   );

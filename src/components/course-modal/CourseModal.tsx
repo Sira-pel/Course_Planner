@@ -25,6 +25,7 @@ interface CourseModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingCourseId?: string | null;
+  targetPlanId?: string | null;
   initialDay?: DayOfWeek;
   initialStartTime?: string;
   initialMode?: 'form' | 'quick';
@@ -42,6 +43,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   isOpen,
   onClose,
   editingCourseId,
+  targetPlanId,
   initialDay = 'monday',
   initialStartTime = '09:00',
   initialMode = 'form',
@@ -72,10 +74,15 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     }))
   );
 
-  const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
+  const effectivePlanId = targetPlanId || activePlanId;
+  const currentPlan = useMemo(
+    () => plans.find((p) => p.id === effectivePlanId) || plans.find((p) => p.id === activePlanId) || plans[0],
+    [plans, effectivePlanId, activePlanId]
+  );
+  const isTargetGhost = effectivePlanId !== activePlanId;
 
   const existingCourse = editingCourseId
-    ? activePlan?.courses.find((c) => c.id === editingCourseId) ||
+    ? currentPlan?.courses.find((c) => c.id === editingCourseId) ||
       catalogCourses.find((c) => c.id === editingCourseId)
     : null;
 
@@ -156,7 +163,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     }
 
     const timer = setTimeout(() => {
-      const parsed = parseBulkCourses(rawText, activePlan?.courses.length || 0);
+      const parsed = parseBulkCourses(rawText, currentPlan?.courses.length || 0);
       const newItems: EditableRecognizedItem[] = parsed.map((res, idx) => {
         if (res.success && res.course) {
           return {
@@ -197,18 +204,18 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [rawText, activePlan?.courses.length]);
+  }, [rawText, currentPlan?.courses.length]);
 
   const selectedCourses = useMemo(() => {
     return recognizedItems.filter((item) => item.selected && !item.hasError).map((item) => item.course);
   }, [recognizedItems]);
 
   const potentialConflicts = useMemo(() => {
-    if (!activePlan || selectedCourses.length === 0) return [];
+    if (!currentPlan || selectedCourses.length === 0) return [];
     const collisionList: { newCode: string; existingCode: string; day: string; time: string }[] = [];
 
     selectedCourses.forEach((newC) => {
-      activePlan.courses.forEach((existC) => {
+      currentPlan.courses.forEach((existC) => {
         newC.sessions.forEach((s1) => {
           existC.sessions.forEach((s2) => {
             if (checkSessionCollision(s1, s2)) {
@@ -225,7 +232,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     });
 
     return collisionList;
-  }, [selectedCourses, activePlan]);
+  }, [selectedCourses, currentPlan]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -252,7 +259,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setSection('');
       setInstructor('');
       setCredits(3);
-      setColor(getNextColor(activePlanId));
+      setColor(getNextColor(effectivePlanId));
       const startTime = toInputTime(initialStartTime, '09:00');
       setPatterns([
         {
@@ -266,7 +273,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setDetailsOpen(false);
     }
     setError(null);
-  }, [existingCourse, isOpen, initialDay, initialStartTime, initialMode, activePlanId, getNextColor]);
+  }, [existingCourse, isOpen, initialDay, initialStartTime, initialMode, effectivePlanId, getNextColor]);
 
   const replayShake = (field: 'code' | 'name' | 'times') => {
     setShakeField(null);
@@ -477,10 +484,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       if (existingCourse.id.startsWith('cat_')) {
         updateCatalogCourse(courseData);
       } else {
-        updateCourse(courseData, activePlanId);
+        updateCourse(courseData, effectivePlanId);
       }
     } else {
-      addCourse(courseData, activePlanId);
+      addCourse(courseData, effectivePlanId);
     }
 
     onClose();
@@ -491,7 +498,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setError('Select at least one recognized course, or paste a syllabus line.');
       return;
     }
-    bulkAddCourses(selectedCourses, activePlanId);
+    bulkAddCourses(selectedCourses, effectivePlanId);
     onClose();
   };
 
@@ -568,9 +575,16 @@ export const CourseModal: React.FC<CourseModalProps> = ({
             <h2 id="course-modal-title" className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
               {existingCourse ? 'Edit course' : 'Add course'}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
-              {activePlan?.name || 'Active plan'}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                {currentPlan?.name || 'Active plan'}
+              </p>
+              {isTargetGhost && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-violet-100 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 shrink-0">
+                  Comparing Plan
+                </span>
+              )}
+            </div>
           </div>
           <button
             type="button"
@@ -710,7 +724,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                     if (existingCourse.id.startsWith('cat_')) {
                       removeFromCatalog(existingCourse.id);
                     } else {
-                      deleteCourse(existingCourse.id, activePlanId);
+                      deleteCourse(existingCourse.id, effectivePlanId);
                     }
                     onClose();
                   }}

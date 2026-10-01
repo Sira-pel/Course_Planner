@@ -30,6 +30,8 @@ interface HeaderProps {
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onOpenCatalog: () => void;
+  onOpenShare?: (plan?: SchedulePlan) => void;
+  onOpenImportShare?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,6 +41,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShortcuts,
   onOpenHelp,
   onOpenCatalog,
+  onOpenShare,
+  onOpenImportShare,
 }) => {
   const {
     plans,
@@ -552,6 +556,7 @@ export const Header: React.FC<HeaderProps> = ({
               setPlanIdConfirmDelete(null);
             }}
             onCancelDelete={() => setPlanIdConfirmDelete(null)}
+            onSharePlan={(plan) => onOpenShare?.(plan)}
           />
 
           <div className="hidden sm:flex items-center gap-1.5 min-w-0 text-xs text-slate-600 dark:text-slate-400 flex-1">
@@ -593,6 +598,8 @@ export const Header: React.FC<HeaderProps> = ({
             const newPlanId = createPlan();
             toggleGhostPlan(newPlanId);
           }}
+          onOpenShare={() => onOpenShare?.()}
+          onImportFriendLink={() => onOpenImportShare?.()}
         />
       </div>
 

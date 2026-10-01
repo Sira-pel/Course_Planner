@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   HelpCircle,
   X,
@@ -14,9 +14,14 @@ import {
   ArrowRight,
   Sparkles,
   ExternalLink,
+  Keyboard,
+  RotateCcw,
+  Edit3,
 } from 'lucide-react';
+import { useScheduleStore } from '../store/useScheduleStore';
+import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
 
-export type HelpTabType = 'workflow' | 'pool' | 'import' | 'export';
+export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -37,7 +42,57 @@ export const HelpModal: React.FC<HelpModalProps> = ({
   onOpenCatalog,
   onOpenShortcuts,
 }) => {
+  const customShortcuts = useScheduleStore((state) => state.customShortcuts);
+  const setCustomShortcut = useScheduleStore((state) => state.setCustomShortcut);
+  const resetCustomShortcuts = useScheduleStore((state) => state.resetCustomShortcuts);
+
   const [activeTab, setActiveTab] = useState<HelpTabType>(initialTab);
+  const [editingShortcutId, setEditingShortcutId] = useState<string | null>(null);
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab, isOpen]);
+
+  // Inline key combination recorder
+  useEffect(() => {
+    if (!editingShortcutId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (['Alt', 'Control', 'Shift', 'Meta'].includes(e.key)) return;
+
+      if (e.key === 'Escape') {
+        setEditingShortcutId(null);
+        return;
+      }
+
+      const parts: string[] = [];
+      if (e.altKey) parts.push('Alt');
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.metaKey) parts.push('Cmd');
+
+      let mainKey = e.key.toUpperCase();
+      if (e.code.startsWith('Key')) {
+        mainKey = e.code.replace('Key', '');
+      } else if (e.code.startsWith('Digit')) {
+        mainKey = e.code.replace('Digit', '');
+      }
+
+      parts.push(mainKey);
+      const combo = parts.join('+');
+
+      setCustomShortcut(editingShortcutId, combo);
+      setEditingShortcutId(null);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [editingShortcutId, setCustomShortcut]);
 
   if (!isOpen) return null;
 
@@ -81,7 +136,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('workflow')}
@@ -93,6 +148,19 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           >
             <Compass className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Workflow</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('shortcuts')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center ${
+              activeTab === 'shortcuts'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Keyboard className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Shortcuts</span>
           </button>
 
           <button
@@ -137,6 +205,90 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
         {/* Tab Content Body */}
         <div className="flex-1 overflow-y-auto py-4 space-y-4 text-xs">
+          {activeTab === 'shortcuts' && (
+            <div className="space-y-3.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+                <div className="min-w-0 pr-2">
+                  <p className="font-semibold text-indigo-950 dark:text-indigo-200 text-xs">
+                    Clash-Free Keyboard Shortcuts
+                  </p>
+                  <p className="text-indigo-900/80 dark:text-indigo-300 text-[11px] mt-0.5 leading-relaxed">
+                    Built with an Alt-based modifier scheme so shortcuts never clash with browser search bars or system tabs.
+                  </p>
+                </div>
+                {Object.keys(customShortcuts).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={resetCustomShortcuts}
+                    className="px-2.5 py-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/60 rounded-lg flex items-center gap-1.5 transition-colors shrink-0 up-chrome-btn"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset all
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {SHORTCUT_DEFINITIONS.map((s) => {
+                  const currentBinding = customShortcuts[s.id] || s.defaultKey;
+                  const isEditing = editingShortcutId === s.id;
+                  const keyChips = formatShortcutKeys(currentBinding, isMac);
+
+                  return (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 text-xs gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 dark:text-white truncate">
+                            {s.name}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300">
+                            {s.category}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate mt-0.5">
+                          {s.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isEditing ? (
+                          <span className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/80 rounded-lg animate-pulse border border-indigo-300 dark:border-indigo-700">
+                            Press keys... (Esc to cancel)
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {keyChips.map((chip, idx) => (
+                              <kbd
+                                key={idx}
+                                className="px-2 py-0.8 rounded font-mono font-bold bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs text-[11px]"
+                              >
+                                {chip}
+                              </kbd>
+                            ))}
+                          </div>
+                        )}
+
+                        {s.isCustomizable && !isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingShortcutId(s.id)}
+                            className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors up-chrome-btn"
+                            title="Rebind shortcut"
+                            aria-label={`Rebind ${s.name}`}
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {activeTab === 'workflow' && (
             <div className="space-y-3.5 animate-in fade-in duration-150">
               <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
@@ -206,18 +358,13 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
               <div className="pt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                 <span>Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[10px]">Ctrl+Z</kbd> anytime to undo accidental changes.</span>
-                {onOpenShortcuts && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenShortcuts();
-                    }}
-                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1"
-                  >
-                    Shortcuts list <ArrowRight className="w-3 h-3" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('shortcuts')}
+                  className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1"
+                >
+                  Shortcuts list <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
             </div>
           )}

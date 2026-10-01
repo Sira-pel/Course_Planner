@@ -29,6 +29,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const {
     plans,
     activePlanId,
+    ghostPlanIds,
     catalogCourses,
     removeFromCatalog,
     addCourseFromPool,
@@ -38,6 +39,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     useShallow((state) => ({
       plans: state.plans,
       activePlanId: state.activePlanId,
+      ghostPlanIds: state.ghostPlanIds,
       catalogCourses: state.catalogCourses,
       removeFromCatalog: state.removeFromCatalog,
       addCourseFromPool: state.addCourseFromPool,
@@ -52,6 +54,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [confirmDeleteCourseId, setConfirmDeleteCourseId] = useState<string | null>(null);
+  const [targetPlanId, setTargetPlanId] = useState<string>(activePlanId);
 
   const tabsRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
@@ -60,33 +63,43 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const searchRef = useRef<HTMLInputElement>(null);
   const wasOverlayOpenRef = useRef(false);
 
+  useEffect(() => {
+    if (!plans.some((p) => p.id === targetPlanId)) {
+      setTargetPlanId(activePlanId);
+    }
+  }, [plans, activePlanId, targetPlanId]);
+
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
-
-  const activeCourseKeys = useMemo(() => {
-    if (!activePlan) return new Set<string>();
-    return new Set(activePlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
-  }, [activePlan]);
-
-  const activePlanDirectIds = useMemo(() => {
-    if (!activePlan) return new Set<string>();
-    return new Set(activePlan.courses.map((c) => c.id));
-  }, [activePlan]);
-
-  const isEnrolledInActivePlan = useCallback(
-    (catalogItem: Course): boolean => {
-      if (!activePlan) return false;
-      if (activeCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
-        return true;
-      }
-      return activePlanDirectIds.has(catalogItem.id);
-    },
-    [activePlan, activeCourseKeys, activePlanDirectIds]
+  const targetPlan = useMemo(
+    () => plans.find((p) => p.id === targetPlanId) || activePlan,
+    [plans, targetPlanId, activePlan]
   );
 
-  const activeSessionsByDay = useMemo(() => {
+  const targetCourseKeys = useMemo(() => {
+    if (!targetPlan) return new Set<string>();
+    return new Set(targetPlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
+  }, [targetPlan]);
+
+  const targetPlanDirectIds = useMemo(() => {
+    if (!targetPlan) return new Set<string>();
+    return new Set(targetPlan.courses.map((c) => c.id));
+  }, [targetPlan]);
+
+  const isEnrolledInTargetPlan = useCallback(
+    (catalogItem: Course): boolean => {
+      if (!targetPlan) return false;
+      if (targetCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
+        return true;
+      }
+      return targetPlanDirectIds.has(catalogItem.id);
+    },
+    [targetPlan, targetCourseKeys, targetPlanDirectIds]
+  );
+
+  const targetSessionsByDay = useMemo(() => {
     const map = new Map<DayOfWeek, Array<{ start: number; end: number; course: Course }>>();
-    if (!activePlan) return map;
-    for (const c of activePlan.courses) {
+    if (!targetPlan) return map;
+    for (const c of targetPlan.courses) {
       for (const s of c.sessions) {
         const start = timeToMinutes(s.startTime);
         const end = timeToMinutes(s.endTime);
@@ -100,14 +113,14 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       }
     }
     return map;
-  }, [activePlan]);
+  }, [targetPlan]);
 
-  const findConflictInActivePlan = useCallback(
+  const findConflictInTargetPlan = useCallback(
     (catalogItem: Course): Course | null => {
-      if (!activePlan || activeSessionsByDay.size === 0) return null;
+      if (!targetPlan || targetSessionsByDay.size === 0) return null;
 
       for (const poolSession of catalogItem.sessions) {
-        const candidates = activeSessionsByDay.get(poolSession.day);
+        const candidates = targetSessionsByDay.get(poolSession.day);
         if (!candidates) continue;
         const sStart = timeToMinutes(poolSession.startTime);
         const sEnd = timeToMinutes(poolSession.endTime);
@@ -122,7 +135,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       }
       return null;
     },
-    [activePlan, activeSessionsByDay]
+    [targetPlan, targetSessionsByDay]
   );
 
   const filteredCourses = useMemo(() => {
@@ -137,16 +150,16 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
       if (!matchesSearch) return false;
 
-      const inPlan = isEnrolledInActivePlan(c);
+      const inPlan = isEnrolledInTargetPlan(c);
       if (filterMode === 'in_plan') return inPlan;
       if (filterMode === 'not_in_plan') return !inPlan;
       return true;
     });
-  }, [catalogCourses, searchQuery, filterMode, isEnrolledInActivePlan]);
+  }, [catalogCourses, searchQuery, filterMode, isEnrolledInTargetPlan]);
 
   const totalInPlan = useMemo(() => {
-    return activePlan ? activePlan.courses.length : 0;
-  }, [activePlan]);
+    return targetPlan ? targetPlan.courses.length : 0;
+  }, [targetPlan]);
 
   const usedInAnyPlanCount = useMemo(() => {
     const usedKeys = new Set<string>();
@@ -274,13 +287,13 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   }, []);
 
   const handleAddToPlan = useCallback(
-    (catalogId: string) => addCourseFromPool(catalogId, activePlanId),
-    [addCourseFromPool, activePlanId]
+    (catalogId: string) => addCourseFromPool(catalogId, targetPlan.id),
+    [addCourseFromPool, targetPlan.id]
   );
 
   const handleRemoveFromPlan = useCallback(
-    (catalogId: string) => removeCourseFromPlanByCatalog(catalogId, activePlanId),
-    [removeCourseFromPlanByCatalog, activePlanId]
+    (catalogId: string) => removeCourseFromPlanByCatalog(catalogId, targetPlan.id),
+    [removeCourseFromPlanByCatalog, targetPlan.id]
   );
 
   const countBadge = (
@@ -313,8 +326,12 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       catalogCount={catalogCourses.length}
       totalInPlan={totalInPlan}
       filteredCourses={filteredCourses}
-      activePlanName={activePlan?.name}
+      activePlanName={targetPlan?.name}
       activePlanId={activePlanId}
+      plans={plans}
+      ghostPlanIds={ghostPlanIds}
+      targetPlanId={targetPlanId}
+      onSelectTargetPlan={setTargetPlanId}
       searchRef={searchRef}
       tabsRef={tabsRef}
       pillRef={pillRef}
@@ -330,8 +347,8 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}
       onCancelDelete={handleCancelDelete}
-      isEnrolled={isEnrolledInActivePlan}
-      findConflict={findConflictInActivePlan}
+      isEnrolled={isEnrolledInTargetPlan}
+      findConflict={findConflictInTargetPlan}
       onAddToPlan={handleAddToPlan}
       onRemoveFromPlan={handleRemoveFromPlan}
       unusedInAnyPlanCount={unusedInAnyPlanCount}

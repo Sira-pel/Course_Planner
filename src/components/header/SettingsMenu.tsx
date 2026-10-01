@@ -186,20 +186,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               </button>
               <button
                 type="button"
-                onClick={onOpenShortcuts}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Keyboard />
-                Keyboard shortcuts
-              </button>
-              <button
-                type="button"
                 id="btn-open-help"
                 onClick={onOpenHelp}
                 className="up-settings-item up-chrome-btn"
               >
                 <HelpCircle />
-                Help & Guide
+                Help & Shortcuts
               </button>
             </div>
 
