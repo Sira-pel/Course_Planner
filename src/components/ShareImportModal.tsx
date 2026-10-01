@@ -85,7 +85,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -117,7 +117,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0 text-xs">
           {(!sharedPlan || initialManualPaste) && !parsedPlan && (
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <label htmlFor="share-link-input" className="font-semibold text-slate-700 dark:text-slate-300">
                 Paste your friend's share link or code:
               </label>
@@ -127,7 +127,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                 onChange={(e) => handleParseInput(e.target.value)}
                 placeholder="https://...#share=... or paste code directly"
                 rows={3}
-                className="w-full text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full max-w-full min-w-0 text-base sm:text-xs font-mono p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none break-all whitespace-pre-wrap"
               />
               {errorMessage && (
                 <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">
@@ -139,9 +139,9 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
           )}
 
           {parsedPlan && (
-            <div className="space-y-3.5">
+            <div className="space-y-3.5 min-w-0">
               {/* Plan Name Editable Input */}
-              <div>
+              <div className="min-w-0">
                 <label htmlFor="friend-plan-name" className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Plan Name
                 </label>
@@ -150,7 +150,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                   type="text"
                   value={planName}
                   onChange={(e) => setPlanName(e.target.value)}
-                  className="mt-1 w-full text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  className="mt-1 w-full min-w-0 text-base sm:text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -214,11 +214,11 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-center"
+            className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-center"
           >
             Cancel
           </button>
@@ -231,7 +231,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                   onOpenAsActivePlan(currentPlanToUse);
                   onClose();
                 }}
-                className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5"
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5"
                 title="Add to plans and make it your active plan"
               >
                 <Check className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                   onCompareWithSchedule(currentPlanToUse);
                   onClose();
                 }}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs"
                 title="Overlay alongside your active schedule to compare times"
               >
                 <Layers className="w-3.5 h-3.5" />

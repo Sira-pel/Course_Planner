@@ -221,12 +221,22 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-modal-title"
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
+            <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-white truncate">
               Export Schedule & Backup
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
@@ -324,8 +334,8 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
           {/* Tab 2: Share Link (Send to friends or paste friend link) */}
           {activeTab === 'share' && (
-            <div className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+            <div className="space-y-4 min-w-0">
+              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
@@ -337,21 +347,21 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2.5 min-w-0">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Your Shareable Schedule Link
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
                   <input
                     type="text"
                     readOnly
                     value={shareUrl}
-                    className="flex-1 px-3 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all"
+                    className="flex-1 min-w-0 px-3 py-2 text-base sm:text-xs font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all"
                   />
                   <button
                     type="button"
                     onClick={handleCopyShareUrl}
-                    className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shrink-0 transition-colors shadow-xs up-chrome-btn"
+                    className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-xs up-chrome-btn"
                   >
                     {copiedShareUrl ? (
                       <>
@@ -366,19 +376,19 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                     )}
                   </button>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">
-                  How it works:
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">
+                    How it works:
+                  </div>
+                  <div>• Your active schedule (<strong>{activePlan?.name}</strong>) is encoded safely into the link.</div>
+                  <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
+                  <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
                 </div>
-                <div>• Your active schedule (<strong>{activePlan?.name}</strong>) is encoded safely into the link.</div>
-                <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
-                <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
               </div>
 
               {/* Friend's Share Link Input Space */}
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="min-w-0">
                 <FriendShareImportTab
                   onCompareWithSchedule={(plan) => {
                     importPlan(plan, true);

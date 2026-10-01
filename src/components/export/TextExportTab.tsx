@@ -18,7 +18,7 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
   onCopy,
 }) => {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
           <button
@@ -59,14 +59,14 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
         <button
           type="button"
           onClick={onCopy}
-          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
         >
           {copiedText ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copiedText ? 'Copied to Clipboard!' : 'Copy as Text'}</span>
         </button>
       </div>
 
-      <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+      <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-all">
         {generatedText}
       </pre>
       <p className="text-[11px] text-slate-600 dark:text-slate-300">

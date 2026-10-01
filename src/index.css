@@ -1329,7 +1329,7 @@ body[data-up-pool-open] .up-fab-cluster {
   position: relative;
 }
 
-.up-pool-search-wrap svg {
+.up-pool-search-wrap > svg {
   position: absolute;
   left: 10px;
   top: 50%;
@@ -1341,7 +1341,7 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-pool-input {
   width: 100%;
   min-height: 36px;
-  padding: 0 28px 0 32px;
+  padding: 0 36px 0 32px;
   border: 1px solid var(--up-line);
   border-radius: 6px;
   background: var(--up-raised);
@@ -1365,8 +1365,9 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-pool-search-clear {
   position: absolute;
   right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1647,14 +1648,24 @@ body[data-up-pool-open] .up-fab-cluster {
     min-height: 44px;
   }
 
+  .up-pool-input {
+    font-size: 16px;
+    padding-right: 50px;
+  }
+
   .up-pool-create {
     width: 44px;
     height: 44px;
   }
 
   .up-pool-icon-hit,
-  .up-pool-handle-hit,
+  .up-pool-handle-hit {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .up-pool-search-clear {
+    right: 2px;
     min-width: 44px;
     min-height: 44px;
   }

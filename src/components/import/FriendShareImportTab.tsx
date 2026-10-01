@@ -53,7 +53,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
     : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* Informational Banner */}
       <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
         <div className="flex items-center gap-2 mb-1">
@@ -68,7 +68,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
       </div>
 
       {/* Input area */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0">
         <label
           htmlFor="friend-share-link-input"
           className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
@@ -81,7 +81,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
           onChange={(e) => handleParseInput(e.target.value)}
           placeholder="https://uniplan.app/#share=... or paste code directly"
           rows={3}
-          className="w-full text-xs font-mono p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none"
+          className="w-full max-w-full min-w-0 text-base sm:text-xs font-mono p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none break-all whitespace-pre-wrap"
         />
         {errorMessage && (
           <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">
@@ -93,9 +93,9 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
 
       {/* Plan Preview when valid */}
       {parsedPlan && currentPlanToUse && (
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3.5 animate-in fade-in">
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3.5 animate-in fade-in min-w-0">
           {/* Plan Name */}
-          <div>
+          <div className="min-w-0">
             <label
               htmlFor="friend-plan-name"
               className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
@@ -107,7 +107,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
               type="text"
               value={planName}
               onChange={(e) => setPlanName(e.target.value)}
-              className="mt-1 w-full text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              className="mt-1 w-full min-w-0 text-base sm:text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -165,7 +165,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
             <button
               type="button"
               onClick={() => onOpenAsActivePlan(currentPlanToUse)}
-              className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors up-chrome-btn"
+              className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors up-chrome-btn"
             >
               <Check className="w-3.5 h-3.5" />
               Open as Active Plan
@@ -173,7 +173,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
             <button
               type="button"
               onClick={() => onCompareWithSchedule(currentPlanToUse)}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors up-chrome-btn"
+              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors up-chrome-btn"
             >
               <Layers className="w-3.5 h-3.5" />
               Compare with my Schedule

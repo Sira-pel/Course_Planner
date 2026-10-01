@@ -166,7 +166,9 @@ export const CalendarGrid = memo(function CalendarGrid({
   }, [currentDayOfWeek]);
 
   const gutterWidth = containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
-  const colWidth = days.length > 0 ? (containerWidth - gutterWidth) / days.length : 120;
+  const minGridWidth = days.length > 5 ? gutterWidth + days.length * 64 : undefined;
+  const effectiveGridWidth = minGridWidth ? Math.max(containerWidth, minGridWidth) : containerWidth;
+  const colWidth = days.length > 0 ? (effectiveGridWidth - gutterWidth) / days.length : 120;
 
   // Responsive day formatting:
   // - Super small (< 68px col width): M, T, W, TH, F, SA, SU
@@ -183,12 +185,16 @@ export const CalendarGrid = memo(function CalendarGrid({
     >
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
       <div className="up-scroll flex-1 overflow-auto relative flex flex-col w-full max-w-full">
-        {/* Day Headers (Sticky at top of scroll area) */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky top-0 z-30 shadow-2xs w-full max-w-full">
+        <div
+          className="flex flex-col flex-1 min-h-0 w-full"
+          style={{ minWidth: minGridWidth ? `${minGridWidth}px` : '100%' }}
+        >
+          {/* Day Headers (Sticky at top of scroll area) */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky top-0 z-30 shadow-2xs w-full max-w-full">
           {/* Top-left corner time label */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="h-11 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 select-none bg-slate-100 dark:bg-slate-950"
+            className="h-11 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 select-none bg-slate-100 dark:bg-slate-950 sticky left-0 z-40"
           >
             <Clock className="w-3.5 h-3.5" />
           </div>
@@ -285,7 +291,7 @@ export const CalendarGrid = memo(function CalendarGrid({
           {/* Time Gutter (Left Column) */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 relative z-10"
+            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky left-0 z-20"
           >
             {hourMarks.map((hour, idx) => {
               const timeStr = containerWidth < 380
@@ -372,6 +378,7 @@ export const CalendarGrid = memo(function CalendarGrid({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </div>

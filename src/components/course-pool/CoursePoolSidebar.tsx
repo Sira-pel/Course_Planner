@@ -62,6 +62,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const pillMetricsRef = useRef({ x: -1, w: -1 });
   const searchRef = useRef<HTMLInputElement>(null);
   const wasOverlayOpenRef = useRef(false);
+  const desktopRootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!plans.some((p) => p.id === targetPlanId)) {
@@ -262,6 +263,53 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     if (trigger instanceof HTMLElement) trigger.focus();
   }, [isCollapsed, layout]);
 
+  useEffect(() => {
+    if (isCollapsed || layout !== 'desktop') return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // Do not collapse if click was inside an open modal, dialog, or dropdown menu
+      if (
+        target.closest('[role="dialog"]') ||
+        target.closest('.course-modal-backdrop') ||
+        target.closest('.course-modal-sheet') ||
+        target.closest('.up-menu')
+      ) {
+        return;
+      }
+      if (desktopRootRef.current && !desktopRootRef.current.contains(target)) {
+        onToggleCollapse();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (e.defaultPrevented) return;
+        // If an open modal or dialog is currently present, let that dialog handle Escape first
+        if (
+          document.querySelector('[role="dialog"]') ||
+          document.querySelector('.course-modal-backdrop') ||
+          document.querySelector('.course-modal-sheet')
+        ) {
+          return;
+        }
+        // If search input has text and is focused, let handleSearchKeyDown clear search first
+        if (searchQuery.trim() !== '' && document.activeElement === searchRef.current) {
+          return;
+        }
+        onToggleCollapse();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isCollapsed, layout, onToggleCollapse, searchQuery]);
+
   const openNewCourse = () => {
     onOpenNewCourse('form');
   };
@@ -375,7 +423,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   return (
     <>
       {layout === 'desktop' && (
-        <div className="up-pool-desktop">
+        <div ref={desktopRootRef} className="up-pool-desktop">
           <button
             type="button"
             id="course-pool-collapsed"
