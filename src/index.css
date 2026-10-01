@@ -2067,7 +2067,12 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
 
 #course-paste {
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#course-paste::-webkit-scrollbar {
+  display: none;
 }
 
 .course-morph {
@@ -2077,6 +2082,7 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
   overflow-y: auto;
   overflow-anchor: none;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .course-acc {

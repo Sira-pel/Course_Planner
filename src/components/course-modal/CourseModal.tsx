@@ -164,44 +164,52 @@ export const CourseModal: React.FC<CourseModalProps> = ({
 
     const timer = setTimeout(() => {
       const parsed = parseBulkCourses(rawText, currentPlan?.courses.length || 0);
-      const newItems: EditableRecognizedItem[] = parsed.map((res, idx) => {
-        if (res.success && res.course) {
-          return {
-            id: res.course.id || prefixedId('rec'),
-            rawText: res.rawText,
-            course: res.course,
-            selected: true,
-            isEditing: false,
-          };
-        }
-        const fallbackCourse: Course = {
-          id: prefixedId('rec_fail'),
-          code: 'COURSE 101',
-          name: res.rawText.slice(0, 40) || 'Custom Course',
-          credits: 3,
-          color: COURSE_COLORS[idx % COURSE_COLORS.length],
-          sessions: [
-            {
-              id: `s_fail_${idx}`,
-              day: 'monday',
-              startTime: '09:00',
-              endTime: '10:30',
-            },
-          ],
-        };
-        return {
-          id: fallbackCourse.id,
-          rawText: res.rawText,
-          course: fallbackCourse,
-          selected: false,
-          isEditing: false,
-          hasError: true,
-          errorMessage: res.error || 'Check formatting',
-        };
-      });
+      setRecognizedItems((prev) => {
+        return parsed.map((res, idx) => {
+          const prevItem = prev[idx];
+          const stableId = prevItem?.id || `rec_${idx}`;
+          const isSelected = prevItem ? prevItem.selected : true;
+          const isEditing = prevItem ? prevItem.isEditing : false;
 
-      setRecognizedItems(newItems);
-    }, 150);
+          if (res.success && res.course) {
+            return {
+              id: stableId,
+              rawText: res.rawText,
+              course: {
+                ...res.course,
+                id: prevItem?.course?.id || res.course.id || `c_rec_${idx}`,
+              },
+              selected: isSelected,
+              isEditing,
+            };
+          }
+          const fallbackCourse: Course = {
+            id: prevItem?.course?.id || `c_fail_${idx}`,
+            code: 'COURSE 101',
+            name: res.rawText.slice(0, 40) || 'Custom Course',
+            credits: 3,
+            color: COURSE_COLORS[idx % COURSE_COLORS.length],
+            sessions: [
+              {
+                id: `s_fail_${idx}`,
+                day: 'monday',
+                startTime: '09:00',
+                endTime: '10:30',
+              },
+            ],
+          };
+          return {
+            id: stableId,
+            rawText: res.rawText,
+            course: fallbackCourse,
+            selected: false,
+            isEditing,
+            hasError: true,
+            errorMessage: res.error || 'Check formatting',
+          };
+        });
+      });
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [rawText, currentPlan?.courses.length]);

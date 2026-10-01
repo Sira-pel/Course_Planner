@@ -43,12 +43,15 @@ export const TTH: DayOfWeek[] = ['tuesday', 'thursday'];
 export const MTH: DayOfWeek[] = ['monday', 'thursday'];
 export const TF: DayOfWeek[] = ['tuesday', 'friday'];
 export const MW: DayOfWeek[] = ['monday', 'wednesday'];
+export const MF: DayOfWeek[] = ['monday', 'friday'];
+export const MT: DayOfWeek[] = ['monday', 'tuesday'];
 
 export const DAY_PRESETS = [
-  { label: 'MTh', days: MTH },
-  { label: 'TF', days: TF },
   { label: 'MW', days: MW },
   { label: 'TTh', days: TTH },
+  { label: 'MTh', days: MTH },
+  { label: 'TF', days: TF },
+  { label: 'MF', days: MF },
 ] as const;
 
 export const FALLBACK_DAYS: DayOfWeek[] = ['monday'];
@@ -73,6 +76,8 @@ export function formatDaysShort(days: DayOfWeek[]): string {
   if (daysEqual(sorted, MTH)) return 'MTh';
   if (daysEqual(sorted, TF)) return 'TF';
   if (daysEqual(sorted, MW)) return 'MW';
+  if (daysEqual(sorted, MF)) return 'MF';
+  if (daysEqual(sorted, MT)) return 'MT';
   return sorted.map((d) => DAYS_LIST.find((x) => x.id === d)?.label ?? d).join(' ');
 }
 
