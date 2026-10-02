@@ -11,9 +11,9 @@ import {
 } from './meetingPatterns';
 
 const inputClass =
-  'course-input w-full px-3 py-2 text-base sm:text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0';
+  'course-input w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0';
 
-const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
+const labelClass = 'block text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
 
 export interface QuickAddPanelProps {
   incomingRef?: Ref<HTMLDivElement>;
@@ -67,7 +67,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             onChange={(e) => onRawTextChange(e.target.value)}
             rows={5}
             placeholder={'CS 101 Computer science MWF 09:00-10:00\nITM 380 Cloud Computing MW 8:30-10:00'}
-            className={`${inputClass} min-h-36 resize-none font-mono text-base sm:text-[13px] leading-relaxed pr-24 break-all whitespace-pre-wrap min-w-0`}
+            className={`${inputClass} min-h-32 sm:min-h-36 resize-none font-mono text-xs sm:text-[13px] leading-relaxed pr-20 sm:pr-24 break-all whitespace-pre-wrap min-w-0`}
           />
           <button
             type="button"

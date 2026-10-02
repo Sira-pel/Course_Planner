@@ -81,7 +81,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
           onChange={(e) => handleParseInput(e.target.value)}
           placeholder="https://uniplan.app/#share=... or paste code directly"
           rows={3}
-          className="w-full max-w-full min-w-0 text-base sm:text-xs font-mono p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 resize-none break-all whitespace-pre-wrap transition-shadow"
+          className="w-full max-w-full min-w-0 text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 resize-none break-all whitespace-pre-wrap transition-shadow"
         />
         {errorMessage && (
           <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">
@@ -107,7 +107,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
               type="text"
               value={planName}
               onChange={(e) => setPlanName(e.target.value)}
-              className="mt-1 w-full min-w-0 text-base sm:text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 transition-shadow"
+              className="mt-1 w-full min-w-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 transition-shadow"
             />
           </div>
 

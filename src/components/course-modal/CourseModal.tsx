@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../../types/schedule';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
+import { EASE_OUT } from '../../utils/motion';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -612,12 +614,16 @@ export const CourseModal: React.FC<CourseModalProps> = ({
             role="tablist"
             aria-label="Add course method"
           >
-            <span
-              className={`absolute top-1 bottom-1 left-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm pointer-events-none transition-transform duration-[var(--dur-chrome)] ease-[var(--ease-snap)] ${
-                mode === 'form'
-                  ? 'translate-x-0 w-[calc(50%-4px)]'
-                  : 'translate-x-full w-[calc(50%-4px)]'
-              }`}
+            <motion.span
+              className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm pointer-events-none"
+              animate={{
+                x: mode === 'form' ? 0 : '100%',
+              }}
+              style={{
+                left: 4,
+                width: 'calc(50% - 4px)',
+              }}
+              transition={{ type: 'spring', stiffness: 500, damping: 36 }}
             />
             <button
               type="button"
@@ -626,7 +632,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'form'}
               onClick={() => switchMode('form')}
-              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-150 ${
                 mode === 'form'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -641,7 +647,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'quick'}
               onClick={() => switchMode('quick')}
-              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-150 ${
                 mode === 'quick'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -665,61 +671,68 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           ref={clipRef}
           className="course-morph up-scroll mt-3 min-h-0 flex-auto"
         >
-          {mode === 'form' ? (
-            <div className="animate-in fade-in duration-150 ease-out">
-              <CourseForm
-                code={code}
-                name={name}
-                section={section}
-                instructor={instructor}
-                credits={credits}
-                color={color}
-                patterns={patterns}
-                detailsOpen={detailsOpen}
-                detailsSummary={detailsSummary}
-                shakeField={shakeField}
-                isCustomColor={isCustomColor}
-                codeInputRef={codeInputRef}
-                nameInputRef={nameInputRef}
-                startTimeInputRef={startTimeInputRef}
-                onCodeChange={setCode}
-                onNameChange={setName}
-                onSectionChange={setSection}
-                onInstructorChange={setInstructor}
-                onCreditsChange={setCredits}
-                onColorChange={setColor}
-                onToggleDetails={() => setDetailsOpen((open) => !open)}
-                onSubmit={handleFormSubmit}
-                onAddPattern={addPattern}
-                onRemovePattern={removePattern}
-                onUpdatePattern={updatePattern}
-                onTogglePatternDay={togglePatternDay}
-                onApplyDayPreset={applyDayPreset}
-                onSetPatternDuration={setPatternDuration}
-              />
-            </div>
-          ) : (
-            <div className="animate-in fade-in duration-150 ease-out">
-              <QuickAddPanel
-                rawText={rawText}
-                recognizedItems={recognizedItems}
-                selectedCount={selectedCourses.length}
-                potentialConflicts={potentialConflicts}
-                pasteInputRef={pasteInputRef}
-                onRawTextChange={(v) => {
-                  setRawText(v);
-                  setError(null);
-                }}
-                onPasteClipboard={handlePasteClipboard}
-                onToggleSelect={handleToggleSelectItem}
-                onToggleEdit={handleToggleEditItem}
-                onDeleteItem={handleDeleteItem}
-                onUpdateItemCourse={handleUpdateItemCourse}
-                onUpdateItemSessionDays={handleUpdateItemSessionDays}
-                onUpdateItemTimes={handleUpdateItemTimes}
-              />
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.16, ease: EASE_OUT }}
+              className="min-h-full"
+            >
+              {mode === 'form' ? (
+                <CourseForm
+                  code={code}
+                  name={name}
+                  section={section}
+                  instructor={instructor}
+                  credits={credits}
+                  color={color}
+                  patterns={patterns}
+                  detailsOpen={detailsOpen}
+                  detailsSummary={detailsSummary}
+                  shakeField={shakeField}
+                  isCustomColor={isCustomColor}
+                  codeInputRef={codeInputRef}
+                  nameInputRef={nameInputRef}
+                  startTimeInputRef={startTimeInputRef}
+                  onCodeChange={setCode}
+                  onNameChange={setName}
+                  onSectionChange={setSection}
+                  onInstructorChange={setInstructor}
+                  onCreditsChange={setCredits}
+                  onColorChange={setColor}
+                  onToggleDetails={() => setDetailsOpen((open) => !open)}
+                  onSubmit={handleFormSubmit}
+                  onAddPattern={addPattern}
+                  onRemovePattern={removePattern}
+                  onUpdatePattern={updatePattern}
+                  onTogglePatternDay={togglePatternDay}
+                  onApplyDayPreset={applyDayPreset}
+                  onSetPatternDuration={setPatternDuration}
+                />
+              ) : (
+                <QuickAddPanel
+                  rawText={rawText}
+                  recognizedItems={recognizedItems}
+                  selectedCount={selectedCourses.length}
+                  potentialConflicts={potentialConflicts}
+                  pasteInputRef={pasteInputRef}
+                  onRawTextChange={(v) => {
+                    setRawText(v);
+                    setError(null);
+                  }}
+                  onPasteClipboard={handlePasteClipboard}
+                  onToggleSelect={handleToggleSelectItem}
+                  onToggleEdit={handleToggleEditItem}
+                  onDeleteItem={handleDeleteItem}
+                  onUpdateItemCourse={handleUpdateItemCourse}
+                  onUpdateItemSessionDays={handleUpdateItemSessionDays}
+                  onUpdateItemTimes={handleUpdateItemTimes}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className="pt-4 mt-1 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0 bg-white dark:bg-slate-900 min-w-0">

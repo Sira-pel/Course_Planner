@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Download,
   Info,
+  X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Course, SchedulePlan } from '../../types/schedule';
@@ -41,7 +42,9 @@ interface FieldDef {
 const PRIMARY_FIELDS: FieldDef[] = [
   { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, COSC 241' },
   { field: 'name', label: 'Course Name / Title', required: true, hint: 'e.g. Mobile App Dev' },
-  { field: 'schedule', label: 'Day & Time Schedule', required: true, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
+  { field: 'schedule', label: 'Schedule (Days & Times)', required: false, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
+  { field: 'days', label: 'Days (Separate)', required: false, hint: 'e.g. MWF, TTH, Mon/Wed' },
+  { field: 'time', label: 'Time Range (Separate)', required: false, hint: 'e.g. 08:30AM - 10:00AM' },
   { field: 'section', label: 'Section', required: false, hint: 'e.g. 001, 101, A' },
   { field: 'instructor', label: 'Professor / Instructor', required: false, hint: 'e.g. Kabin Antony' },
   { field: 'credits', label: 'Credits', required: false, hint: 'e.g. 3, 4' },
@@ -504,34 +507,49 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           )}
 
           {/* Search, Filter & Bulk Select Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-300" />
+          <div className="space-y-2">
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search courses, professors, sections..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleSelectAll}
-                className="px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Select all ({allCourses.length})
-              </button>
-              <span className="text-slate-300 dark:text-slate-700">|</span>
-              <button
-                type="button"
-                onClick={handleDeselectAll}
-                className="px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Deselect all
-              </button>
+            <div className="flex items-center justify-between text-xs px-0.5 text-slate-600 dark:text-slate-300">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} found
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  Select all ({allCourses.length})
+                </button>
+                <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={handleDeselectAll}
+                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  Deselect all
+                </button>
+              </div>
             </div>
           </div>
 

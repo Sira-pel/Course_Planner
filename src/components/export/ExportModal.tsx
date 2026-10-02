@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -17,6 +18,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { encodePlanToShareUrl } from '../../utils/shareLink';
+import { EASE_OUT } from '../../utils/motion';
 import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
@@ -32,8 +34,11 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose }) => {
-  if (!isOpen) return null;
-  return <ExportModalBody initialTab={initialTab} onClose={onClose} />;
+  return (
+    <AnimatePresence>
+      {isOpen && <ExportModalBody initialTab={initialTab} onClose={onClose} />}
+    </AnimatePresence>
+  );
 };
 
 const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'text', onClose }) => {
@@ -220,18 +225,34 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     }
   };
 
+  const exportTabs: { id: ExportTabType; label: string; mobileLabel?: string; icon: React.ReactNode }[] = [
+    { id: 'text', label: 'Clean Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'share', label: 'Share Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Google Calendar (.ics)', mobileLabel: 'Google Cal (.ics)', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'image', label: 'PNG Snapshot', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'backup', label: 'JSON Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
+  ];
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto"
+    <motion.div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: EASE_OUT }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 4 }}
+        transition={{ duration: 0.22, ease: EASE_OUT }}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
@@ -246,209 +267,191 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0 up-chrome-btn"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Switcher - 2-col on mobile portrait, 5-col on landscape/tablets, flex row on desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            onClick={() => setActiveTab('text')}
-            title="Clean Text"
-            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
-              activeTab === 'text'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate md:whitespace-nowrap">Clean Text</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('share')}
-            title="Share Link"
-            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
-              activeTab === 'share'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Share2 className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate md:whitespace-nowrap">Share Link</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('ics')}
-            title="Google Calendar (.ics)"
-            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
-              activeTab === 'ics'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span className="md:hidden truncate">Google Cal (.ics)</span>
-            <span className="hidden md:inline md:whitespace-nowrap">Google Calendar (.ics)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('image');
-              if (!imagePreviewUrl) handleGeneratePreviewImage();
-            }}
-            title="PNG Snapshot"
-            className={`py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
-              activeTab === 'image'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Image className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate md:whitespace-nowrap">PNG Snapshot</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('backup')}
-            title="JSON Backup"
-            className={`col-span-2 sm:col-span-1 py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 ${
-              activeTab === 'backup'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate md:whitespace-nowrap">JSON Backup</span>
-          </button>
+        {/* Tab Switcher - with smooth sliding layout pill */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar relative">
+          {exportTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'image' && !imagePreviewUrl) {
+                    handleGeneratePreviewImage();
+                  }
+                }}
+                title={tab.label}
+                className={`relative py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 transition-colors duration-150 z-10 ${
+                  tab.id === 'backup' ? 'col-span-2 sm:col-span-1' : ''
+                } ${
+                  isActive
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="activeExportTabPill"
+                    className="absolute inset-0 bg-white dark:bg-slate-900 rounded-lg shadow-xs -z-10"
+                    transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+                  />
+                )}
+                {tab.icon}
+                {tab.mobileLabel ? (
+                  <>
+                    <span className="md:hidden truncate">{tab.mobileLabel}</span>
+                    <span className="hidden md:inline md:whitespace-nowrap">{tab.label}</span>
+                  </>
+                ) : (
+                  <span className="truncate md:whitespace-nowrap">{tab.label}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Tab Body - Scrollable Container */}
+        {/* Tab Body - Smooth Animated Transition */}
         <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-1 sm:pr-2">
-          {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
-          {activeTab === 'text' && (
-            <TextExportTab
-              textFormat={textFormat}
-              copiedText={copiedText}
-              generatedText={generatedText}
-              onFormat={setTextFormat}
-              onCopy={handleCopyText}
-            />
-          )}
-
-          {/* Tab 2: Share Link (Send to friends or paste friend link) */}
-          {activeTab === 'share' && (
-            <div className="space-y-4 min-w-0">
-              <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-                    Shareable Friend Comparison Link
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Send this link to classmates or friends. When they open it, Uniplan lets them compare your schedule side-by-side as a ghost overlay or save it to their plans. No account or backend required!
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2.5 min-w-0">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Your Shareable Schedule Link
-                </label>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
-                  <input
-                    type="text"
-                    readOnly
-                    value={shareUrl}
-                    className="flex-1 min-w-0 px-3 py-2 text-base sm:text-xs font-mono bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyShareUrl}
-                    className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-xs up-chrome-btn"
-                  >
-                    {copiedShareUrl ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-300" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Link</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-                  <div className="font-semibold text-slate-700 dark:text-slate-300">
-                    How it works:
-                  </div>
-                  <div>• Your active schedule (<strong>{activePlan?.name}</strong>) is encoded safely into the link.</div>
-                  <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
-                  <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
-                </div>
-              </div>
-
-              {/* Friend's Share Link Input Space */}
-              <div className="min-w-0">
-                <FriendShareImportTab
-                  onCompareWithSchedule={(plan) => {
-                    importPlan(plan, true);
-                    onClose();
-                  }}
-                  onOpenAsActivePlan={(plan) => {
-                    importPlan(plan, false);
-                    onClose();
-                  }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.16, ease: EASE_OUT }}
+              className="min-h-full"
+            >
+              {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
+              {activeTab === 'text' && (
+                <TextExportTab
+                  textFormat={textFormat}
+                  copiedText={copiedText}
+                  generatedText={generatedText}
+                  onFormat={setTextFormat}
+                  onCopy={handleCopyText}
                 />
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Tab 3: Google Calendar / Apple Calendar (.ics) */}
-          {activeTab === 'ics' && (
-            <IcsExportTab
-              activePlan={activePlan}
-              semesterStart={semesterStart}
-              semesterEnd={semesterEnd}
-              onSemesterStart={(start) => setSemesterDates(start, semesterEnd)}
-              onSemesterEnd={(end) => setSemesterDates(semesterStart, end)}
-              onDownloadIcs={handleDownloadIcs}
-              onDownloadCourseIcs={handleDownloadCourseIcs}
-            />
-          )}
+              {/* Tab 2: Share Link (Send to friends or paste friend link) */}
+              {activeTab === 'share' && (
+                <div className="space-y-4 min-w-0">
+                  <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
+                        Shareable Friend Comparison Link
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Send this link to classmates or friends. When they open it, Uniplan lets them compare your schedule side-by-side as a ghost overlay or save it to their plans. No account or backend required!
+                    </p>
+                  </div>
 
-          {/* Tab 3: High-Res PNG Image */}
-          {activeTab === 'image' && (
-            <ImageExportTab
-              imageTheme={imageTheme}
-              imagePreviewUrl={imagePreviewUrl}
-              generatingImage={generatingImage}
-              onToggleTheme={() => {
-                const next = imageTheme === 'light' ? 'dark' : 'light';
-                setImageTheme(next);
-              }}
-              onRefresh={handleGeneratePreviewImage}
-              onDownload={handleDownloadImage}
-            />
-          )}
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2.5 min-w-0">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Your Shareable Schedule Link
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
+                      <input
+                        type="text"
+                        readOnly
+                        value={shareUrl}
+                        className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyShareUrl}
+                        className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shrink-0 transition-all shadow-xs up-chrome-btn active:scale-95"
+                      >
+                        {copiedShareUrl ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-300" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Link</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
 
-          {/* Tab 4: JSON Backup & Restore */}
-          {activeTab === 'backup' && (
-            <BackupTab
-              importJson={importJson}
-              importError={importError}
-              importSuccess={importSuccess}
-              onImportJsonChange={setImportJson}
-              onFileUpload={handleFileUpload}
-              onDownloadBackup={handleDownloadBackup}
-              onApplyImport={handleApplyImport}
-            />
-          )}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                      <div className="font-semibold text-slate-700 dark:text-slate-300">
+                        How it works:
+                      </div>
+                      <div>• Your active schedule (<strong>{activePlan?.name}</strong>) is encoded safely into the link.</div>
+                      <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
+                      <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
+                    </div>
+                  </div>
+
+                  {/* Friend's Share Link Input Space */}
+                  <div className="min-w-0">
+                    <FriendShareImportTab
+                      onCompareWithSchedule={(plan) => {
+                        importPlan(plan, true);
+                        onClose();
+                      }}
+                      onOpenAsActivePlan={(plan) => {
+                        importPlan(plan, false);
+                        onClose();
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Google Calendar / Apple Calendar (.ics) */}
+              {activeTab === 'ics' && (
+                <IcsExportTab
+                  activePlan={activePlan}
+                  semesterStart={semesterStart}
+                  semesterEnd={semesterEnd}
+                  onSemesterStart={(start) => setSemesterDates(start, semesterEnd)}
+                  onSemesterEnd={(end) => setSemesterDates(semesterStart, end)}
+                  onDownloadIcs={handleDownloadIcs}
+                  onDownloadCourseIcs={handleDownloadCourseIcs}
+                />
+              )}
+
+              {/* Tab 4: High-Res PNG Image */}
+              {activeTab === 'image' && (
+                <ImageExportTab
+                  imageTheme={imageTheme}
+                  imagePreviewUrl={imagePreviewUrl}
+                  generatingImage={generatingImage}
+                  onToggleTheme={() => {
+                    const next = imageTheme === 'light' ? 'dark' : 'light';
+                    setImageTheme(next);
+                  }}
+                  onRefresh={handleGeneratePreviewImage}
+                  onDownload={handleDownloadImage}
+                />
+              )}
+
+              {/* Tab 5: JSON Backup & Restore */}
+              {activeTab === 'backup' && (
+                <BackupTab
+                  importJson={importJson}
+                  importError={importError}
+                  importSuccess={importSuccess}
+                  onImportJsonChange={setImportJson}
+                  onFileUpload={handleFileUpload}
+                  onDownloadBackup={handleDownloadBackup}
+                  onApplyImport={handleApplyImport}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Footer */}
@@ -456,12 +459,12 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center"
+            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center up-chrome-btn active:scale-95"
           >
             Done
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

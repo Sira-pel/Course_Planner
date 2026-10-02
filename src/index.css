@@ -282,9 +282,12 @@ html.dark body {
 }
 
 .up-chrome-btn {
-  transition-property: color, background-color, border-color, opacity;
+  transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: var(--dur-chrome);
   transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
 }
 
 .up-chrome-btn:focus {
@@ -318,6 +321,11 @@ html.dark body {
   color: var(--up-ink);
   opacity: 0.72;
   cursor: pointer;
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .up-icon-btn:hover:not(:disabled) {
@@ -330,6 +338,10 @@ html.dark body {
   background: color-mix(in srgb, var(--up-ink) 8%, transparent);
   color: var(--up-ink);
   opacity: 1;
+}
+
+.up-icon-btn:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .up-add-course {
@@ -348,10 +360,19 @@ html.dark body {
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .up-add-course:hover {
   background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+}
+
+.up-add-course:active {
+  transform: scale(0.97);
 }
 
 @media (min-width: 640px) {
@@ -710,6 +731,11 @@ html.dark .up-settings-select option,
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .up-text-trigger:hover {
@@ -723,6 +749,10 @@ html.dark .up-settings-select option,
 
 .up-text-trigger.is-open:hover {
   background: color-mix(in srgb, var(--up-ink) 12%, transparent);
+}
+
+.up-text-trigger:active {
+  transform: scale(0.97);
 }
 
 .up-conflict {
@@ -741,6 +771,15 @@ html.dark .up-settings-select option,
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.up-conflict:active {
+  transform: scale(0.96);
 }
 
 .dark .up-conflict {
@@ -858,6 +897,11 @@ body[data-up-pool-open] .up-fab-cluster {
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
 }
 
 .up-fab-more {
@@ -1649,7 +1693,7 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 
   .up-pool-input {
-    font-size: 16px;
+    font-size: 13px;
     padding-right: 50px;
   }
 

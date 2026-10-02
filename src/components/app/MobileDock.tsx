@@ -44,10 +44,10 @@ export function MobileDock({
 }: MobileDockProps) {
   const menuOpenTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.25, ease: EASE_OUT };
+    : { duration: 0.22, ease: EASE_OUT };
   const menuCloseTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.15, ease: EASE_OUT };
+    : { duration: 0.16, ease: EASE_OUT };
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -140,13 +140,13 @@ export function MobileDock({
                 key="more-menu"
                 role="menu"
                 aria-label="More actions"
-                className="up-menu up-more-menu"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                className="up-menu up-more-menu will-change-transform"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, y: 8, transition: menuCloseTransition }
+                    : { opacity: 0, y: '100%', transition: menuCloseTransition }
                 }
                 transition={menuOpenTransition}
               >

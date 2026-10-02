@@ -85,7 +85,7 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
             }}
             placeholder='{"version": 1, "exportedAt": "...", "plans": [...] }'
             rows={5}
-            className="w-full min-w-0 p-2.5 text-base sm:text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 break-all whitespace-pre-wrap"
+            className="w-full min-w-0 p-2.5 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 break-all whitespace-pre-wrap"
           />
         </div>
 

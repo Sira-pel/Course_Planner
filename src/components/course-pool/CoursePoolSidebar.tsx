@@ -490,13 +490,13 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
-                className="up-pool-drawer"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
+                className="up-pool-drawer will-change-transform"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: '100%' }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, x: 12, transition: panelCloseTransition }
+                    : { opacity: 0, x: '100%', transition: panelCloseTransition }
                 }
                 transition={panelOpenTransition}
               >
@@ -518,13 +518,13 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
-                className="up-pool-sheet"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                className="up-pool-sheet will-change-transform"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, y: 8, transition: panelCloseTransition }
+                    : { opacity: 0, y: '100%', transition: panelCloseTransition }
                 }
                 transition={panelOpenTransition}
               >
