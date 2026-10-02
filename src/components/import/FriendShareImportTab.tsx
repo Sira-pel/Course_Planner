@@ -121,7 +121,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
           </div>
 
           {/* Course Preview */}
-          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 up-scroll overscroll-contain">
             {parsedPlan.courses.map((course) => (
               <div
                 key={course.id}

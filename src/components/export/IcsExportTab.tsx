@@ -84,7 +84,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
                 To import as separate colored calendars in Google Cal
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto up-scroll overscroll-contain">
               {activePlan.courses.map((course) => (
                 <button
                   key={course.id}

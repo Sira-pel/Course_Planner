@@ -674,11 +674,11 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.16, ease: EASE_OUT }}
-              className="min-h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: EASE_OUT }}
+              className="w-full"
             >
               {mode === 'form' ? (
                 <CourseForm

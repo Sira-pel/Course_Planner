@@ -182,10 +182,10 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
   const panelOpenTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.25, ease: EASE_OUT };
+    : { duration: 0.18, ease: EASE_OUT };
   const panelCloseTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.15, ease: EASE_OUT };
+    : { duration: 0.12, ease: EASE_OUT };
 
   useEffect(() => {
     pillPaintedRef.current = false;

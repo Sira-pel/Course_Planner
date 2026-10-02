@@ -140,15 +140,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   const menuOpenTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.22, ease: EASE_OUT };
+    : { duration: 0.18, ease: EASE_OUT };
   const menuCloseTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.16, ease: EASE_OUT };
+    : { duration: 0.12, ease: EASE_OUT };
   const menuEnter = reduceMotion
     ? { opacity: 0 }
     : isPhone
       ? { opacity: 0, y: '100%' }
-      : { opacity: 0, scale: 0.96, y: -4 };
+      : { opacity: 0, scale: 0.98, y: -3 };
   const menuShown = reduceMotion
     ? { opacity: 1 }
     : isPhone
@@ -158,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
     ? { opacity: 0, transition: menuCloseTransition }
     : isPhone
       ? { opacity: 0, y: '100%', transition: menuCloseTransition }
-      : { opacity: 0, scale: 0.98, y: -2, transition: menuCloseTransition };
+      : { opacity: 0, scale: 0.985, y: -2, transition: menuCloseTransition };
 
   const closeAllMenus = () => {
     setGhostMenuOpen(false);

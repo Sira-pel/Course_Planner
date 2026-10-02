@@ -44,10 +44,10 @@ export function MobileDock({
 }: MobileDockProps) {
   const menuOpenTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.22, ease: EASE_OUT };
+    : { duration: 0.18, ease: EASE_OUT };
   const menuCloseTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.16, ease: EASE_OUT };
+    : { duration: 0.12, ease: EASE_OUT };
 
   useEffect(() => {
     if (!isMoreOpen) return;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -64,6 +64,15 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   );
 
   const [activeTab, setActiveTab] = useState<ImportTabType>(initialTab);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll position to top whenever active tab changes to prevent scroll glitching
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
+
   const [successBanner, setSuccessBanner] = useState<{ count: number; destination: string } | null>(
     null
   );
@@ -92,7 +101,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -132,7 +141,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         </div>
 
         {/* Tab Switcher - Responsive 4-col grid with smooth sliding pill */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative [scrollbar-width:none]">
           {importTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -178,16 +187,19 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
           )}
         </AnimatePresence>
 
-        {/* Tab Body - Scrollable Container with Smooth Cross-fade */}
-        <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-0.5">
+        {/* Tab Body - Scrollable Container with Smooth Cross-fade without translation glitch */}
+        <div
+          ref={contentRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pt-3 pb-2 pr-0.5 up-scroll overscroll-contain [overflow-anchor:none]"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.16, ease: EASE_OUT }}
-              className="min-h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: EASE_OUT }}
+              className="w-full"
             >
               {activeTab === 'excel' && (
                 <ExcelImportTab

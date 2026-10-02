@@ -264,7 +264,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
           </div>
 
           {/* Parsed courses list */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
             {filteredCourses.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-600 dark:text-slate-300">
                 No courses match the current filter.

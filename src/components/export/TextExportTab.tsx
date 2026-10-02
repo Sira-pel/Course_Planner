@@ -66,7 +66,7 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
         </button>
       </div>
 
-      <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-all">
+      <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-all up-scroll overscroll-contain">
         {generatedText}
       </pre>
       <p className="text-[11px] text-slate-600 dark:text-slate-300">

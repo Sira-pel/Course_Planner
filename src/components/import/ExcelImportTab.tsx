@@ -554,7 +554,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           </div>
 
           {/* Parsed Course List with interactive checkboxes */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-64 sm:max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-64 sm:max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
             {filteredCourses.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-600 dark:text-slate-300">
                 <p className="font-semibold text-slate-800 dark:text-slate-200">No courses parsed</p>

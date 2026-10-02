@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Conflict } from '../../types/schedule';
-import { EASE_OUT } from '../../utils/motion';
+import { MODAL_BACKDROP_ANIMATION, MODAL_SHEET_ANIMATION } from '../../utils/motion';
 
 interface ConflictModalProps {
   open: boolean;
@@ -24,24 +24,24 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
       {open && (
         <motion.div
           key="conflict-modal"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT } }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: EASE_OUT }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60"
+          initial={reduceMotion ? false : MODAL_BACKDROP_ANIMATION.initial}
+          animate={reduceMotion ? false : MODAL_BACKDROP_ANIMATION.animate}
+          exit={reduceMotion ? { opacity: 0 } : MODAL_BACKDROP_ANIMATION.exit}
+          transition={reduceMotion ? { duration: 0 } : MODAL_BACKDROP_ANIMATION.transition}
           onClick={onClose}
         >
-          <div className="absolute inset-0 bg-slate-950/50" />
           <motion.div
             role="dialog"
             aria-modal="true"
             aria-labelledby="conflict-modal-title"
-            initial={reduceMotion ? false : { scale: 0.96 }}
-            animate={{ scale: 1 }}
-            exit={reduceMotion ? undefined : { scale: 0.96, transition: { duration: 0.15, ease: EASE_OUT } }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: EASE_OUT }}
+            initial={reduceMotion ? false : MODAL_SHEET_ANIMATION.initial}
+            animate={reduceMotion ? false : MODAL_SHEET_ANIMATION.animate}
+            exit={reduceMotion ? undefined : MODAL_SHEET_ANIMATION.exit}
+            transition={reduceMotion ? { duration: 0 } : MODAL_SHEET_ANIMATION.transition}
+            style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-white dark:bg-slate-900 rounded-lg border border-rose-200 dark:border-rose-900/60 shadow-[0_8px_24px_rgb(15_23_42/0.18)] max-w-md w-full min-w-0 p-5"
+            className="relative bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-[0_8px_24px_rgb(15_23_42/0.18)] max-w-md w-full min-w-0 p-5"
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">

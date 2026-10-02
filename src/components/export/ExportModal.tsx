@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
@@ -83,6 +83,14 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
   }, [onClose]);
 
   const [activeTab, setActiveTab] = useState<ExportTabType>(initialTab);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll position to top whenever active tab changes to prevent scroll glitching
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
   const [copiedShareUrl, setCopiedShareUrl] = useState(false);
   const shareUrl = useMemo(() => (activePlan ? encodePlanToShareUrl(activePlan) : ''), [activePlan]);
 
@@ -232,7 +240,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -271,7 +279,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         </div>
 
         {/* Tab Switcher - with smooth sliding layout pill */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar relative">
+        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar relative [scrollbar-width:none]">
           {exportTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -314,16 +322,19 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
           })}
         </div>
 
-        {/* Tab Body - Smooth Animated Transition */}
-        <div className="flex-1 overflow-y-auto min-h-0 pt-4 pr-0.5">
+        {/* Tab Body - Smooth Cross-fade without vertical displacement glitch */}
+        <div
+          ref={contentRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pt-4 pb-2 pr-0.5 up-scroll overscroll-contain [overflow-anchor:none]"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.16, ease: EASE_OUT }}
-              className="min-h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: EASE_OUT }}
+              className="w-full"
             >
               {activeTab === 'text' && (
                 <TextExportTab

@@ -79,7 +79,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -127,7 +127,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0 text-xs">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-4 min-h-0 text-xs up-scroll overscroll-contain">
               {(!sharedPlan || initialManualPaste) && !parsedPlan && (
                 <div className="space-y-2 min-w-0">
                   <label htmlFor="share-link-input" className="font-semibold text-slate-700 dark:text-slate-300">
