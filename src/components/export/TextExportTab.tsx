@@ -59,7 +59,7 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
         <button
           type="button"
           onClick={onCopy}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors up-chrome-btn active:scale-95"
         >
           {copiedText ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copiedText ? 'Copied to Clipboard!' : 'Copy as Text'}</span>
@@ -69,9 +69,6 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
       <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-all">
         {generatedText}
       </pre>
-      <p className="text-[11px] text-slate-600 dark:text-slate-300">
-        Formatted without emojis for universal compatibility with chat apps, SMS, and advisors.
-      </p>
     </div>
   );
 };

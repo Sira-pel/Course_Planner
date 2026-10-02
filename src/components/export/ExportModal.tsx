@@ -3,9 +3,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { PERSIST_SCHEMA_VERSION } from '../../store/persist';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { Course } from '../../types/schedule';
 import { generateScheduleText, TextExportFormat } from '../../utils/textExport';
-import { downloadIcsFile, downloadCourseIcsFile } from '../../utils/icsExport';
+import { downloadIcsFile } from '../../utils/icsExport';
 import { downloadScheduleImage, exportScheduleToImage } from '../../utils/imageExport';
 import {
   X,
@@ -23,9 +22,8 @@ import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
 import { BackupTab } from './BackupTab';
-import { FriendShareImportTab } from '../import/FriendShareImportTab';
 
-export type ExportTabType = 'text' | 'share' | 'ics' | 'image' | 'backup';
+export type ExportTabType = 'share' | 'image' | 'ics' | 'text' | 'backup';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -33,7 +31,7 @@ interface ExportModalProps {
   onClose: () => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'share', onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && <ExportModalBody initialTab={initialTab} onClose={onClose} />}
@@ -41,7 +39,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = '
   );
 };
 
-const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'text', onClose }) => {
+const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'share', onClose }) => {
   const {
     plans,
     activePlanId,
@@ -53,8 +51,6 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     semesterStart,
     semesterEnd,
     setSemesterDates,
-    importFullState,
-    importPlan,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -67,8 +63,6 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
       semesterStart: state.semesterStart,
       semesterEnd: state.semesterEnd,
       setSemesterDates: state.setSemesterDates,
-      importFullState: state.importFullState,
-      importPlan: state.importPlan,
     }))
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
@@ -109,11 +103,6 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageTheme, setImageTheme] = useState<'light' | 'dark'>(theme);
 
-  // Backup State
-  const [importJson, setImportJson] = useState('');
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState(false);
-
   // Memoize generated text so it only recalculates when activePlan or textFormat changes
   const generatedText = useMemo(() => {
     if (!activePlan) return '';
@@ -125,17 +114,13 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
       await navigator.clipboard.writeText(generatedText);
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 2000);
-    } catch (e) {
+    } catch {
       // Fallback
     }
   };
 
   const handleDownloadIcs = () => {
     downloadIcsFile(activePlan, semesterStart, semesterEnd);
-  };
-
-  const handleDownloadCourseIcs = (course: Course) => {
-    downloadCourseIcsFile(activePlan, course, semesterStart, semesterEnd);
   };
 
   const handleGeneratePreviewImage = async () => {
@@ -190,46 +175,11 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result;
-      if (typeof content === 'string') {
-        setImportJson(content);
-        setImportError(null);
-      }
-    };
-    reader.onerror = () => {
-      setImportError('Failed to read file');
-    };
-    reader.readAsText(file);
-  };
-
-  const handleApplyImport = () => {
-    setImportError(null);
-    setImportSuccess(false);
-    if (!importJson.trim()) {
-      setImportError('Please paste or upload a valid JSON backup string');
-      return;
-    }
-    const res = importFullState(importJson);
-    if (res.success) {
-      setImportSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 1200);
-    } else {
-      setImportError(res.error || 'Failed to parse JSON backup');
-    }
-  };
-
   const exportTabs: { id: ExportTabType; label: string; mobileLabel?: string; icon: React.ReactNode }[] = [
-    { id: 'text', label: 'Clean Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'share', label: 'Share Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'ics', label: 'Google Calendar (.ics)', mobileLabel: 'Google Cal (.ics)', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'image', label: 'PNG Snapshot', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'image', label: 'PNG Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Cal (.ics)', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'text', label: 'Clean Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'backup', label: 'JSON Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
@@ -258,23 +208,24 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
             <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
-              Export Schedule & Backup
+              Export
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Exporting: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> ({activePlan.courses.length} courses)
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate">
+              {activePlan.name}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0 up-chrome-btn"
+            aria-label="Close export dialog"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Switcher - with smooth sliding layout pill */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar relative">
+        {/* Tab Switcher - Responsive with smooth sliding layout pill */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative">
           {exportTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -318,7 +269,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         </div>
 
         {/* Tab Body - Smooth Animated Transition */}
-        <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-1 sm:pr-2">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-3.5 pr-0.5 sm:pr-1">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -328,32 +279,9 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
               transition={{ duration: 0.16, ease: EASE_OUT }}
               className="min-h-full"
             >
-              {/* Tab 1: Clean Text (For Discord / WhatsApp / Advisors) */}
-              {activeTab === 'text' && (
-                <TextExportTab
-                  textFormat={textFormat}
-                  copiedText={copiedText}
-                  generatedText={generatedText}
-                  onFormat={setTextFormat}
-                  onCopy={handleCopyText}
-                />
-              )}
-
-              {/* Tab 2: Share Link (Send to friends or paste friend link) */}
+              {/* Tab 1: Share Link */}
               {activeTab === 'share' && (
-                <div className="space-y-4 min-w-0">
-                  <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                      <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-                        Shareable Friend Comparison Link
-                      </h3>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Send this link to classmates or friends. When they open it, Uniplan lets them compare your schedule side-by-side as a ghost overlay or save it to their plans. No account or backend required!
-                    </p>
-                  </div>
-
+                <div className="space-y-3 min-w-0">
                   <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2.5 min-w-0">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Your Shareable Schedule Link
@@ -363,12 +291,12 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                         type="text"
                         readOnly
                         value={shareUrl}
-                        className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                        className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 select-all font-mono focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                       />
                       <button
                         type="button"
                         onClick={handleCopyShareUrl}
-                        className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shrink-0 transition-all shadow-xs up-chrome-btn active:scale-95"
+                        className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shrink-0 transition-all shadow-xs up-chrome-btn active:scale-95"
                       >
                         {copiedShareUrl ? (
                           <>
@@ -383,47 +311,11 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                         )}
                       </button>
                     </div>
-
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
-                      <div className="font-semibold text-slate-700 dark:text-slate-300">
-                        How it works:
-                      </div>
-                      <div>• Your active schedule (<strong>{activePlan?.name}</strong>) is encoded safely into the link.</div>
-                      <div>• Your friend opens the link and sees their schedule and yours superimposed in different colors.</div>
-                      <div>• Both of you can adjust course times in real time to resolve conflicts together!</div>
-                    </div>
-                  </div>
-
-                  {/* Friend's Share Link Input Space */}
-                  <div className="min-w-0">
-                    <FriendShareImportTab
-                      onCompareWithSchedule={(plan) => {
-                        importPlan(plan, true);
-                        onClose();
-                      }}
-                      onOpenAsActivePlan={(plan) => {
-                        importPlan(plan, false);
-                        onClose();
-                      }}
-                    />
                   </div>
                 </div>
               )}
 
-              {/* Tab 3: Google Calendar / Apple Calendar (.ics) */}
-              {activeTab === 'ics' && (
-                <IcsExportTab
-                  activePlan={activePlan}
-                  semesterStart={semesterStart}
-                  semesterEnd={semesterEnd}
-                  onSemesterStart={(start) => setSemesterDates(start, semesterEnd)}
-                  onSemesterEnd={(end) => setSemesterDates(semesterStart, end)}
-                  onDownloadIcs={handleDownloadIcs}
-                  onDownloadCourseIcs={handleDownloadCourseIcs}
-                />
-              )}
-
-              {/* Tab 4: High-Res PNG Image */}
+              {/* Tab 2: High-Res PNG Image */}
               {activeTab === 'image' && (
                 <ImageExportTab
                   imageTheme={imageTheme}
@@ -438,31 +330,35 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                 />
               )}
 
-              {/* Tab 5: JSON Backup & Restore */}
-              {activeTab === 'backup' && (
-                <BackupTab
-                  importJson={importJson}
-                  importError={importError}
-                  importSuccess={importSuccess}
-                  onImportJsonChange={setImportJson}
-                  onFileUpload={handleFileUpload}
-                  onDownloadBackup={handleDownloadBackup}
-                  onApplyImport={handleApplyImport}
+              {/* Tab 3: Google Calendar / Apple Calendar (.ics) */}
+              {activeTab === 'ics' && (
+                <IcsExportTab
+                  activePlan={activePlan}
+                  semesterStart={semesterStart}
+                  semesterEnd={semesterEnd}
+                  onSemesterStart={(start) => setSemesterDates(start, semesterEnd)}
+                  onSemesterEnd={(end) => setSemesterDates(semesterStart, end)}
+                  onDownloadIcs={handleDownloadIcs}
                 />
+              )}
+
+              {/* Tab 4: Clean Text */}
+              {activeTab === 'text' && (
+                <TextExportTab
+                  textFormat={textFormat}
+                  copiedText={copiedText}
+                  generatedText={generatedText}
+                  onFormat={setTextFormat}
+                  onCopy={handleCopyText}
+                />
+              )}
+
+              {/* Tab 5: JSON Backup */}
+              {activeTab === 'backup' && (
+                <BackupTab onDownloadBackup={handleDownloadBackup} />
               )}
             </motion.div>
           </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center up-chrome-btn active:scale-95"
-          >
-            Done
-          </button>
         </div>
       </motion.div>
     </motion.div>

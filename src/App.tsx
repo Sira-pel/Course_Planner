@@ -159,7 +159,7 @@ export default function App() {
     setIsCourseModalOpen(true);
   }, []);
 
-  const handleOpenExport = useCallback((tab: ExportTabType = 'text') => {
+  const handleOpenExport = useCallback((tab: ExportTabType = 'share') => {
     setIsPoolCollapsed(true);
     setExportInitialTab(tab);
     setIsExportOpen(true);
@@ -220,7 +220,7 @@ export default function App() {
     isConfirmingClear,
     isAnyModalOpen,
     onOpenNewCourse: handleOpenNewCourse,
-    onOpenExport: () => handleOpenExport('text'),
+    onOpenExport: () => handleOpenExport('share'),
     onOpenImport: () => handleOpenImport('excel'),
     onOpenShare: handleOpenShareModal,
     onTogglePool: () => setIsPoolCollapsed((prev) => !prev),
@@ -248,7 +248,7 @@ export default function App() {
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-          onOpenExport={() => handleOpenExport('text')}
+          onOpenExport={() => handleOpenExport('share')}
           onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
           onOpenHelp={() => handleOpenHelp('workflow')}
@@ -324,7 +324,7 @@ export default function App() {
         initialTab={helpInitialTab}
         onClose={handleCloseHelp}
         onOpenImport={handleOpenImport}
-        onOpenExport={() => handleOpenExport('text')}
+        onOpenExport={() => handleOpenExport('share')}
         onOpenCatalog={() => setIsPoolCollapsed(false)}
         onOpenShortcuts={handleOpenShortcuts}
       />

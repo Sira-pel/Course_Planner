@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { SchedulePlan } from '../../types/schedule';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
-import { Share2, Layers, Check, AlertCircle, ArrowRight } from 'lucide-react';
+import { Layers, Check, AlertCircle } from 'lucide-react';
 
 interface FriendShareImportTabProps {
   onCompareWithSchedule: (plan: SchedulePlan) => void;
@@ -54,19 +54,6 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
 
   return (
     <div className="space-y-4 min-w-0">
-      {/* Informational Banner */}
-      <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
-        <div className="flex items-center gap-2 mb-1">
-          <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-            Import Friend's Schedule Link
-          </h3>
-        </div>
-        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-          Paste the shareable link or code your friend sent you. You can compare it side-by-side as a ghost overlay against your own classes or save it into your plans.
-        </p>
-      </div>
-
       {/* Input area */}
       <div className="space-y-1.5 min-w-0">
         <label
@@ -81,7 +68,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
           onChange={(e) => handleParseInput(e.target.value)}
           placeholder="https://uniplan.app/#share=... or paste code directly"
           rows={3}
-          className="w-full max-w-full min-w-0 text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 resize-none break-all whitespace-pre-wrap transition-shadow"
+          className="w-full max-w-full min-w-0 text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 resize-none break-all whitespace-pre-wrap transition-shadow font-mono"
         />
         {errorMessage && (
           <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-medium mt-1">
@@ -165,18 +152,18 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
             <button
               type="button"
               onClick={() => onOpenAsActivePlan(currentPlanToUse)}
-              className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors up-chrome-btn"
+              className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors up-chrome-btn active:scale-95"
             >
               <Check className="w-3.5 h-3.5" />
-              Open as Active Plan
+              <span>Open as Active Plan</span>
             </button>
             <button
               type="button"
               onClick={() => onCompareWithSchedule(currentPlanToUse)}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors up-chrome-btn"
+              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95"
             >
               <Layers className="w-3.5 h-3.5" />
-              Compare with my Schedule
+              <span>Compare with my Schedule</span>
             </button>
           </div>
         </div>

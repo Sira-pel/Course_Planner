@@ -26,7 +26,7 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
           <button
             type="button"
             onClick={onToggleTheme}
-            className="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+            className="px-2.5 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors up-chrome-btn"
           >
             {imageTheme === 'dark' ? 'Dark Background' : 'Light Background'}
           </button>
@@ -42,7 +42,7 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
         <button
           type="button"
           onClick={onDownload}
-          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors up-chrome-btn active:scale-95"
         >
           <Download className="w-3.5 h-3.5" />
           <span>Download High-Res PNG</span>
@@ -54,7 +54,7 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
         {generatingImage ? (
           <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
             <Sparkles className="w-4 h-4 animate-spin text-indigo-600" />
-            Generating crisp 2x retina schedule image...
+            <span>Generating crisp 2x retina schedule image...</span>
           </div>
         ) : imagePreviewUrl ? (
           <img
@@ -66,15 +66,12 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
           <button
             type="button"
             onClick={onRefresh}
-            className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold"
+            className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
           >
             Click to Generate Snapshot Preview
           </button>
         )}
       </div>
-      <p className="text-[11px] text-slate-600 dark:text-slate-300">
-        High-DPI rendering is perfectly sized for lockscreens, printing, or sending to classmates.
-      </p>
     </div>
   );
 };

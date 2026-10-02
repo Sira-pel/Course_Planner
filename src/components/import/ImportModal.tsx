@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import type { Course, SchedulePlan } from '../../types/schedule';
+import type { Course } from '../../types/schedule';
 import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
 import { EASE_OUT } from '../../utils/motion';
 import { ExcelImportTab } from './ExcelImportTab';
@@ -10,7 +10,7 @@ import { IcsImportTab } from './IcsImportTab';
 import { BackupRestoreTab } from './BackupRestoreTab';
 import { FriendShareImportTab } from './FriendShareImportTab';
 
-export type ImportTabType = 'excel' | 'share' | 'ics' | 'backup';
+export type ImportTabType = 'excel' | 'ics' | 'share' | 'backup';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -34,12 +34,11 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   initialTab,
   onClose,
 }) => {
-  const { plans, activePlanId, catalogCourses, bulkAddToCatalog, bulkAddCourses, importPlan } =
+  const { plans, activePlanId, bulkAddToCatalog, bulkAddCourses, importPlan } =
     useScheduleStore(
       useShallow((state) => ({
         plans: state.plans,
         activePlanId: state.activePlanId,
-        catalogCourses: state.catalogCourses,
         bulkAddToCatalog: state.bulkAddToCatalog,
         bulkAddCourses: state.bulkAddCourses,
         importPlan: state.importPlan,
@@ -85,8 +84,8 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
 
   const importTabs: { id: ImportTabType; label: string; icon: React.ReactNode }[] = [
     { id: 'excel', label: 'Excel / CSV', icon: <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'share', label: 'Friend Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'ics', label: 'Calendar (.ics)', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'share', label: 'Friend Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'backup', label: 'JSON Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
@@ -115,10 +114,10 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
             <h2 id="import-modal-title" className="text-base font-bold text-slate-900 dark:text-white truncate">
-              Import Courses & Schedule
+              Import
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 truncate">
-              Active Plan: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> · Saved in Pool: <strong className="text-slate-700 dark:text-slate-200">{catalogCourses.length} courses</strong>
+              Active Plan: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong>
             </p>
           </div>
           <button
@@ -179,7 +178,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         </AnimatePresence>
 
         {/* Tab Body - Scrollable Container with Smooth Cross-fade */}
-        <div className="flex-1 overflow-y-auto min-h-0 pt-3 pr-0.5">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-3.5 pr-0.5">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -191,6 +190,15 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
             >
               {activeTab === 'excel' && (
                 <ExcelImportTab
+                  activePlan={activePlan}
+                  onImportToPool={handleImportToPool}
+                  onImportToPlanAndPool={handleImportToPlanAndPool}
+                  onSuccess={handleSuccess}
+                />
+              )}
+
+              {activeTab === 'ics' && (
+                <IcsImportTab
                   activePlan={activePlan}
                   onImportToPool={handleImportToPool}
                   onImportToPlanAndPool={handleImportToPlanAndPool}
@@ -211,31 +219,11 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
                 />
               )}
 
-              {activeTab === 'ics' && (
-                <IcsImportTab
-                  activePlan={activePlan}
-                  onImportToPool={handleImportToPool}
-                  onImportToPlanAndPool={handleImportToPlanAndPool}
-                  onSuccess={handleSuccess}
-                />
-              )}
-
               {activeTab === 'backup' && (
                 <BackupRestoreTab onSuccess={onClose} />
               )}
             </motion.div>
           </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center up-chrome-btn active:scale-95"
-          >
-            Done
-          </button>
         </div>
       </motion.div>
     </motion.div>
