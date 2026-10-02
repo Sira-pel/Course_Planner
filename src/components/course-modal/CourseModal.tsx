@@ -83,10 +83,14 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   );
   const isTargetGhost = effectivePlanId !== activePlanId;
 
-  const existingCourse = editingCourseId
-    ? currentPlan?.courses.find((c) => c.id === editingCourseId) ||
-      catalogCourses.find((c) => c.id === editingCourseId)
-    : null;
+  const existingCourse = useMemo(() => {
+    if (!editingCourseId) return null;
+    return (
+      currentPlan?.courses.find((c) => c.id === editingCourseId) ||
+      catalogCourses.find((c) => c.id === editingCourseId) ||
+      null
+    );
+  }, [editingCourseId, currentPlan?.courses, catalogCourses]);
 
   const [mode, setMode] = useState<'form' | 'quick'>('form');
   const [phase, setPhase] = useState<'hidden' | 'open' | 'closing'>('hidden');
@@ -284,7 +288,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setDetailsOpen(false);
     }
     setError(null);
-  }, [existingCourse, isOpen, initialDay, initialStartTime, initialMode, effectivePlanId, getNextColor]);
+  }, [editingCourseId, isOpen, initialDay, initialStartTime, initialMode, effectivePlanId]);
 
   const replayShake = (field: 'code' | 'name' | 'times') => {
     setShakeField(null);
