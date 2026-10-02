@@ -138,45 +138,45 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
                         {course.code}
                       </span>
                       {course.section && (
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                          Sec {course.section}
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          ({course.section})
                         </span>
                       )}
+                      <span className="text-slate-600 dark:text-slate-300 truncate">
+                        {course.name}
+                      </span>
                     </div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                      {course.name}
-                    </p>
+                    {course.instructor && (
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {course.instructor}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono text-right shrink-0">
-                  {course.sessions.map((s, idx) => (
-                    <div key={idx}>
-                      <span className="capitalize">{s.day.slice(0, 3)}</span>{' '}
-                      {minutesToTime(timeToMinutes(s.startTime))} - {minutesToTime(timeToMinutes(s.endTime))}
-                    </div>
-                  ))}
-                </div>
+                <span className="font-mono text-slate-400 font-semibold shrink-0">
+                  {course.credits} cr
+                </span>
               </div>
             ))}
           </div>
 
-          {/* Actions */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => onOpenAsActivePlan(currentPlanToUse)}
-              className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors up-chrome-btn"
-            >
-              <Check className="w-3.5 h-3.5" />
-              Open as Active Plan
-            </button>
+          {/* Action buttons */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => onCompareWithSchedule(currentPlanToUse)}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors up-chrome-btn"
+              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors flex items-center justify-center gap-1.5"
             >
               <Layers className="w-3.5 h-3.5" />
-              Compare with my Schedule
+              <span>Compare as Ghost Overlay</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAsActivePlan(currentPlanToUse)}
+              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Open as Active Plan</span>
             </button>
           </div>
         </div>
