@@ -157,6 +157,37 @@ html.dark body {
   background: transparent;
 }
 
+/* File input button hover precision - activates hover ONLY directly over the button */
+.up-file-input {
+  cursor: default;
+}
+
+.up-file-input::file-selector-button {
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.up-file-input::file-selector-button:hover {
+  background-color: rgb(224 231 255);
+}
+
+.dark .up-file-input::file-selector-button:hover {
+  background-color: rgb(49 46 129);
+}
+
+.up-file-input::-webkit-file-upload-button {
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.up-file-input::-webkit-file-upload-button:hover {
+  background-color: rgb(224 231 255);
+}
+
+.dark .up-file-input::-webkit-file-upload-button:hover {
+  background-color: rgb(49 46 129);
+}
+
 /* Header: ledger instrument strip */
 .up-header {
   display: flex;

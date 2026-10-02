@@ -69,7 +69,7 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
             type="file"
             accept=".json,application/json"
             onChange={handleFileUpload}
-            className="block w-full text-xs text-slate-600 dark:text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950/60 dark:file:text-indigo-300 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900 transition-colors cursor-pointer"
+            className="up-file-input block w-fit max-w-full text-xs text-slate-600 dark:text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950/60 dark:file:text-indigo-300"
           />
         </div>
 
