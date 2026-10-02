@@ -80,15 +80,26 @@ const COURSE_CODE_WITH_SECTION_REGEX =
 const COURSE_CODE_REGEX =
   /\b([A-Za-z]{2,6})\s*[-_.:]?\s*([0-9]{2,4}[A-Za-z]?)\b/i;
 
+const DAY_NAME_PATTERN =
+  '(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY|MON|TUE|WED|THURS|THUR|THU|FRI|SAT|SUN|MO|TU|WE|TH|FR|SA|SU|[MTWRFSU])';
+
 // Regex to detect days including compound single-letter and multi-letter combinations e.g. MF, MT, MW, MWF, TR, TTH, TF, WF, MR, TW, WR, MTW, MTWR, MTWRF, M-F, M/F, M & W, Mon/Fri, etc.
-const DAYS_COMPOUND_REGEX =
-  /\b(?:MTWTHF|MTWRF|MTWTH|MTWR|MTWF|MTTH|MWRF|MWTHF|TWTHF|TWRF|M-F|M-TH|MON-FRI|MON-THU|MWF|MOWEFR|MONWEDFRI|MTW|MTR|MTF|MWR|MWTH|TWF|TWR|TWTH|TRF|TTHF|WRF|WFR|TTH|TUTH|TUETHU|TR|TUR|TF|TUFR|TUEFRI|TW|TUWE|TUWED|WF|WEFR|WEDFRI|WR|WTH|WETH|WEDTHU|RF|THF|THFR|THUFRI|MW|MOWE|MONWED|MTH|MOTH|MONTHU|MR|MF|MOFR|MONFRI|MT|MOTU|MONTUE|FS|FRSA|FRISAT|DAILY|(?:(?:MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U)\s*(?:&|and|[/,-])\s*)+(?:MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U))\b/gi;
+const DAYS_COMPOUND_REGEX = new RegExp(
+  '\\b(?:MTWTHF|MTWRF|MTWTH|MTWR|MTWF|MTTH|MWRF|MWTHF|TWTHF|TWRF|M-F|M-TH|MON-FRI|MON-THU|MWF|MOWEFR|MONWEDFRI|MTW|MTR|MTF|MWR|MWTH|TWF|TWR|TWTH|TRF|TTHF|WRF|WFR|TTH|TUTH|TUETHU|TR|TUR|TF|TUFR|TUEFRI|TW|TUWE|TUWED|WF|WEFR|WEDFRI|WR|WTH|WETH|WEDTHU|RF|THF|THFR|THUFRI|MW|MOWE|MONWED|MTH|MOTH|MONTHU|MR|MF|MOFR|MONFRI|MT|MOTU|MONTUE|FS|FRSA|FRISAT|DAILY|(?:(?:' +
+    DAY_NAME_PATTERN +
+    ')\\s*(?:&|and|[/,-])\\s*){1,6}(?:' +
+    DAY_NAME_PATTERN +
+    '))\\b',
+  'gi'
+);
 
 const DAYS_SINGLE_TOKEN_REGEX =
   /\b(MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U)\b/gi;
 
 const TIME_RANGE_REGEX =
   /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
+
+const TIME_RANGE_GLOBAL_REGEX = new RegExp(TIME_RANGE_REGEX.source, 'gi');
 
 const BRACKET_ROOM_REGEX = /\[\s*([A-Za-z0-9\s-]+)\s*\]/;
 const EXPLICIT_SECTION_REGEX = /\b(?:sec(?:tion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i;
@@ -774,13 +785,18 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
  */
 export function parseCourseLine(line: string, colorIndex: number = 0): ParseResult {
   try {
-    let raw = (line || '').slice(0, 500).trim().replace(/^[`'"]+|[`'"]+$/g, '').trim();
+    if (typeof line !== 'string') {
+      return { success: false, rawText: String(line || ''), error: 'Empty line' };
+    }
+    // Defensively cap input line length to prevent ReDoS / long-line DoS
+    const cappedLine = line.length > 2000 ? line.slice(0, 2000) : line;
+    let raw = cappedLine.trim().replace(/^[`'"]+|[`'"]+$/g, '').trim();
     if (!raw) {
-      return { success: false, rawText: line, error: 'Empty line' };
+      return { success: false, rawText: cappedLine, error: 'Empty line' };
     }
 
     if (isPlanHeaderLine(raw)) {
-      return { success: false, rawText: line, error: 'Header or summary line ignored' };
+      return { success: false, rawText: cappedLine, error: 'Header or summary line ignored' };
     }
 
     // Decode HTML entities (e.g. &amp;, &ndash;, &nbsp;)
@@ -956,7 +972,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     // STEP 4: Extract Time Range & Days from remaining text if not yet detected
     // -------------------------------------------------------------
     if (parsedSessionsList.length === 0 && lineWorking) {
-      const allTimeMatches = Array.from(lineWorking.matchAll(new RegExp(TIME_RANGE_REGEX.source, 'gi')));
+      const allTimeMatches = Array.from(lineWorking.matchAll(TIME_RANGE_GLOBAL_REGEX));
       if (allTimeMatches.length > 1) {
         // Multi-session line: "MW 09:00-10:00, F 10:00-11:00"
         for (let i = 0; i < allTimeMatches.length; i++) {
@@ -976,7 +992,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
             });
           }
         }
-        lineWorking = lineWorking.replace(new RegExp(TIME_RANGE_REGEX.source, 'gi'), ' ');
+        lineWorking = lineWorking.replace(TIME_RANGE_GLOBAL_REGEX, ' ');
         lineWorking = lineWorking.replace(DAYS_COMPOUND_REGEX, ' ').replace(DAYS_SINGLE_TOKEN_REGEX, ' ');
       } else {
         const parsedSeg = parseScheduleSegment(lineWorking, TIME_RANGE_REGEX);
@@ -1182,11 +1198,12 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
  * Handles compact exports, standard multi-line exports, by-day schedules, and direct spreadsheet pastes.
  */
 export function parseBulkCourses(text: string, existingCourseCount: number = 0): ParseResult[] {
-  if (!text || !text.trim()) return [];
+  if (typeof text !== 'string' || !text.trim()) return [];
+  const cappedText = text.length > 200000 ? text.slice(0, 200000) : text;
 
   // Check if text is a multi-line "Standard" export format (blocks starting with "Course:")
-  if (/^\s*Course:\s*/im.test(text)) {
-    const rawBlocks = text.split(/\n\s*\n/);
+  if (/^\s*Course:\s*/im.test(cappedText)) {
+    const rawBlocks = cappedText.split(/\n\s*\n/);
     const results: ParseResult[] = [];
 
     for (const block of rawBlocks) {

@@ -1,6 +1,7 @@
 import { createJSONStorage, type PersistOptions, type PersistStorage, type StorageValue } from 'zustand/middleware';
-import type { Course } from '../types/schedule';
+import type { Course, SchedulePlan } from '../types/schedule';
 import { courseIdentityKey } from '../utils/courseIdentity';
+import { prefixedId } from '../utils/id';
 import { applyDomTheme, isThemeName, persistTheme, readStoredTheme } from '../utils/theme';
 import { sanitizeCatalog, sanitizePlans } from './sanitize';
 import { clearStorageWriteFailure, reportStorageWriteFailure } from './storageWrite';
@@ -66,6 +67,7 @@ export function migratePersistedSchedule(persistedState: unknown, version: unkno
 export const safeLocalStorage = {
   getItem: (name: string) => {
     try {
+      if (typeof localStorage === 'undefined') return null;
       return localStorage.getItem(name);
     } catch {
       return null;
@@ -73,6 +75,7 @@ export const safeLocalStorage = {
   },
   setItem: (name: string, value: string) => {
     try {
+      if (typeof localStorage === 'undefined') return;
       localStorage.setItem(name, value);
       clearStorageWriteFailure();
     } catch (error) {
@@ -81,6 +84,7 @@ export const safeLocalStorage = {
   },
   removeItem: (name: string) => {
     try {
+      if (typeof localStorage === 'undefined') return;
       localStorage.removeItem(name);
     } catch {
       // ignore
@@ -128,15 +132,20 @@ export function partialize(state: ScheduleState): PersistedSchedule {
   };
 }
 
-export function rehydratePersistedState(state: ScheduleState): void {
-  state.customShortcuts =
-    typeof state.customShortcuts === 'object' && state.customShortcuts !== null
-      ? state.customShortcuts
-      : {};
-  // Verify plans integrity - default to a single blank Plan A if empty
-  // or if sanitization filters out every entry (e.g. [null, "bad"]).
-  if (!Array.isArray(state.plans) || state.plans.length === 0) {
-    state.plans = [
+export function reconcilePersistedState(
+  persistedState: unknown,
+  currentState?: ScheduleState
+): ScheduleState {
+  const raw = asRecord(persistedState);
+
+  const customShortcuts =
+    typeof raw.customShortcuts === 'object' && raw.customShortcuts !== null && !Array.isArray(raw.customShortcuts)
+      ? (raw.customShortcuts as Record<string, string>)
+      : currentState?.customShortcuts || {};
+
+  let plans: SchedulePlan[];
+  if (!Array.isArray(raw.plans) || raw.plans.length === 0) {
+    plans = [
       {
         id: 'plan_1',
         name: 'Plan A',
@@ -144,9 +153,9 @@ export function rehydratePersistedState(state: ScheduleState): void {
       },
     ];
   } else {
-    state.plans = sanitizePlans(state.plans);
-    if (state.plans.length === 0) {
-      state.plans = [
+    plans = sanitizePlans(raw.plans as any[]);
+    if (plans.length === 0) {
+      plans = [
         {
           id: 'plan_1',
           name: 'Plan A',
@@ -156,47 +165,91 @@ export function rehydratePersistedState(state: ScheduleState): void {
     }
   }
 
-  // Verify activePlanId validity
-  if (!state.plans.some((p) => p.id === state.activePlanId)) {
-    state.activePlanId = state.plans[0]?.id || 'plan_1';
-  }
+  const rawActiveId = typeof raw.activePlanId === 'string' ? raw.activePlanId : '';
+  const activePlanId = plans.some((p) => p.id === rawActiveId)
+    ? rawActiveId
+    : plans[0]?.id || 'plan_1';
 
-  // Verify catalog - default to empty array
-  if (!Array.isArray(state.catalogCourses)) {
-    state.catalogCourses = [];
-  } else {
-    state.catalogCourses = sanitizeCatalog(state.catalogCourses);
-  }
+  let catalogCourses: Course[] = Array.isArray(raw.catalogCourses)
+    ? sanitizeCatalog(raw.catalogCourses)
+    : (currentState?.catalogCourses || []);
 
-  // Ensure all courses across all plans are represented in the course pool (catalogCourses)
   const existingCatalogKeys = new Set(
-    state.catalogCourses.map((c) => courseIdentityKey(c.code, c.section))
+    catalogCourses.map((c) => courseIdentityKey(c.code, c.section))
   );
   const missingCatalogCourses: Course[] = [];
-  for (const plan of state.plans) {
-    for (const c of plan.courses) {
+  for (const plan of plans) {
+    for (const c of plan.courses || []) {
+      if (!c || typeof c !== 'object') continue;
       const key = courseIdentityKey(c.code, c.section);
       if (!existingCatalogKeys.has(key)) {
         existingCatalogKeys.add(key);
+        const cId = typeof c.id === 'string' && c.id ? c.id : prefixedId('c');
         missingCatalogCourses.push({
           ...c,
-          id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}`,
+          id: cId.startsWith('cat_') ? cId : `cat_${cId}`,
         });
       }
     }
   }
   if (missingCatalogCourses.length > 0) {
-    state.catalogCourses = [...state.catalogCourses, ...missingCatalogCourses];
+    catalogCourses = [...catalogCourses, ...missingCatalogCourses];
   }
 
-  state.semesterStart = isIsoDate(state.semesterStart) ? state.semesterStart : DEFAULT_SEMESTER_START;
-  state.semesterEnd = isIsoDate(state.semesterEnd) ? state.semesterEnd : DEFAULT_SEMESTER_END;
+  const semesterStart = isIsoDate(raw.semesterStart)
+    ? raw.semesterStart
+    : currentState?.semesterStart || DEFAULT_SEMESTER_START;
+  const semesterEnd = isIsoDate(raw.semesterEnd)
+    ? raw.semesterEnd
+    : currentState?.semesterEnd || DEFAULT_SEMESTER_END;
 
-  const preferred = readStoredTheme() ?? (isThemeName(state.theme) ? state.theme : null);
-  if (preferred) {
-    state.theme = preferred;
-    applyDomTheme(preferred);
-    persistTheme(preferred);
+  const showWeekends =
+    typeof raw.showWeekends === 'boolean'
+      ? raw.showWeekends
+      : currentState?.showWeekends ?? false;
+
+  let startHour =
+    typeof raw.startHour === 'number' && Number.isFinite(raw.startHour)
+      ? Math.max(0, Math.min(23, Math.round(raw.startHour)))
+      : currentState?.startHour ?? 7;
+
+  let endHour =
+    typeof raw.endHour === 'number' && Number.isFinite(raw.endHour)
+      ? Math.max(0, Math.min(24, Math.round(raw.endHour)))
+      : currentState?.endHour ?? 17;
+
+  if (startHour >= endHour) {
+    startHour = 7;
+    endHour = 17;
+  }
+
+  const preferredTheme =
+    readStoredTheme() ??
+    (isThemeName(raw.theme) ? raw.theme : currentState?.theme ?? 'light');
+
+  const baseState = currentState || ({} as ScheduleState);
+
+  return {
+    ...baseState,
+    plans,
+    activePlanId,
+    catalogCourses,
+    showWeekends,
+    startHour,
+    endHour,
+    theme: preferredTheme,
+    semesterStart,
+    semesterEnd,
+    customShortcuts,
+  };
+}
+
+export function rehydratePersistedState(state: ScheduleState): void {
+  const reconciled = reconcilePersistedState(state, state);
+  Object.assign(state, reconciled);
+  if (reconciled.theme) {
+    applyDomTheme(reconciled.theme);
+    persistTheme(reconciled.theme);
   }
 }
 
@@ -205,9 +258,14 @@ export const persistOptions: PersistOptions<ScheduleState, PersistedSchedule> = 
   version: PERSIST_SCHEMA_VERSION,
   storage: createVersionedStorage(),
   partialize,
+  merge: (persistedState, currentState) => reconcilePersistedState(persistedState, currentState),
   migrate: migratePersistedSchedule,
   onRehydrateStorage: () => (state) => {
     if (!state) return;
-    rehydratePersistedState(state);
+    const preferred = readStoredTheme() ?? (isThemeName(state.theme) ? state.theme : null);
+    if (preferred) {
+      applyDomTheme(preferred);
+      persistTheme(preferred);
+    }
   },
 };

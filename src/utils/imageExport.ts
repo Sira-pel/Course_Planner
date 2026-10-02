@@ -154,8 +154,13 @@ export async function exportScheduleToImage(
     for (const s of c.sessions) {
       const sM = timeToMinutes(s.startTime);
       const eM = timeToMinutes(s.endTime);
-      if (sM > 0) startHour = Math.min(startHour, Math.floor(sM / 60));
-      if (eM > 0) endHour = Math.max(endHour, Math.ceil(eM / 60));
+      if (sM >= 0 && eM > sM) {
+        startHour = Math.min(startHour, Math.floor(sM / 60));
+        endHour = Math.max(endHour, Math.ceil(eM / 60));
+      } else {
+        if (sM > 0) startHour = Math.min(startHour, Math.floor(sM / 60));
+        if (eM > 0) endHour = Math.max(endHour, Math.ceil(eM / 60));
+      }
     }
   }
   startHour = Math.max(0, startHour);

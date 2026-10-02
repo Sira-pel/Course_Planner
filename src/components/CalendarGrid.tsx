@@ -2,7 +2,7 @@ import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { nextMeasuredWidth } from './calendarMeasure';
 import { CourseBlock } from './CourseBlock';
-import { DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
+import { Course, DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
 import { computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { collectDaySessions } from '../utils/collectDaySessions';
 import { Clock } from 'lucide-react';
@@ -94,15 +94,28 @@ export const CalendarGrid = memo(function CalendarGrid({
   const { effectiveStartHour, effectiveEndHour } = useMemo(() => {
     let minH = startHour;
     let maxH = endHour;
-    const allCourses = [...(activePlan?.courses || []), ...ghostPlans.flatMap(p => p.courses)];
-    for (const c of allCourses) {
+
+    const scanCourse = (c: Course) => {
       for (const s of c.sessions) {
         const sM = timeToMinutes(s.startTime);
         const eM = timeToMinutes(s.endTime);
-        if (sM > 0) minH = Math.min(minH, Math.floor(sM / 60));
-        if (eM > 0) maxH = Math.max(maxH, Math.ceil(eM / 60));
+        if (sM >= 0 && eM > sM) {
+          minH = Math.min(minH, Math.floor(sM / 60));
+          maxH = Math.max(maxH, Math.ceil(eM / 60));
+        } else {
+          if (sM > 0) minH = Math.min(minH, Math.floor(sM / 60));
+          if (eM > 0) maxH = Math.max(maxH, Math.ceil(eM / 60));
+        }
       }
+    };
+
+    if (activePlan?.courses) {
+      for (const c of activePlan.courses) scanCourse(c);
     }
+    for (const p of ghostPlans) {
+      for (const c of p.courses) scanCourse(c);
+    }
+
     return {
       effectiveStartHour: Math.max(0, minH),
       effectiveEndHour: Math.min(24, Math.max(minH + 1, maxH)),
