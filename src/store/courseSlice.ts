@@ -39,6 +39,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       const targetId = targetPlanId || state.activePlanId;
       const targetPlan = state.plans.find((p) => p.id === targetId);
       const oldCourse = targetPlan?.courses.find((c) => c.id === updatedCourse.id);
+      if (!oldCourse) return;
 
       const updatedPlans = state.plans.map((p) => {
         if (p.id === targetId) {

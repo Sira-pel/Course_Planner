@@ -187,11 +187,17 @@ export function computeDayLayout(
   const working = items.map((item, originalIndex) => {
     let start = timeToMinutes(item.session.startTime);
     let end = timeToMinutes(item.session.endTime);
+    let session = item.session;
     if (end <= start) {
       end = Math.min(1439, start + 30);
+      session = {
+        ...item.session,
+        endTime: minutesToTime(end, false),
+      };
     }
     return {
       ...item,
+      session,
       start,
       end,
       originalIndex,
