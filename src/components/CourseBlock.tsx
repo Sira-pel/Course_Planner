@@ -248,4 +248,24 @@ export const CourseBlock = memo(function CourseBlock({
       )}
     </div>
   );
-});
+}, (prev, next) =>
+  prev.layout.session.id === next.layout.session.id &&
+  prev.layout.session.startTime === next.layout.session.startTime &&
+  prev.layout.session.endTime === next.layout.session.endTime &&
+  prev.layout.session.room === next.layout.session.room &&
+  prev.layout.course.id === next.layout.course.id &&
+  prev.layout.course.color === next.layout.course.color &&
+  prev.layout.course.code === next.layout.course.code &&
+  prev.layout.course.name === next.layout.course.name &&
+  prev.layout.course.section === next.layout.course.section &&
+  prev.layout.course.instructor === next.layout.course.instructor &&
+  prev.layout.hasConflict === next.layout.hasConflict &&
+  prev.layout.isGhost === next.layout.isGhost &&
+  prev.layout.ghostIndex === next.layout.ghostIndex &&
+  prev.layout.planName === next.layout.planName &&
+  prev.layout.planId === next.layout.planId &&
+  prev.layout.colIndex === next.layout.colIndex &&
+  prev.layout.totalCols === next.layout.totalCols &&
+  prev.startHour === next.startHour &&
+  prev.totalMinutes === next.totalMinutes
+);

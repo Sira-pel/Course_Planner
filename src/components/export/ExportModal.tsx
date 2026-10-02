@@ -33,14 +33,14 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && <ExportModalBody initialTab={initialTab} onClose={onClose} />}
-    </AnimatePresence>
-  );
+  return <ExportModalBody isOpen={isOpen} initialTab={initialTab} onClose={onClose} />;
 };
 
-const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => void }> = ({ initialTab = 'text', onClose }) => {
+const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; onClose: () => void }> = ({
+  isOpen,
+  initialTab = 'text',
+  onClose,
+}) => {
   const {
     plans,
     activePlanId,
@@ -72,6 +72,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
   // Close modal when user presses Escape
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -80,10 +81,22 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   const [activeTab, setActiveTab] = useState<ExportTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Reset tab & state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setCopiedShareUrl(false);
+      setCopiedText(false);
+      setImportJson('');
+      setImportError(null);
+      setImportSuccess(false);
+    }
+  }, [isOpen, initialTab]);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
   useEffect(() => {
@@ -116,13 +129,13 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
 
   // Generate preview image smoothly with debounce when activeTab becomes 'image'
   useEffect(() => {
-    if (activeTab === 'image' && !imagePreviewUrl && !generatingImage) {
+    if (isOpen && activeTab === 'image' && !imagePreviewUrl && !generatingImage) {
       const timer = setTimeout(() => {
         handleGeneratePreviewImage();
       }, 160);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, imagePreviewUrl, generatingImage]);
+  }, [isOpen, activeTab, imagePreviewUrl, generatingImage]);
 
   // Backup State
   const [importJson, setImportJson] = useState('');
@@ -249,18 +262,21 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
   ];
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: EASE_OUT }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <motion.div
-        role="dialog"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="export-modal-overlay"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: EASE_OUT }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <motion.div
+            role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -414,5 +430,7 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         </div>
       </motion.div>
     </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

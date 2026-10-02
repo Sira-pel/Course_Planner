@@ -24,13 +24,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   onClose,
 }) => {
   return (
-    <AnimatePresence>
-      {isOpen && <ImportModalBody initialTab={initialTab} onClose={onClose} />}
-    </AnimatePresence>
+    <ImportModalBody
+      isOpen={isOpen}
+      initialTab={initialTab}
+      onClose={onClose}
+    />
   );
 };
 
-const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void }> = ({
+const ImportModalBody: React.FC<{
+  isOpen: boolean;
+  initialTab: ImportTabType;
+  onClose: () => void;
+}> = ({
+  isOpen,
   initialTab,
   onClose,
 }) => {
@@ -48,6 +55,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
 
   // Close modal when user presses Escape
   useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -56,7 +64,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   const activePlan = useMemo(
     () => plans.find((p) => p.id === activePlanId) || plans[0],
@@ -65,6 +73,14 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
 
   const [activeTab, setActiveTab] = useState<ImportTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Sync activeTab when opened with a new initialTab
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setSuccessBanner(null);
+    }
+  }, [isOpen, initialTab]);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
   useEffect(() => {
@@ -100,18 +116,21 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
   ];
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: EASE_OUT }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <motion.div
-        role="dialog"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="import-modal-overlay"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: EASE_OUT }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <motion.div
+            role="dialog"
         aria-modal="true"
         aria-labelledby="import-modal-title"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -231,5 +250,7 @@ const ImportModalBody: React.FC<{ initialTab: ImportTabType; onClose: () => void
         </div>
       </motion.div>
     </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

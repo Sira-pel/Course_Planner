@@ -49,6 +49,9 @@ function toBase64Url(str: string): string {
 }
 
 function fromBase64Url(base64url: string): string {
+  if (base64url.length > 50_000) {
+    throw new Error('Share payload too large');
+  }
   let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) {
     base64 += '=';

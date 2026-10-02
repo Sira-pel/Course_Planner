@@ -94,6 +94,10 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
               ...updatedCourse,
               id: c.id,
               color: c.color || updatedCourse.color,
+              sessions: updatedCourse.sessions.map((s, idx) => ({
+                ...s,
+                id: `s_${c.id}_${idx}`,
+              })),
             };
           }
           return c;
