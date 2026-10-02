@@ -40,11 +40,11 @@ export const PoolRow = React.memo(function PoolRow({
   return (
     <motion.div
       className="up-pool-row group"
-      initial={stagger ? { opacity: 0, y: 8 } : false}
+      initial={stagger ? { opacity: 0, y: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={
         stagger
-          ? { duration: 0.2, ease: EASE_OUT, delay: index * 0.04 }
+          ? { duration: 0.18, ease: EASE_OUT, delay: Math.min(index * 0.02, 0.16) }
           : { duration: 0 }
       }
     >

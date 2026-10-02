@@ -174,7 +174,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 className="up-settings-item up-chrome-btn"
               >
                 <Upload />
-                Import courses & schedule
+                Import
               </button>
               <button
                 type="button"
@@ -182,7 +182,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 className="up-settings-item up-chrome-btn"
               >
                 <Download />
-                Export schedule
+                Export
               </button>
               <button
                 type="button"

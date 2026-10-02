@@ -167,7 +167,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             </div>
 
             {/* Tab Switcher with sliding pill */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative [scrollbar-width:none]">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative overflow-hidden [scrollbar-width:none]">
               {helpTabs.map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -175,19 +175,12 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-colors duration-150 z-10 ${
+                    className={`relative py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-all duration-150 z-10 ${
                       isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
+                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {isActive && (
-                      <motion.span
-                        layoutId="activeHelpTabPill"
-                        className="absolute inset-0 bg-white dark:bg-slate-900 rounded-lg shadow-xs -z-10"
-                        transition={{ type: 'spring', stiffness: 500, damping: 36 }}
-                      />
-                    )}
                     {tab.icon}
                     <span className="truncate">{tab.label}</span>
                   </button>
@@ -198,17 +191,15 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             {/* Tab Content Body with smooth cross-fade */}
             <div
               ref={contentRef}
-              className="flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-4 text-xs up-scroll overscroll-contain [overflow-anchor:none]"
+              className="flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-4 text-xs up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
             >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15, ease: EASE_OUT }}
-                  className="w-full"
-                >
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0.2 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.22, ease: EASE_OUT }}
+                className="w-full will-change-[opacity] transform-gpu"
+              >
                   {activeTab === 'shortcuts' && (
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
@@ -608,7 +599,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                   )}
                 </motion.div>
-              </AnimatePresence>
             </div>
 
             {/* Footer */}

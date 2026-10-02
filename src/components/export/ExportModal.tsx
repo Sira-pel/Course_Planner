@@ -114,6 +114,16 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageTheme, setImageTheme] = useState<'light' | 'dark'>(theme);
 
+  // Generate preview image smoothly with debounce when activeTab becomes 'image'
+  useEffect(() => {
+    if (activeTab === 'image' && !imagePreviewUrl && !generatingImage) {
+      const timer = setTimeout(() => {
+        handleGeneratePreviewImage();
+      }, 160);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, imagePreviewUrl, generatingImage]);
+
   // Backup State
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
@@ -230,12 +240,12 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
     }
   };
 
-  const exportTabs: { id: ExportTabType; label: string; mobileLabel?: string; icon: React.ReactNode }[] = [
-    { id: 'text', label: 'Clean Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'share', label: 'Share Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'ics', label: 'Google Calendar (.ics)', mobileLabel: 'Google Cal (.ics)', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'image', label: 'PNG Snapshot', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'backup', label: 'JSON Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
+  const exportTabs: { id: ExportTabType; label: string; mobileLabel: string; icon: React.ReactNode }[] = [
+    { id: 'text', label: 'Clean Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'share', label: 'Share Link', mobileLabel: 'Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Google Cal (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'image', label: 'Snapshot', mobileLabel: 'Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'backup', label: 'JSON Backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
   return (
@@ -255,87 +265,66 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
         aria-labelledby="export-modal-title"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 4 }}
-        transition={{ duration: 0.22, ease: EASE_OUT }}
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
+        exit={{ opacity: 0, scale: 0.98, y: 5 }}
+        transition={{ duration: 0.26, ease: EASE_OUT }}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-3 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        {/* Header - Compact on mobile */}
+        <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0 pr-2">
-            <h2 id="export-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 id="export-modal-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
               Export Schedule & Backup
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Exporting: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> ({activePlan.courses.length} courses)
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+              Plan: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> ({activePlan.courses.length} courses)
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0 up-chrome-btn"
+            className="p-1 sm:p-1.5 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0 up-chrome-btn"
+            aria-label="Close export dialog"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
-        {/* Tab Switcher - with smooth sliding layout pill */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 overflow-x-auto no-scrollbar relative [scrollbar-width:none]">
+        {/* Tab Switcher - Single clean row on all screen sizes */}
+        <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-2 sm:mt-2.5 shrink-0 relative overflow-hidden [scrollbar-width:none]">
           {exportTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  if (tab.id === 'image' && !imagePreviewUrl) {
-                    handleGeneratePreviewImage();
-                  }
-                }}
+                onClick={() => setActiveTab(tab.id)}
                 title={tab.label}
-                className={`relative py-2 sm:py-1.5 px-2 md:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center min-w-0 md:flex-1 md:min-w-max md:shrink-0 transition-colors duration-150 z-10 ${
-                  tab.id === 'backup' ? 'col-span-2 sm:col-span-1' : ''
-                } ${
+                className={`relative py-1.5 px-1 sm:px-2 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 text-center min-w-0 transition-all duration-200 ease-out z-10 ${
                   isActive
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {isActive && (
-                  <motion.span
-                    layoutId="activeExportTabPill"
-                    className="absolute inset-0 bg-white dark:bg-slate-900 rounded-lg shadow-xs -z-10"
-                    transition={{ type: 'spring', stiffness: 500, damping: 36 }}
-                  />
-                )}
                 {tab.icon}
-                {tab.mobileLabel ? (
-                  <>
-                    <span className="md:hidden truncate">{tab.mobileLabel}</span>
-                    <span className="hidden md:inline md:whitespace-nowrap">{tab.label}</span>
-                  </>
-                ) : (
-                  <span className="truncate md:whitespace-nowrap">{tab.label}</span>
-                )}
+                <span className="hidden sm:inline truncate">{tab.label}</span>
+                <span className="inline sm:hidden truncate">{tab.mobileLabel}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Tab Body - Smooth Cross-fade without vertical displacement glitch */}
+        {/* Tab Body - Instant synchronous switch with silky fast fade */}
         <div
           ref={contentRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pt-4 pb-2 pr-0.5 up-scroll overscroll-contain [overflow-anchor:none]"
+          className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pt-3 pb-2 pr-0.5 up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, ease: EASE_OUT }}
-              className="w-full"
-            >
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0.2 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: EASE_OUT }}
+            className="w-full will-change-[opacity] transform-gpu"
+          >
               {activeTab === 'text' && (
                 <TextExportTab
                   textFormat={textFormat}
@@ -422,18 +411,6 @@ const ExportModalBody: React.FC<{ initialTab?: ExportTabType; onClose: () => voi
                 />
               )}
             </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center up-chrome-btn active:scale-95"
-          >
-            Done
-          </button>
         </div>
       </motion.div>
     </motion.div>

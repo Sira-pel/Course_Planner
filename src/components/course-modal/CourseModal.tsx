@@ -295,6 +295,9 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     if (next === mode) return;
     setMode(next);
     setError(null);
+    if (clipRef.current) {
+      clipRef.current.scrollTop = 0;
+    }
   };
 
   useEffect(() => {
@@ -623,7 +626,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                 left: 4,
                 width: 'calc(50% - 4px)',
               }}
-              transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
             />
             <button
               type="button"
@@ -671,15 +674,13 @@ export const CourseModal: React.FC<CourseModalProps> = ({
           ref={clipRef}
           className="course-morph up-scroll mt-3 min-h-0 flex-auto"
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, ease: EASE_OUT }}
-              className="w-full"
-            >
+          <motion.div
+            key={mode}
+            initial={{ opacity: 0.2 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: EASE_OUT }}
+            className="w-full will-change-[opacity] transform-gpu"
+          >
               {mode === 'form' ? (
                 <CourseForm
                   code={code}
@@ -732,7 +733,6 @@ export const CourseModal: React.FC<CourseModalProps> = ({
                 />
               )}
             </motion.div>
-          </AnimatePresence>
         </div>
 
         <div className="pt-4 mt-1 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0 bg-white dark:bg-slate-900 min-w-0">

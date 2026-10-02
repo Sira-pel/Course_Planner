@@ -68,7 +68,7 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, onToggle 
   return (
     <div
       onClick={() => onToggle(c.id)}
-      className={`p-2.5 flex items-center gap-3 cursor-pointer transition-colors ${
+      className={`py-2 px-2.5 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 cursor-pointer transition-colors ${
         isSelected
           ? 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
           : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-70'
@@ -324,97 +324,94 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col min-h-0 space-y-2.5">
       {/* File Upload Dropzone */}
       {!sheetData ? (
-        <div
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx, .xls, .csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            {isLoading ? (
-              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <FileSpreadsheet className="w-6 h-6" />
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              Upload your school's Excel or CSV schedule file
-            </p>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-              Supports <strong className="text-slate-700 dark:text-slate-200">.xlsx</strong>,{' '}
-              <strong className="text-slate-700 dark:text-slate-200">.xls</strong>, and{' '}
-              <strong className="text-slate-700 dark:text-slate-200">.csv</strong> spreadsheets
-            </p>
-          </div>
-          <button
-            type="button"
-            className="mt-1 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+        <div>
+          <div
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3"
           >
-            <Upload className="w-3.5 h-3.5" />
-            Browse Files
-          </button>
-
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 w-full max-w-xs mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-            <Info className="w-3.5 h-3.5" />
-            <span>Need a template?</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx, .xls, .csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              {isLoading ? (
+                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-6 h-6" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Upload your school's Excel or CSV schedule file
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Supports <strong className="text-slate-700 dark:text-slate-200">.xlsx</strong>,{' '}
+                <strong className="text-slate-700 dark:text-slate-200">.xls</strong>, and{' '}
+                <strong className="text-slate-700 dark:text-slate-200">.csv</strong> spreadsheets
+              </p>
+            </div>
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDownloadSampleTemplate();
-              }}
-              className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-0.5 ml-1"
+              className="mt-1 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
-              Download Sample
+              <Upload className="w-3.5 h-3.5" />
+              Browse Files
             </button>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 w-full max-w-xs mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <Info className="w-3.5 h-3.5" />
+              <span>Need a template?</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownloadSampleTemplate();
+                }}
+                className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-0.5 ml-1"
+              >
+                Download Sample
+              </button>
+            </div>
           </div>
         </div>
       ) : (
         /* Workspace when file is loaded */
-        <div className="space-y-3">
-          {/* File summary pill & sheet switcher */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <FileSpreadsheet className="w-4 h-4" />
+        <div className="flex flex-col flex-1 min-h-0 gap-3">
+          {/* File summary pill & sheet switcher - Compact on mobile */}
+          <div className="p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-xs" title={fileName || ''}>
                     {fileName}
                   </span>
-                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                  <span className="text-[10px] text-slate-500 font-mono shrink-0 hidden xs:inline">
                     {fileSize}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                  {allCourses.length} course sections detected ({selectedCourseIds.size} selected)
-                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               {sheetData.sheets.length > 1 && (
-                <div className="flex items-center gap-1.5">
-                  <label htmlFor="sheet-select" className="text-xs text-slate-600 dark:text-slate-300 shrink-0">
-                    Sheet:
-                  </label>
+                <div className="flex items-center gap-1">
                   <select
                     id="sheet-select"
                     value={sheetData.currentSheet}
                     onChange={(e) => handleSheetChange(e.target.value)}
-                    className="text-xs font-semibold px-2 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                    className="text-[11px] font-semibold px-1.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 max-w-[130px] sm:max-w-[180px] truncate"
+                    title="Select Sheet"
                   >
                     {sheetData.sheets.map((s) => (
                       <option key={s} value={s} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -428,15 +425,17 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               <button
                 type="button"
                 onClick={() => setShowColumnSetup((prev) => !prev)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md border flex items-center gap-1 transition-colors ${
+                className={`px-2 py-1 text-[11px] font-semibold rounded-md border flex items-center gap-1 transition-colors ${
                   showColumnSetup
                     ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-400'
                     : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
+                title="Configure Column Mapping"
               >
-                <Settings2 className="w-3.5 h-3.5" />
-                <span>Column Mapping</span>
-                {showColumnSetup ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <Settings2 className="w-3 h-3 shrink-0" />
+                <span className="hidden sm:inline">Column Mapping</span>
+                <span className="sm:hidden">Mapping</span>
+                {showColumnSetup ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
               </button>
 
               <button
@@ -447,9 +446,10 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                   setFileName(null);
                   setSelectedCourseIds(new Set());
                 }}
-                className="text-xs text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 px-2 py-1 font-semibold"
+                className="text-[11px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 px-1.5 py-1 font-semibold transition-colors"
+                title="Change File"
               >
-                Change file
+                Change
               </button>
             </div>
           </div>
@@ -457,7 +457,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           {/* Column Mapping Setup Panel - toggled with display style for instant reveal */}
           {activeMapping && (
             <div
-              className={`p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3 ${
+              className={`p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3 shrink-0 max-h-48 overflow-y-auto up-scroll ${
                 showColumnSetup ? 'block' : 'hidden'
               }`}
             >
@@ -507,21 +507,21 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           )}
 
           {/* Search, Filter & Bulk Select Bar */}
-          <div className="space-y-2">
-            <div className="relative w-full px-0.5">
-              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
+          <div className="space-y-1 shrink-0">
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search courses, professors, sections..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   aria-label="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -533,13 +533,13 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} found
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAll}
                   className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
-                  Select all ({allCourses.length})
+                  Select all
                 </button>
                 <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">·</span>
                 <button
@@ -553,13 +553,13 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             </div>
           </div>
 
-          {/* Parsed Course List with interactive checkboxes */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-64 sm:max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
+          {/* Parsed Course List with interactive checkboxes - Only this scrolls */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[42vh] sm:max-h-[48vh] min-h-[120px] flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
             {filteredCourses.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-600 dark:text-slate-300">
+              <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">
                 <p className="font-semibold text-slate-800 dark:text-slate-200">No courses parsed</p>
-                <p className="mt-1">
-                  Click <strong>Column Mapping</strong> above to check or adjust which column maps to Course Code and Schedule.
+                <p className="mt-1 text-[11px]">
+                  Click <strong>Mapping</strong> above to adjust column assignments.
                 </p>
               </div>
             ) : (
@@ -574,35 +574,42 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             )}
           </div>
 
-          {/* Action Footer */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={alsoAddToActivePlan}
-                onChange={(e) => setAlsoAddToActivePlan(e.target.checked)}
-                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700"
-              />
-              <span>
-                Also enroll selected courses into active plan: <strong>{activePlan.name}</strong>
-              </span>
-            </label>
+          {/* Action Footer - Compact Single-row on all screen sizes */}
+          <div className="pt-1 pb-0.5 shrink-0">
+            <div className="p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2 shadow-xs">
+              <label className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none min-w-0">
+                <input
+                  type="checkbox"
+                  checked={alsoAddToActivePlan}
+                  onChange={(e) => setAlsoAddToActivePlan(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 shrink-0"
+                />
+                <span className="truncate text-[11px] sm:text-xs">
+                  <span className="hidden sm:inline">Also enroll in </span>
+                  <span className="sm:hidden">Add to </span>
+                  <strong>{activePlan.name}</strong>
+                </span>
+              </label>
 
-            <button
-              type="button"
-              disabled={selectedCourseIds.size === 0 || isImporting}
-              onClick={handleImport}
-              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
-                selectedCourseIds.size > 0 && !isImporting
-                  ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
-                  : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'
-              }`}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>
-                Import {selectedCourseIds.size} Course{selectedCourseIds.size === 1 ? '' : 's'} to Course Pool
-              </span>
-            </button>
+              <button
+                type="button"
+                disabled={selectedCourseIds.size === 0 || isImporting}
+                onClick={handleImport}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                  selectedCourseIds.size > 0 && !isImporting
+                    ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 active:scale-95'
+                    : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  Import {selectedCourseIds.size} Course{selectedCourseIds.size === 1 ? '' : 's'}
+                </span>
+                <span className="sm:hidden">
+                  Import ({selectedCourseIds.size})
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

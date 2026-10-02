@@ -334,10 +334,10 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
 
       <div className="up-pool-list">
         <motion.div
-          className="up-pool-list-ink"
-          initial={reduceMotion ? false : { opacity: 0, y: 12, filter: 'blur(var(--blur-ink))' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: EASE_OUT }}
+          className="up-pool-list-ink will-change-[opacity,transform] transform-gpu"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
         >
           {filteredCourses.length === 0 ? (
             <div className="up-pool-empty">
