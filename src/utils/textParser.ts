@@ -99,6 +99,8 @@ const DAYS_SINGLE_TOKEN_REGEX =
 const TIME_RANGE_REGEX =
   /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
 
+const TIME_RANGE_GLOBAL_REGEX = new RegExp(TIME_RANGE_REGEX.source, 'gi');
+
 const BRACKET_ROOM_REGEX = /\[\s*([A-Za-z0-9\s-]+)\s*\]/;
 const EXPLICIT_SECTION_REGEX = /\b(?:sec(?:tion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i;
 const LECTURE_SECTION_REGEX = /\b(?:lec(?:ture)?\.?|lab(?:oratory)?\.?|rec(?:itation)?\.?|disc(?:ussion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i;
@@ -970,7 +972,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     // STEP 4: Extract Time Range & Days from remaining text if not yet detected
     // -------------------------------------------------------------
     if (parsedSessionsList.length === 0 && lineWorking) {
-      const allTimeMatches = Array.from(lineWorking.matchAll(new RegExp(TIME_RANGE_REGEX.source, 'gi')));
+      const allTimeMatches = Array.from(lineWorking.matchAll(TIME_RANGE_GLOBAL_REGEX));
       if (allTimeMatches.length > 1) {
         // Multi-session line: "MW 09:00-10:00, F 10:00-11:00"
         for (let i = 0; i < allTimeMatches.length; i++) {
@@ -990,7 +992,7 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
             });
           }
         }
-        lineWorking = lineWorking.replace(new RegExp(TIME_RANGE_REGEX.source, 'gi'), ' ');
+        lineWorking = lineWorking.replace(TIME_RANGE_GLOBAL_REGEX, ' ');
         lineWorking = lineWorking.replace(DAYS_COMPOUND_REGEX, ' ').replace(DAYS_SINGLE_TOKEN_REGEX, ' ');
       } else {
         const parsedSeg = parseScheduleSegment(lineWorking, TIME_RANGE_REGEX);
