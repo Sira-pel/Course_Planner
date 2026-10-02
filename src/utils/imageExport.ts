@@ -288,11 +288,14 @@ export async function exportScheduleToImage(
     });
   });
 
-  const dataUrl = canvas.toDataURL('image/png');
+  const blob = await new Promise<Blob>((resolve) =>
+    canvas.toBlob((b) => resolve(b!), 'image/png')
+  );
   // Release backing GPU/canvas bitmap buffer immediately to avoid memory bloat
   canvas.width = 0;
   canvas.height = 0;
-  return dataUrl;
+  const url = URL.createObjectURL(blob);
+  return url;
 }
 
 /**
@@ -302,12 +305,15 @@ export async function downloadScheduleImage(
   plan: SchedulePlan,
   options?: ImageExportOptions
 ): Promise<void> {
-  const dataUrl = await exportScheduleToImage(plan, options);
+  const url = await exportScheduleToImage(plan, options);
   const link = document.createElement('a');
-  link.href = dataUrl;
+  link.href = url;
   const safeName = plan.name.replace(/[^a-zA-Z0-9_-]/g, '_');
   link.download = `${safeName}_Schedule.png`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  if (url.startsWith('blob:')) {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
