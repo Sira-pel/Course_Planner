@@ -1,7 +1,8 @@
 import type { SchedulePlan } from '../types/schedule';
+import { courseIdentityKey } from '../utils/courseIdentity';
 import { prefixedId } from '../utils/id';
 import { commitWithHistory } from './history';
-import { uniquePlanId } from './sanitize';
+import { sanitizePlans, uniquePlanId } from './sanitize';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
 
 export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
@@ -121,11 +122,12 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
 
     importPlan: (plan: SchedulePlan, asGhost: boolean = false) => {
       const state = get();
+      const sanitized = sanitizePlans([plan])[0] || plan;
       const existingIds = new Set(state.plans.map((p) => p.id));
-      const newPlanId = existingIds.has(plan.id) ? uniquePlanId(state.plans.map((p) => p.id)) : plan.id;
+      const newPlanId = existingIds.has(sanitized.id) ? uniquePlanId(state.plans.map((p) => p.id)) : sanitized.id;
 
       const newPlan: SchedulePlan = {
-        ...plan,
+        ...sanitized,
         id: newPlanId,
       };
 
@@ -135,10 +137,26 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
         : state.ghostPlanIds.filter((id) => id !== newPlanId);
       const nextActiveId = asGhost ? state.activePlanId : newPlanId;
 
+      // Synchronize any new unique courses into catalogCourses (Course Pool sidebar)
+      const catalogKeys = new Set(
+        state.catalogCourses.map((cat) => courseIdentityKey(cat.code, cat.section))
+      );
+      const currentCatalog = [...state.catalogCourses];
+      for (const c of newPlan.courses || []) {
+        if (!c || typeof c !== 'object') continue;
+        const key = courseIdentityKey(c.code, c.section);
+        if (!catalogKeys.has(key)) {
+          catalogKeys.add(key);
+          const cId = typeof c.id === 'string' && c.id ? c.id : prefixedId('c');
+          currentCatalog.push({ ...c, id: cId.startsWith('cat_') ? cId : `cat_${cId}` });
+        }
+      }
+
       commitWithHistory(set, get, {
         plans: nextPlans,
         activePlanId: nextActiveId,
         ghostPlanIds: nextGhostIds,
+        catalogCourses: currentCatalog,
       });
 
       return newPlanId;

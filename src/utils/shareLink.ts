@@ -1,4 +1,5 @@
 import { DayOfWeek, SchedulePlan, Course, ClassSession, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../types/schedule';
+import { sanitizePlans } from '../store/sanitize';
 import { prefixedId } from './id';
 
 interface CompactSession {
@@ -128,42 +129,57 @@ export function decodePlanFromSharePayload(payload: string): {
     }
 
     const planId = prefixedId('plan_friend');
-    const planName = parsed.n?.trim() || 'Friend Plan';
+    const planName = typeof parsed.n === 'string' && parsed.n.trim() ? parsed.n.trim() : 'Friend Plan';
 
-    const courses: Course[] = parsed.c.map((compactCourse, cIdx) => {
-      const courseId = prefixedId(`c_f${cIdx}`);
-      const sessions: ClassSession[] = (compactCourse.ss || [])
-        .filter((s) => VALID_DAYS.has(s.d as DayOfWeek))
-        .map((s, sIdx) => ({
-          id: `s_${courseId}_${sIdx}`,
-          day: s.d as DayOfWeek,
-          startTime: s.st || '09:00',
-          endTime: s.et || '10:15',
-          room: s.rm || undefined,
-        }));
+    const courses: Course[] = parsed.c
+      .filter((compactCourse): compactCourse is CompactCourse => Boolean(compactCourse && typeof compactCourse === 'object'))
+      .map((compactCourse, cIdx) => {
+        const courseId = prefixedId(`c_f${cIdx}`);
+        const rawSessions = Array.isArray(compactCourse.ss) ? compactCourse.ss : [];
+        const sessions: ClassSession[] = rawSessions
+          .filter((s) => s && typeof s === 'object' && VALID_DAYS.has(s.d as DayOfWeek))
+          .map((s, sIdx) => ({
+            id: `s_${courseId}_${sIdx}`,
+            day: s.d as DayOfWeek,
+            startTime: typeof s.st === 'string' ? s.st : '09:00',
+            endTime: typeof s.et === 'string' ? s.et : '10:15',
+            room: typeof s.rm === 'string' ? s.rm : undefined,
+          }));
 
-      return {
-        id: courseId,
-        code: compactCourse.cd || 'COURSE',
-        name: compactCourse.nm || 'Class',
-        section: compactCourse.sc || undefined,
-        instructor: compactCourse.in || undefined,
-        credits: Number(compactCourse.cr) || 0,
-        color:
-          (compactCourse.co && LEGACY_COURSE_COLOR_MAP[compactCourse.co.toLowerCase()]) ||
-          compactCourse.co ||
-          COURSE_COLORS[cIdx % COURSE_COLORS.length],
-        sessions,
-      };
-    });
+        const colorStr = typeof compactCourse.co === 'string' ? compactCourse.co : '';
+        const normalizedColor = colorStr
+          ? LEGACY_COURSE_COLOR_MAP[colorStr.toLowerCase()] || colorStr
+          : undefined;
 
-    const plan: SchedulePlan = {
+        const rawCredits =
+          typeof compactCourse.cr === 'number' && Number.isFinite(compactCourse.cr)
+            ? compactCourse.cr
+            : undefined;
+
+        return {
+          id: courseId,
+          code: typeof compactCourse.cd === 'string' ? compactCourse.cd : 'COURSE',
+          name: typeof compactCourse.nm === 'string' ? compactCourse.nm : 'Class',
+          section: typeof compactCourse.sc === 'string' ? compactCourse.sc : undefined,
+          instructor: typeof compactCourse.in === 'string' ? compactCourse.in : undefined,
+          credits: rawCredits !== undefined ? rawCredits : 3,
+          color: normalizedColor || COURSE_COLORS[cIdx % COURSE_COLORS.length],
+          sessions,
+        };
+      });
+
+    const rawPlan: SchedulePlan = {
       id: planId,
       name: planName,
       courses,
     };
 
-    return { success: true, plan };
+    const sanitizedPlan = sanitizePlans([rawPlan])[0];
+    if (!sanitizedPlan) {
+      return { success: false, error: 'Failed to sanitize shared plan.' };
+    }
+
+    return { success: true, plan: sanitizedPlan };
   } catch (err) {
     return {
       success: false,

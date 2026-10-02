@@ -77,7 +77,13 @@ export function sanitizeCourse(c: any, index: number): Course {
     }
   }
 
-  const credits = typeof c?.credits === 'number' && !isNaN(c.credits) ? Math.max(0, Math.min(30, c.credits)) : 3;
+  const rawNum =
+    typeof c?.credits === 'number'
+      ? c.credits
+      : typeof c?.credits === 'string' && c.credits.trim() !== ''
+        ? Number(c.credits)
+        : NaN;
+  const credits = Number.isFinite(rawNum) ? Math.max(0, Math.min(30, rawNum)) : 3;
 
   const sessions: ClassSession[] = Array.isArray(c?.sessions)
     ? c.sessions
@@ -149,7 +155,9 @@ export function sanitizePlans(rawPlans: any[]): SchedulePlan[] {
       const rawPlanName = safeTrim(p.name, 60);
       const planName = rawPlanName || `Plan ${String.fromCharCode(65 + pIdx)}`;
       const courses = Array.isArray(p.courses)
-        ? p.courses.map((c: any, cIdx: number) => sanitizeCourse(c, cIdx))
+        ? p.courses
+            .filter((c: any) => c && typeof c === 'object')
+            .map((c: any, cIdx: number) => sanitizeCourse(c, cIdx))
         : [];
 
       return {

@@ -80,9 +80,18 @@ const COURSE_CODE_WITH_SECTION_REGEX =
 const COURSE_CODE_REGEX =
   /\b([A-Za-z]{2,6})\s*[-_.:]?\s*([0-9]{2,4}[A-Za-z]?)\b/i;
 
+const DAY_NAME_PATTERN =
+  '(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY|MON|TUE|WED|THURS|THUR|THU|FRI|SAT|SUN|MO|TU|WE|TH|FR|SA|SU|[MTWRFSU])';
+
 // Regex to detect days including compound single-letter and multi-letter combinations e.g. MF, MT, MW, MWF, TR, TTH, TF, WF, MR, TW, WR, MTW, MTWR, MTWRF, M-F, M/F, M & W, Mon/Fri, etc.
-const DAYS_COMPOUND_REGEX =
-  /\b(?:MTWTHF|MTWRF|MTWTH|MTWR|MTWF|MTTH|MWRF|MWTHF|TWTHF|TWRF|M-F|M-TH|MON-FRI|MON-THU|MWF|MOWEFR|MONWEDFRI|MTW|MTR|MTF|MWR|MWTH|TWF|TWR|TWTH|TRF|TTHF|WRF|WFR|TTH|TUTH|TUETHU|TR|TUR|TF|TUFR|TUEFRI|TW|TUWE|TUWED|WF|WEFR|WEDFRI|WR|WTH|WETH|WEDTHU|RF|THF|THFR|THUFRI|MW|MOWE|MONWED|MTH|MOTH|MONTHU|MR|MF|MOFR|MONFRI|MT|MOTU|MONTUE|FS|FRSA|FRISAT|DAILY|(?:(?:MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U)\s*(?:&|and|[/,-])\s*)+(?:MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U))\b/gi;
+const DAYS_COMPOUND_REGEX = new RegExp(
+  '\\b(?:MTWTHF|MTWRF|MTWTH|MTWR|MTWF|MTTH|MWRF|MWTHF|TWTHF|TWRF|M-F|M-TH|MON-FRI|MON-THU|MWF|MOWEFR|MONWEDFRI|MTW|MTR|MTF|MWR|MWTH|TWF|TWR|TWTH|TRF|TTHF|WRF|WFR|TTH|TUTH|TUETHU|TR|TUR|TF|TUFR|TUEFRI|TW|TUWE|TUWED|WF|WEFR|WEDFRI|WR|WTH|WETH|WEDTHU|RF|THF|THFR|THUFRI|MW|MOWE|MONWED|MTH|MOTH|MONTHU|MR|MF|MOFR|MONFRI|MT|MOTU|MONTUE|FS|FRSA|FRISAT|DAILY|(?:(?:' +
+    DAY_NAME_PATTERN +
+    ')\\s*(?:&|and|[/,-])\\s*){1,6}(?:' +
+    DAY_NAME_PATTERN +
+    '))\\b',
+  'gi'
+);
 
 const DAYS_SINGLE_TOKEN_REGEX =
   /\b(MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U)\b/gi;
@@ -774,13 +783,18 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
  */
 export function parseCourseLine(line: string, colorIndex: number = 0): ParseResult {
   try {
-    let raw = (line || '').slice(0, 500).trim().replace(/^[`'"]+|[`'"]+$/g, '').trim();
+    if (typeof line !== 'string') {
+      return { success: false, rawText: String(line || ''), error: 'Empty line' };
+    }
+    // Defensively cap input line length to prevent ReDoS / long-line DoS
+    const cappedLine = line.length > 2000 ? line.slice(0, 2000) : line;
+    let raw = cappedLine.trim().replace(/^[`'"]+|[`'"]+$/g, '').trim();
     if (!raw) {
-      return { success: false, rawText: line, error: 'Empty line' };
+      return { success: false, rawText: cappedLine, error: 'Empty line' };
     }
 
     if (isPlanHeaderLine(raw)) {
-      return { success: false, rawText: line, error: 'Header or summary line ignored' };
+      return { success: false, rawText: cappedLine, error: 'Header or summary line ignored' };
     }
 
     // Decode HTML entities (e.g. &amp;, &ndash;, &nbsp;)
@@ -1182,11 +1196,12 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
  * Handles compact exports, standard multi-line exports, by-day schedules, and direct spreadsheet pastes.
  */
 export function parseBulkCourses(text: string, existingCourseCount: number = 0): ParseResult[] {
-  if (!text || !text.trim()) return [];
+  if (typeof text !== 'string' || !text.trim()) return [];
+  const cappedText = text.length > 200000 ? text.slice(0, 200000) : text;
 
   // Check if text is a multi-line "Standard" export format (blocks starting with "Course:")
-  if (/^\s*Course:\s*/im.test(text)) {
-    const rawBlocks = text.split(/\n\s*\n/);
+  if (/^\s*Course:\s*/im.test(cappedText)) {
+    const rawBlocks = cappedText.split(/\n\s*\n/);
     const results: ParseResult[] = [];
 
     for (const block of rawBlocks) {
