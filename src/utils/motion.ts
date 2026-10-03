@@ -8,22 +8,22 @@ export const EASE_IN_OUT = [0.65, 0, 0.35, 1] as const;
 export const EASE_SHEET_ENTER = [0.32, 0.72, 0, 1] as const;
 
 export const SHEET_OPEN_TRANSITION = {
-  duration: 0.32,
-  ease: EASE_SHEET_ENTER,
+  duration: 0.24,
+  ease: EASE_DECEL,
 } as const;
 
 export const SHEET_CLOSE_TRANSITION = {
-  duration: 0.24,
+  duration: 0.18,
   ease: EASE_OUT,
 } as const;
 
 export const SHEET_BACKDROP_OPEN_TRANSITION = {
-  duration: 0.3,
+  duration: 0.24,
   ease: EASE_OUT,
 } as const;
 
 export const SHEET_BACKDROP_CLOSE_TRANSITION = {
-  duration: 0.22,
+  duration: 0.18,
   ease: EASE_OUT,
 } as const;
 

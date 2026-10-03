@@ -308,14 +308,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   aria-modal="true"
                   aria-label="Settings"
                   className="up-mobile-sheet up-settings"
-                  drag="y"
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0, bottom: 0.4 }}
-                  onDragEnd={(_e, info) => {
-                    if (info.offset.y > 80 || info.velocity.y > 350) {
-                      onToggleOpen();
-                    }
-                  }}
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={

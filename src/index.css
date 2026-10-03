@@ -1351,11 +1351,12 @@ html.dark .up-pool-drawer,
   border-top: 1px solid var(--up-line);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -12px 36px rgb(0 0 0 / 0.28);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
   background: var(--up-raised);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  touch-action: pan-y;
+  contain: layout;
+  will-change: transform;
 }
 
 html:not(.dark) .up-mobile-sheet {
@@ -1647,6 +1648,8 @@ html.dark .up-mobile-sheet,
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  contain: paint layout;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;

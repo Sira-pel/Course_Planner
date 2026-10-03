@@ -525,14 +525,6 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
                 className="up-pool-sheet"
-                drag="y"
-                dragConstraints={{ top: 0 }}
-                dragElastic={{ top: 0, bottom: 0.4 }}
-                onDragEnd={(_e, info) => {
-                  if (info.offset.y > 80 || info.velocity.y > 350) {
-                    onToggleCollapse();
-                  }
-                }}
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={

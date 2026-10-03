@@ -152,14 +152,6 @@ export function MobileDock({
                 role="menu"
                 aria-label="More actions"
                 className="up-menu up-more-menu"
-                drag="y"
-                dragConstraints={{ top: 0 }}
-                dragElastic={{ top: 0, bottom: 0.4 }}
-                onDragEnd={(_e, info) => {
-                  if (info.offset.y > 70 || info.velocity.y > 350) {
-                    onCloseMoreMenu();
-                  }
-                }}
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
