@@ -19,7 +19,7 @@ export default defineConfig(() => {
           description: 'University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter.',
           theme_color: '#020617',
           background_color: '#020617',
-          display: 'standalone',
+          display: 'browser',
           start_url: '/',
           scope: '/',
           icons: [
