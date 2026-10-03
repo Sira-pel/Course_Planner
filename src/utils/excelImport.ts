@@ -8,12 +8,14 @@ export interface ColumnOption {
   index: number;       // 0, 1, 2...
   letter: string;      // "A", "B", "C"...
   headerText: string;  // header label if present
-  label: string;       // "Col B (ICT 304...)" or "Col B: Course Code"
+  label: string;       // "Col B [Course Code]"
   samples: string[];   // preview values
 }
 
 export interface ColumnMapping {
   code: string;        // column key e.g. "col_1"
+  subject?: string;    // separate subject column e.g. "col_0" (e.g. BUSN)
+  courseNum?: string;  // separate course number column e.g. "col_1" (e.g. 200, 370)
   name: string;        // column key e.g. "col_3"
   section: string;     // column key e.g. "col_2"
   schedule: string;    // combined day + time column e.g. "col_6"
@@ -74,11 +76,9 @@ export function sanitizeString(val: unknown, maxLen = 200): string {
 
 /**
  * Converts an Excel serial date/time number into "HH:mm" (24-hour string).
- * In Excel: 0.375 = 09:00, 0.5 = 12:00, 0.5625 = 13:30, 0.75 = 18:00
  */
 export function excelSerialToTime(val: number): string | null {
   if (isNaN(val)) return null;
-  // If date + time (e.g. 44500.375), take only the fractional time component
   let fraction = val - Math.floor(val);
   if (fraction === 0 && val >= 0 && val < 1) fraction = val;
   if (fraction < 0 || fraction >= 1) return null;
@@ -90,14 +90,13 @@ export function excelSerialToTime(val: number): string | null {
 }
 
 /**
- * Extracts a time range { start, end } from any raw string or number.
+ * Extracts a time range { start, end } from any raw string, number, or condensed military format.
  */
 export function extractTimeRange(raw: unknown): { start: string; end: string } | null {
   if (raw === null || raw === undefined) return null;
   if (typeof raw === 'number') {
     const t = excelSerialToTime(raw);
     if (t) {
-      // If only a single time was given, assume 1 hour duration
       const [hStr, mStr] = t.split(':');
       const h = parseInt(hStr, 10);
       const m = parseInt(mStr, 10);
@@ -117,21 +116,33 @@ export function extractTimeRange(raw: unknown): { start: string; end: string } |
     .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212~]/g, '-')
     .replace(/\b(?:to|until|till)\b/gi, '-');
 
-  // 1. Try standard regex time range: e.g. "08:30AM - 10:00AM", "1:45 PM - 3:15 PM", "9:00-10:15", "13:30-15:00"
-  const rangeMatch = cleanStr.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)\s*-\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)/i);
+  // 1. Try standard regex time range: e.g. "08:30AM - 10:00AM", "01:45PM - 03:15PM", "1:45 PM - 3:15 PM", "9:00-10:15", "13:30-15:00"
+  const rangeMatch = cleanStr.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)\s*[-/]\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)/i);
   if (rangeMatch) {
     const parsed = parseTimeRange(`${rangeMatch[1]}-${rangeMatch[2]}`);
     if (parsed) return parsed;
   }
 
-  // 2. Direct fallback using parseTimeRange on the cleaned string
+  // 2. Condensed military time: e.g. "0900-1015" or "1330-1500"
+  const militaryMatch = cleanStr.match(/\b([012]\d[0-5]\d)\s*[-/ ]\s*([012]\d[0-5]\d)\b/);
+  if (militaryMatch) {
+    const sH = militaryMatch[1].slice(0, 2);
+    const sM = militaryMatch[1].slice(2, 4);
+    const eH = militaryMatch[2].slice(0, 2);
+    const eM = militaryMatch[2].slice(2, 4);
+    return {
+      start: `${sH}:${sM}`,
+      end: `${eH}:${eM}`,
+    };
+  }
+
   return parseTimeRange(cleanStr);
 }
 
 /**
- * Regex patterns for day tokens: MWF, TTH, TUTH, TR, M, T, W, R, F, Mon, Tue, Wed, Thu, Fri, etc.
+ * Regex patterns for day tokens: MWF, TTH, TUTH, TR, M, T, W, R, F, Mon, Tue, Wed, Thu, Fri, TF, TH, MW, WF, etc.
  */
-const DAY_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|TUFR|WEFR|MTWTHF|MTWRF|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|TH|SU|M|T|W|R|F|S|U)\b/gi;
+const DAY_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|TUFR|WEFR|MTWTHF|MTWRF|TWTHF|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|TH|SU|SA|TU|WE|MO|FR|M|T|W|R|F|S|U)\b/gi;
 
 /**
  * Extracts DayOfWeek[] from any raw string or array of tokens.
@@ -141,30 +152,47 @@ export function extractDays(raw: unknown): DayOfWeek[] {
   const str = sanitizeString(raw, 100);
   if (!str) return [];
 
+  // Strip cohort prefixes e.g. "(DD)", "(A)", "(AA)", "(Y)", "(Z)", "(B)", "(BB)", "(L)"
+  const withoutPrefix = str.replace(/^\([A-Za-z0-9]+\)\s*/, '');
+  const cleanStr = withoutPrefix.replace(/[-–—/]/g, ' ');
+
   // Match all day tokens in the string
-  const matches = str.match(DAY_TOKEN_REGEX);
+  const matches = cleanStr.match(DAY_TOKEN_REGEX);
   if (matches && matches.length > 0) {
     const normalized = normalizeDays(matches);
     if (normalized.length > 0) return normalized;
   }
 
-  // Fallback: split by commas, slashes, spaces
-  const parts = str.split(/[\s,;/&]+/).filter(Boolean);
+  // Fallback: split by delimiters
+  const parts = str.split(/[\s,;/&+\-–—]+/).filter(Boolean);
   if (parts.length > 0) {
-    return normalizeDays(parts);
+    const res = normalizeDays(parts);
+    if (res.length > 0) return res;
   }
 
   return [];
 }
 
 /**
+ * Checks if a string represents an Online, Asynchronous, TBA, or Flexible course.
+ */
+export function isOnlineOrTBA(val: unknown): boolean {
+  if (val === null || val === undefined) return false;
+  const s = sanitizeString(val, 100).toLowerCase();
+  return /\b(online|async|asynchronous|tba|tbd|tbc|arr|arranged|distance|virtual|remote|web|flex|flexible|n\/a)\b/i.test(s);
+}
+
+/**
  * Parses schedule strings that contain both day and time, e.g.:
- * "(H) 01:45PM - 03:15PM TTH"
- * "(E) 03:30PM - 05:00PM MW"
+ * "(DD) 01:45PM - 03:15PM TF"
+ * "(A) 08:30AM - 10:00AM MW"
+ * "(AA) 08:30AM - 10:00AM TF"
+ * "(Y) 01:45PM - 02:45PM TH"
+ * "(Z) 03:30PM - 04:30PM TH"
+ * "(B) 10:15AM - 11:45AM MW"
+ * "(BB) 10:15AM - 11:45AM TF"
+ * "(L) 12:00PM - 01:30PM WF"
  * "MWF 9:00AM - 10:00AM"
- * "09:00 - 10:15 MWF"
- * "TTH 1:30 - 3:00 PM"
- * "Mon/Wed 8:30-10:00"
  */
 export function parseScheduleString(raw: unknown): {
   days: DayOfWeek[];
@@ -175,7 +203,7 @@ export function parseScheduleString(raw: unknown): {
   let str = sanitizeString(raw, 100);
   if (!str) return null;
 
-  // 1. Strip cohort or letter prefix in parentheses: e.g. "(H)", "(AA)", "(1)", "(L)"
+  // 1. Strip cohort or letter prefix in parentheses: e.g. "(DD)", "(AA)", "(1)", "(L)", "(A)", "(Y)", "(Z)"
   str = str.replace(/^\([A-Za-z0-9]+\)\s*/, '');
   str = str.replace(/\s*\([A-Za-z0-9]+\)$/, '');
 
@@ -193,7 +221,6 @@ export function parseScheduleString(raw: unknown): {
     };
   }
 
-  // If days exist but time range could not be parsed, default to 09:00 - 10:15
   if (days.length > 0) {
     return {
       days,
@@ -215,7 +242,7 @@ export function readExcelFile(data: ArrayBuffer): {
   const workbook = XLSX.read(data, {
     type: 'array',
     cellDates: false,
-    raw: false, // Extract formatted strings from cells
+    raw: false,
   });
 
   return {
@@ -226,7 +253,6 @@ export function readExcelFile(data: ArrayBuffer): {
 
 /**
  * Clamps the sheet's !ref range to only rows and columns that contain actual non-empty data.
- * Always sets start cell to A1 (s: { r: 0, c: 0 }) so column indexing remains strictly aligned.
  */
 export function clampSheetRange(sheet: XLSX.WorkSheet, maxAllowedCols = 60, maxAllowedRows = 10000): void {
   if (!sheet) return;
@@ -236,7 +262,7 @@ export function clampSheetRange(sheet: XLSX.WorkSheet, maxAllowedCols = 60, maxA
   let hasCells = false;
 
   for (const key of Object.keys(sheet)) {
-    if (key.charCodeAt(0) === 33) continue; // skip '!ref', '!merges', '!cols', etc.
+    if (key.charCodeAt(0) === 33) continue;
     const cellVal = sheet[key];
     if (!cellVal) continue;
 
@@ -284,7 +310,7 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
     };
   }
 
-  // Pre-clamp range so sheet_to_json does not expand 16,384 empty columns
+  // Pre-clamp range so sheet_to_json does not expand empty columns
   clampSheetRange(sheet);
 
   // Convert sheet to 2D array of values
@@ -331,22 +357,23 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
     return trimmed;
   });
 
-  const sampleScanRows = Math.min(trimmedRows.length, 100);
+  const sampleScanRows = Math.min(trimmedRows.length, 300);
 
   // Detect header row index
   let headerRowIndex = -1;
   const HEADER_KEYWORDS = [
     'course', 'code', 'subject', 'subj', 'title', 'name', 'section', 'sec',
     'instructor', 'professor', 'prof', 'faculty', 'day', 'days', 'time', 'times',
-    'start', 'end', 'room', 'bldg', 'location', 'credit', 'credits', 'unit', 'units', 'schedule'
+    'start', 'end', 'room', 'bldg', 'classroom', 'location', 'credit', 'credits', 'unit', 'units', 'schedule',
+    'crn', 'catalog', 'crse', 'descr', 'nbr', 'dept'
   ];
 
-  for (let r = 0; r < Math.min(trimmedRows.length, 6); r++) {
+  for (let r = 0; r < Math.min(trimmedRows.length, 12); r++) {
     const row = trimmedRows[r];
     if (!row) continue;
     let matchCount = 0;
     for (const cell of row) {
-      const text = sanitizeString(cell).toLowerCase();
+      const text = sanitizeString(cell).toLowerCase().replace(/[^a-z0-9]/g, '');
       if (HEADER_KEYWORDS.some((kw) => text.includes(kw))) {
         matchCount++;
       }
@@ -425,6 +452,8 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
 export function getEmptyMapping(): ColumnMapping {
   return {
     code: '',
+    subject: '',
+    courseNum: '',
     name: '',
     section: '',
     schedule: '',
@@ -438,13 +467,15 @@ export function getEmptyMapping(): ColumnMapping {
   };
 }
 
-// Regex patterns for course code, section, and schedule detection
+// Regex patterns for course code, subject, number, section, and schedule detection
 const COURSE_CODE_REGEX = /^[A-Za-z]{2,6}\s*[-_.:]?\s*\d{2,4}[A-Za-z]?$/;
+const SUBJECT_ONLY_REGEX = /^[A-Za-z]{2,5}$/;
+const COURSE_NUMBER_ONLY_REGEX = /^\d{2,4}[A-Za-z]?$/;
 const SECTION_REGEX = /^\d{1,4}[A-Za-z]?$|^[A-Za-z]\d{0,2}$/i;
 
 /**
  * Automatically detects which column corresponds to each course field
- * combining header keyword analysis and deep content validation.
+ * combining header keyword analysis and deep content validation across up to 1,000 rows.
  */
 export function autoDetectColumns(
   rawRows: (string | number | undefined)[][],
@@ -454,12 +485,14 @@ export function autoDetectColumns(
   const mapping = getEmptyMapping();
   if (columns.length === 0 || rawRows.length === 0) return mapping;
 
-  const scanEnd = Math.min(rawRows.length, dataStartRow + 500);
+  const scanEnd = Math.min(rawRows.length, dataStartRow + 1000);
   const totalSampleRows = Math.max(1, scanEnd - dataStartRow);
 
   interface FieldScore {
     colKey: string;
     code: number;
+    subject: number;
+    courseNum: number;
     name: number;
     section: number;
     schedule: number;
@@ -473,10 +506,13 @@ export function autoDetectColumns(
   }
 
   const scores: FieldScore[] = columns.map((col) => {
-    const h = col.headerText.toLowerCase();
+    const rawH = col.headerText.toLowerCase();
+    const cleanH = rawH.replace(/[^a-z0-9]/g, ' ').trim();
 
     // 1. Header keyword weights
     let codeH = 0;
+    let subjectH = 0;
+    let courseNumH = 0;
     let nameH = 0;
     let sectionH = 0;
     let scheduleH = 0;
@@ -488,35 +524,51 @@ export function autoDetectColumns(
     let creditsH = 0;
     let roomH = 0;
 
-    if (/\b(course\s*code|course\s*id|course\s*num|course\s*#|subj|subject|catalog|cat\s*#|crn|class\s*#|course\s*no)\b/i.test(h)) codeH = 10;
-    else if (/\b(code)\b/i.test(h)) codeH = 8;
+    // Subject column detection e.g. "Acad. Dept", "Subject", "Dept"
+    if (/\b(acad\s*dept|academic\s*department|subject|subj|department|dept)\b/i.test(cleanH)) subjectH = 14;
 
-    if (/\b(course\s*title|course\s*name|subject\s*title|course\s*desc|description)\b/i.test(h)) nameH = 10;
-    else if (/\b(title|name)\b/i.test(h) && !/\b(instructor|prof|teacher|faculty)\b/i.test(h)) nameH = 7;
+    // Course number column detection e.g. "Crse", "Course #"
+    if (/\b(crse|course\s*no|course\s*num|course\s*#|catalog\s*#|cat\s*#|cat\s*no|catalog\s*nbr|catalog\s*number)\b/i.test(cleanH)) courseNumH = 14;
 
-    if (/\b(section|sec|sec\s*#|sec\s*no|sect|class\s*sec)\b/i.test(h)) sectionH = 10;
+    // Full Course Code detection e.g. "Course Code", "Course ID", "CRN"
+    if (/\b(course\s*code|course\s*id|crn|class\s*#|class\s*nbr|course\s*identifier|subj\s*crse)\b/i.test(cleanH)) codeH = 16;
+    else if (/\b(code)\b/i.test(cleanH)) codeH = 8;
 
-    if (/\b(schedule|day\s*[\/&]\s*time|days\s*[\/&]\s*time|days\s*and\s*times?|meeting\s*pattern|class\s*schedule)\b/i.test(h)) scheduleH = 10;
-    else if (/\b(meeting|meeting\s*time)\b/i.test(h)) scheduleH = 8;
+    // Course Title detection e.g. "Course Title", "Course Name"
+    if (/\b(course\s*title|course\s*name|subject\s*title|course\s*desc|description|descr|long\s*title)\b/i.test(cleanH)) nameH = 16;
+    else if (/\b(title|name)\b/i.test(cleanH) && !/\b(instructor|prof|teacher|faculty)\b/i.test(cleanH)) nameH = 8;
 
-    if (/\b(meeting\s*days?|class\s*days?|pattern)\b/i.test(h)) daysH = 10;
-    else if (/\b(days?)\b/i.test(h) && !/\btime\b/i.test(h)) daysH = 8;
+    // Section e.g. "Section", "Sec"
+    if (/\b(section|sec|sec\s*#|sec\s*no|sect|class\s*sec|section\s*number)\b/i.test(cleanH)) sectionH = 16;
 
-    if (/\b(class\s*times?|meeting\s*time|time\s*range)\b/i.test(h)) timeH = 10;
-    else if (/\b(time|times|hours)\b/i.test(h) && !/\b(start|end|begin|finish|day)\b/i.test(h)) timeH = 8;
+    // Schedule / Meeting / Time* e.g. "Time*", "Schedule", "Day / Time"
+    if (/\b(schedule|day\s*[\/&]\s*time|days\s*[\/&]\s*time|days\s*and\s*times?|meeting\s*pattern|class\s*schedule|meeting\s*info)\b/i.test(cleanH)) {
+      scheduleH = 16;
+    } else if (/\b(time)\b/i.test(cleanH) && !/\b(start|end|begin|finish|due|date)\b/i.test(cleanH)) {
+      scheduleH = 10;
+      timeH = 10;
+    }
 
-    if (/\b(start\s*time|begin\s*time|start|begin|from)\b/i.test(h)) startH = 10;
-    if (/\b(end\s*time|finish\s*time|end|finish|to)\b/i.test(h)) endH = 10;
+    if (/\b(meeting\s*days?|class\s*days?|pattern|mtg\s*days?)\b/i.test(cleanH)) daysH = 14;
+    else if (/\b(days?)\b/i.test(cleanH) && !/\btime\b/i.test(cleanH)) daysH = 8;
 
-    if (/\b(instructor|professor|faculty|teacher|prof|lecturer|instructor\s*name)\b/i.test(h)) instructorH = 10;
-    else if (/\bstaff\b/i.test(h)) instructorH = 6;
+    if (/\b(start\s*time|begin\s*time|start|begin|from)\b/i.test(cleanH) && !/\bdate\b/i.test(cleanH)) startH = 14;
+    if (/\b(end\s*time|finish\s*time|end|finish|to)\b/i.test(cleanH) && !/\bdate\b/i.test(cleanH)) endH = 14;
 
-    if (/\b(credit\s*hours?|credits?|units?|credit\s*units?|hrs?|cr)\b/i.test(h)) creditsH = 10;
+    // Faculty / Professor / Instructor e.g. "Faculty", "Instructor"
+    if (/\b(faculty|instructor|professor|teacher|prof|lecturer|instructor\s*name|primary\s*instructor)\b/i.test(cleanH)) instructorH = 16;
+    else if (/\bstaff\b/i.test(cleanH)) instructorH = 6;
 
-    if (/\b(room|location|bldg|building|facility|classroom|hall|venue)\b/i.test(h)) roomH = 10;
+    // Credit e.g. "Credit", "Credits", "Units"
+    if (/\b(credit\s*hours?|credits?|units?|credit\s*units?|hrs?|cr|credit)\b/i.test(cleanH)) creditsH = 16;
 
-    // 2. Data content analysis
+    // Classroom / Room e.g. "Classroom", "Room", "Location"
+    if (/\b(classroom|room|location|bldg|building|facility|hall|venue|facility\s*id)\b/i.test(cleanH)) roomH = 16;
+
+    // 2. Data content analysis across rows
     let codeMatches = 0;
+    let subjectMatches = 0;
+    let courseNumMatches = 0;
     let nameMatches = 0;
     let sectionMatches = 0;
     let scheduleMatches = 0;
@@ -534,38 +586,49 @@ export function autoDetectColumns(
       const val = sanitizeString(row[col.index]);
       if (!val) continue;
 
-      // Course Code e.g. "ICT 304", "COSC 241", "CS 101", "CS101", "BIO-102"
+      // Full Course Code e.g. "BUSN 200", "BUSN 370", "BUSN 370L", "ECON 200"
       if (COURSE_CODE_REGEX.test(val)) {
         codeMatches++;
       } else if (/^[A-Za-z]{2,5}\s+\d{2,4}/.test(val)) {
         codeMatches += 0.8;
       }
 
-      // Section e.g. "001", "101", "01", "A"
+      // Subject Only e.g. "BUSN", "ECON", "MATH", "CS"
+      if (SUBJECT_ONLY_REGEX.test(val) && val.length <= 5) {
+        subjectMatches++;
+      }
+
+      // Course Number Only e.g. "200", "370", "370L"
+      if (COURSE_NUMBER_ONLY_REGEX.test(val) && val.length <= 5) {
+        courseNumMatches++;
+      }
+
+      // Section e.g. "001", "002", "003", "A"
       if (SECTION_REGEX.test(val) && val.length <= 4 && !/^[A-Za-z]{2,}/.test(val)) {
         sectionMatches++;
       }
 
-      // Course Title e.g. "Mobile App Development", "Calculus I"
+      // Course Title e.g. "Intro to Business Communication", "Management of Information Systems"
       if (
-        val.length >= 6 &&
+        val.length >= 5 &&
         val.includes(' ') &&
         !/\d{1,2}:\d{2}/.test(val) &&
-        !/^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(val)
+        !/^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(val) &&
+        !/^\d{1,2}\/\d{1,2}/.test(val)
       ) {
         nameMatches++;
       }
 
-      // Schedule (Day + Time combined) e.g. "(H) 01:45PM - 03:15PM TTH", "MWF 9:00-10:00"
-      const hasTime = /\d{1,2}[:.]\d{2}/.test(val);
-      const hasDays = /(?:MWF|TTH|TF|WF|MW|TR|TUFR|MTH|MTWRF|MON|TUE|WED|THU|FRI)/i.test(val);
+      // Schedule (Day + Time combined) e.g. "(DD) 01:45PM - 03:15PM TF", "(A) 08:30AM - 10:00AM MW"
+      const hasTime = /\d{1,2}[:.]\d{2}|\b[012]\d[0-5]\d\b/.test(val);
+      const hasDays = /(?:MWF|TTH|TF|WF|MW|TR|TUFR|MTH|MTWRF|MON|TUE|WED|THU|FRI|\bTH\b|\bTF\b|\bMW\b|\bWF\b)/i.test(val);
 
       if (hasTime && hasDays) {
         scheduleMatches++;
       } else if (hasDays && !hasTime) {
         daysMatches++;
       } else if (hasTime && !hasDays) {
-        if (/[-–~to]/.test(val)) {
+        if (/[-–~to/]/.test(val)) {
           timeMatches++;
         } else {
           startMatches += 0.5;
@@ -573,7 +636,7 @@ export function autoDetectColumns(
         }
       }
 
-      // Instructor e.g. "Kabin Antony", "Jesse Lee Orndorff", "Staff", "TBA"
+      // Instructor e.g. "Yusuf Nulla", "Darin Duch", "TBC", "TBA", "Staff"
       if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$/.test(val) || val === 'Staff' || val === 'TBA' || val === 'TBC') {
         instructorMatches++;
       }
@@ -584,7 +647,7 @@ export function autoDetectColumns(
         creditsMatches++;
       }
 
-      // Room e.g. "Hall 101", "TBD", "Room 204", "Science 301"
+      // Room e.g. "TBD", "TBA", "Hall 101", "Room 204"
       if (
         val === 'TBD' ||
         val === 'TBA' ||
@@ -597,17 +660,19 @@ export function autoDetectColumns(
 
     return {
       colKey: col.key,
-      code: codeH + (codeMatches / totalSampleRows) * 5,
-      name: nameH + (nameMatches / totalSampleRows) * 5,
-      section: sectionH + (sectionMatches / totalSampleRows) * 5,
-      schedule: scheduleH + (scheduleMatches / totalSampleRows) * 5,
-      days: daysH + (daysMatches / totalSampleRows) * 5,
-      time: timeH + (timeMatches / totalSampleRows) * 5,
-      startTime: startH + (startMatches / totalSampleRows) * 5,
-      endTime: endH + (endMatches / totalSampleRows) * 5,
-      instructor: instructorH + (instructorMatches / totalSampleRows) * 5,
-      credits: creditsH + (creditsMatches / totalSampleRows) * 5,
-      room: roomH + (roomMatches / totalSampleRows) * 5,
+      code: codeH + (codeMatches / totalSampleRows) * 8,
+      subject: subjectH + (subjectMatches / totalSampleRows) * 6,
+      courseNum: courseNumH + (courseNumMatches / totalSampleRows) * 6,
+      name: nameH + (nameMatches / totalSampleRows) * 8,
+      section: sectionH + (sectionMatches / totalSampleRows) * 8,
+      schedule: scheduleH + (scheduleMatches / totalSampleRows) * 8,
+      days: daysH + (daysMatches / totalSampleRows) * 6,
+      time: timeH + (timeMatches / totalSampleRows) * 6,
+      startTime: startH + (startMatches / totalSampleRows) * 6,
+      endTime: endH + (endMatches / totalSampleRows) * 6,
+      instructor: instructorH + (instructorMatches / totalSampleRows) * 8,
+      credits: creditsH + (creditsMatches / totalSampleRows) * 8,
+      room: roomH + (roomMatches / totalSampleRows) * 8,
     };
   });
 
@@ -626,8 +691,16 @@ export function autoDetectColumns(
     return '';
   };
 
-  // Assign in logical priority order
+  // Assign in prioritized order
   mapping.code = pickBest('code');
+  if (!mapping.code) {
+    mapping.subject = pickBest('subject');
+    mapping.courseNum = pickBest('courseNum');
+  } else {
+    // Subject (Acad Dept) can still be recognized optionally
+    mapping.subject = pickBest('subject', 5.0);
+  }
+
   mapping.name = pickBest('name');
   mapping.schedule = pickBest('schedule');
   if (!mapping.schedule) {
@@ -637,10 +710,6 @@ export function autoDetectColumns(
       mapping.startTime = pickBest('startTime');
       mapping.endTime = pickBest('endTime');
     }
-  } else {
-    // If schedule was picked, check if days/time were separate
-    mapping.days = pickBest('days', 3.0);
-    mapping.time = pickBest('time', 3.0);
   }
 
   mapping.section = pickBest('section');
@@ -649,7 +718,7 @@ export function autoDetectColumns(
   mapping.room = pickBest('room');
 
   // Safety fallback: if code still empty, pick first non-empty column
-  if (!mapping.code && columns.length > 0) {
+  if (!mapping.code && !mapping.subject && columns.length > 0) {
     const unassigned = columns.find((c) => !assigned.has(c.key) && c.samples.length > 0);
     if (unassigned) {
       mapping.code = unassigned.key;
@@ -671,6 +740,7 @@ export function autoDetectColumns(
 
 /**
  * Parses raw data rows into structured Course objects based on active column mapping.
+ * Each data row in the spreadsheet corresponds to 1 independent course / section option.
  */
 export function parseExcelRowsToCourses(
   rawRows: (string | number | undefined)[][],
@@ -682,7 +752,7 @@ export function parseExcelRowsToCourses(
   const warnings: string[] = [];
   let skippedRows = 0;
 
-  const getCell = (row: (string | number | undefined)[], colKey: string): string => {
+  const getCell = (row: (string | number | undefined)[], colKey: string | undefined): string => {
     if (!colKey || !colKey.startsWith('col_')) return '';
     const idx = parseInt(colKey.replace('col_', ''), 10);
     if (isNaN(idx) || idx < 0 || idx >= row.length) return '';
@@ -697,6 +767,8 @@ export function parseExcelRowsToCourses(
     }
 
     let code = getCell(row, mapping.code);
+    const subject = getCell(row, mapping.subject);
+    const courseNum = getCell(row, mapping.courseNum);
     let name = getCell(row, mapping.name);
     const section = getCell(row, mapping.section);
     const instructor = getCell(row, mapping.instructor);
@@ -708,6 +780,13 @@ export function parseExcelRowsToCourses(
     if (isRowBlank) {
       skippedRows++;
       continue;
+    }
+
+    // Auto-combine Subject + Course Number if mapped separately e.g. "BUSN" + "200"
+    if (!code && subject && courseNum) {
+      code = `${subject.toUpperCase()} ${courseNum.toUpperCase()}`;
+    } else if (code && !code.includes(' ') && courseNum && !code.includes(courseNum)) {
+      code = `${code.toUpperCase()} ${courseNum.toUpperCase()}`;
     }
 
     // Auto-decompose code and title if one contains the other: e.g. "ICT 304 Mobile App Dev"
@@ -725,15 +804,85 @@ export function parseExcelRowsToCourses(
       }
     }
 
+    // If neither code nor name found, check if any cell has text
     if (!code && !name) {
-      // If neither code nor name found, check if any cell has text
       const firstText = row.find((c) => sanitizeString(c).length > 0);
       if (firstText) {
-        code = sanitizeString(firstText).slice(0, 10).toUpperCase();
-        name = sanitizeString(firstText);
+        const textVal = sanitizeString(firstText);
+        // Ignore department banner or page total lines
+        if (/^(?:total|page\s*\d+|department of|undergraduate|graduate|fall\s*\d+|spring\s*\d+|summer\s*\d+|winter\s*\d+)\b/i.test(textVal)) {
+          skippedRows++;
+          continue;
+        }
+        code = textVal.slice(0, 10).toUpperCase();
+        name = textVal;
       } else {
         skippedRows++;
         continue;
+      }
+    }
+
+    // Parse Schedule Sessions for current row
+    let rowSessions: ClassSession[] = [];
+    const safeTag = (code || name || `item_${r}`).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+    const courseId = prefixedId(`c_${safeTag}`);
+
+    // Path 1: Combined schedule column e.g. "(DD) 01:45PM - 03:15PM TF"
+    if (mapping.schedule) {
+      const scheduleRaw = getCell(row, mapping.schedule);
+      const scheduleParsed = parseScheduleString(scheduleRaw);
+      if (scheduleParsed) {
+        rowSessions = scheduleParsed.days.map((day, sIdx) => ({
+          id: `s_${courseId}_${sIdx}`,
+          day,
+          startTime: scheduleParsed.startTime,
+          endTime: scheduleParsed.endTime,
+          room: room || undefined,
+        }));
+      }
+    }
+
+    // Path 2: Separate Days and Time column (or StartTime + EndTime)
+    if (rowSessions.length === 0 && (mapping.days || mapping.time || mapping.startTime || mapping.endTime)) {
+      const daysRaw = getCell(row, mapping.days);
+      const timeRaw = getCell(row, mapping.time);
+      const startRaw = getCell(row, mapping.startTime);
+      const endRaw = getCell(row, mapping.endTime);
+
+      const parsedDays = extractDays(daysRaw);
+      if (parsedDays.length > 0 || timeRaw || startRaw || endRaw) {
+        const finalDays: DayOfWeek[] = parsedDays.length > 0 ? parsedDays : ['monday', 'wednesday', 'friday'];
+        let startTime = '09:00';
+        let endTime = '10:15';
+
+        if (timeRaw) {
+          const timeParsed = extractTimeRange(timeRaw);
+          if (timeParsed) {
+            startTime = timeParsed.start;
+            endTime = timeParsed.end;
+          }
+        } else if (startRaw || endRaw) {
+          const parsedStart = parseSingleTimeToken(startRaw, false);
+          const parsedEnd = parseSingleTimeToken(endRaw, true);
+
+          if (parsedStart) {
+            startTime = `${String(parsedStart.h).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
+          }
+          if (parsedEnd) {
+            endTime = `${String(parsedEnd.h).padStart(2, '0')}:${String(parsedEnd.m).padStart(2, '0')}`;
+          } else if (parsedStart) {
+            const endH = (parsedStart.h + 1) % 24;
+            endTime = `${String(endH).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
+          }
+        }
+
+        rowSessions = finalDays.map((day, sIdx) => ({
+          id: `s_${courseId}_${sIdx}`,
+          day,
+          startTime,
+          endTime,
+          room: room || undefined,
+        }));
       }
     }
 
@@ -746,78 +895,16 @@ export function parseExcelRowsToCourses(
       }
     }
 
-    // Schedule Parsing
-    let sessions: ClassSession[] = [];
-    const safeTag = (code || name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
-    const courseId = prefixedId(`c_${safeTag}`);
-
-    // Path 1: Combined schedule column
-    if (mapping.schedule) {
-      const scheduleRaw = getCell(row, mapping.schedule);
-      const scheduleParsed = parseScheduleString(scheduleRaw);
-      if (scheduleParsed) {
-        sessions = scheduleParsed.days.map((day, sIdx) => ({
-          id: `s_${courseId}_${sIdx}`,
-          day,
-          startTime: scheduleParsed.startTime,
-          endTime: scheduleParsed.endTime,
-          room: room || undefined,
-        }));
-      }
-    }
-
-    // Path 2: Separate Days and Time column (or StartTime + EndTime)
-    if (sessions.length === 0 && (mapping.days || mapping.time || mapping.startTime || mapping.endTime)) {
-      const daysRaw = getCell(row, mapping.days);
-      const timeRaw = getCell(row, mapping.time);
-      const startRaw = getCell(row, mapping.startTime);
-      const endRaw = getCell(row, mapping.endTime);
-
-      const parsedDays = extractDays(daysRaw);
-      const finalDays: DayOfWeek[] = parsedDays.length > 0 ? parsedDays : ['monday', 'wednesday', 'friday'];
-
-      let startTime = '09:00';
-      let endTime = '10:15';
-
-      if (timeRaw) {
-        const timeParsed = extractTimeRange(timeRaw);
-        if (timeParsed) {
-          startTime = timeParsed.start;
-          endTime = timeParsed.end;
-        }
-      } else if (startRaw || endRaw) {
-        const parsedStart = parseSingleTimeToken(startRaw, false);
-        const parsedEnd = parseSingleTimeToken(endRaw, true);
-
-        if (parsedStart) {
-          startTime = `${String(parsedStart.h).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
-        }
-        if (parsedEnd) {
-          endTime = `${String(parsedEnd.h).padStart(2, '0')}:${String(parsedEnd.m).padStart(2, '0')}`;
-        } else if (parsedStart) {
-          const endH = (parsedStart.h + 1) % 24;
-          endTime = `${String(endH).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
-        }
-      }
-
-      sessions = finalDays.map((day, sIdx) => ({
-        id: `s_${courseId}_${sIdx}`,
-        day,
-        startTime,
-        endTime,
-        room: room || undefined,
-      }));
-    }
-
     // Path 3: Fallback if no sessions parsed (e.g. online/async or unmapped schedule)
-    if (sessions.length === 0) {
-      sessions = [
+    if (rowSessions.length === 0) {
+      const isOnline = isOnlineOrTBA(getCell(row, mapping.schedule)) || isOnlineOrTBA(room);
+      rowSessions = [
         {
           id: `s_${courseId}_0`,
           day: 'monday',
           startTime: '09:00',
           endTime: '10:15',
-          room: room || undefined,
+          room: isOnline ? 'Online / Flexible' : room || undefined,
         },
       ];
     }
@@ -836,7 +923,7 @@ export function parseExcelRowsToCourses(
       instructor: instructor || undefined,
       credits,
       color,
-      sessions,
+      sessions: rowSessions,
     };
 
     courses.push(course);

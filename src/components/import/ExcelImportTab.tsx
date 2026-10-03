@@ -40,7 +40,9 @@ interface FieldDef {
 }
 
 const PRIMARY_FIELDS: FieldDef[] = [
-  { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, COSC 241' },
+  { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, CS 101' },
+  { field: 'subject', label: 'Subject / Dept (Optional)', required: false, hint: 'e.g. CS, MATH, BIO' },
+  { field: 'courseNum', label: 'Course # (Optional)', required: false, hint: 'e.g. 101, 2040, 380' },
   { field: 'name', label: 'Course Name / Title', required: true, hint: 'e.g. Mobile App Dev' },
   { field: 'schedule', label: 'Schedule (Days & Times)', required: false, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
   { field: 'days', label: 'Days (Separate)', required: false, hint: 'e.g. MWF, TTH, Mon/Wed' },
