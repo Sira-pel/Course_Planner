@@ -9,7 +9,6 @@ import {
   Moon,
   RotateCcw,
   Settings,
-  ShoppingBag,
   Smartphone,
   Sparkles,
   Sun,
@@ -33,7 +32,7 @@ interface SettingsMenuProps {
   onToggleOpen: () => void;
   onSetTimeRange: (start: number, end: number) => void;
   onSetShowWeekends: (show: boolean) => void;
-  onOpenCatalog: () => void;
+  onOpenCatalog?: () => void;
   onToggleTheme: (event: React.MouseEvent<HTMLElement>) => void;
   onImportIcsClick: () => void;
   onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
@@ -162,31 +161,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
             </div>
 
             <div className="up-settings-group">
-              {!isInstalled ? (
-                <button
-                  type="button"
-                  id="btn-install-app"
-                  onClick={handleInstallClick}
-                  className="up-settings-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
-                >
-                  <Smartphone />
-                  <span>Install Uniplan app</span>
-                </button>
-              ) : (
-                <div className="up-settings-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
-                  <CheckCircle2 className="text-emerald-500" />
-                  <span>App installed</span>
-                </div>
-              )}
-              <button
-                type="button"
-                id="btn-open-catalog"
-                onClick={onOpenCatalog}
-                className="up-settings-item up-chrome-btn"
-              >
-                <ShoppingBag />
-                Course pool
-              </button>
               <button
                 type="button"
                 onClick={onToggleTheme}
@@ -226,6 +200,22 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 <HelpCircle />
                 Help & Shortcuts
               </button>
+              {!isInstalled ? (
+                <button
+                  type="button"
+                  id="btn-install-app"
+                  onClick={handleInstallClick}
+                  className="up-settings-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
+                >
+                  <Smartphone />
+                  <span>Install Uniplan app</span>
+                </button>
+              ) : (
+                <div className="up-settings-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
+                  <CheckCircle2 className="text-emerald-500" />
+                  <span>App installed</span>
+                </div>
+              )}
             </div>
 
             <div className="up-settings-group">
