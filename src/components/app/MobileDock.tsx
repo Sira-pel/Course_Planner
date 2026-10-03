@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
 import { EASE_OUT, EASE_POP } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
@@ -47,12 +47,12 @@ export function MobileDock({
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
 
-  const menuOpenTransition = reduceMotion
+  const menuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.18, ease: EASE_OUT };
-  const menuCloseTransition = reduceMotion
+    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+  const menuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.12, ease: EASE_OUT };
+    : { duration: 0.2, ease: EASE_OUT };
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -136,7 +136,7 @@ export function MobileDock({
                   opacity: 0,
                   transition: reduceMotion ? { duration: 0 } : menuCloseTransition,
                 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
                 onClick={onCloseMoreMenu}
               />
             )}
@@ -146,12 +146,12 @@ export function MobileDock({
                 role="menu"
                 aria-label="More actions"
                 className="up-menu up-more-menu will-change-transform"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: '100%' }}
+                initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, y: '100%', transition: menuCloseTransition }
+                    : { y: '100%', transition: menuCloseTransition }
                 }
                 transition={menuOpenTransition}
               >

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { applyDomTheme, persistTheme } from '../../utils/theme';
@@ -138,26 +139,37 @@ export const Header: React.FC<HeaderProps> = ({
     creditsMounted.current = true;
   }, []);
 
-  const menuOpenTransition = reduceMotion
+  const sheetOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+  const sheetCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.2, ease: EASE_OUT };
+
+  const desktopMenuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.18, ease: EASE_OUT };
-  const menuCloseTransition = reduceMotion
+  const desktopMenuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.12, ease: EASE_OUT };
-  const menuEnter = reduceMotion
+
+  const menuOpenTransition: Transition = isPhone ? sheetOpenTransition : desktopMenuOpenTransition;
+  const menuCloseTransition: Transition = isPhone ? sheetCloseTransition : desktopMenuCloseTransition;
+
+  const menuEnter: TargetAndTransition = reduceMotion
     ? { opacity: 0 }
     : isPhone
-      ? { opacity: 0, y: '100%' }
+      ? { y: '100%' }
       : { opacity: 0, scale: 0.98, y: -3 };
-  const menuShown = reduceMotion
+  const menuShown: TargetAndTransition = reduceMotion
     ? { opacity: 1 }
     : isPhone
-      ? { opacity: 1, y: 0 }
+      ? { y: 0 }
       : { opacity: 1, scale: 1, y: 0 };
-  const menuLeave = reduceMotion
+  const menuLeave: TargetAndTransition = reduceMotion
     ? { opacity: 0, transition: menuCloseTransition }
     : isPhone
-      ? { opacity: 0, y: '100%', transition: menuCloseTransition }
+      ? { y: '100%', transition: menuCloseTransition }
       : { opacity: 0, scale: 0.985, y: -2, transition: menuCloseTransition };
 
   const closeAllMenus = () => {
@@ -648,6 +660,27 @@ export const Header: React.FC<HeaderProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {isPhone && typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {anyMenuOpen && (
+              <motion.div
+                key="header-sheet-backdrop"
+                className="up-sheet-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{
+                  opacity: 0,
+                  transition: reduceMotion ? { duration: 0 } : sheetCloseTransition,
+                }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
+                onClick={closeAllMenus}
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </header>
   );
 };
