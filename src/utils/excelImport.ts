@@ -142,7 +142,7 @@ export function extractTimeRange(raw: unknown): { start: string; end: string } |
 /**
  * Regex patterns for day tokens: MWF, TTH, TUTH, TR, M, T, W, R, F, Mon, Tue, Wed, Thu, Fri, TF, TH, MW, WF, etc.
  */
-const DAY_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|TUFR|WEFR|MTWTHF|MTWRF|TWTHF|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|TH|SU|SA|TU|WE|MO|FR|M|T|W|R|F|S|U)\b/gi;
+const DAY_TOKEN_REGEX = /\b(MWF|TTH|TUTH|MTH|MOTH|WF|MW|TF|TR|TRF|TTHF|TUFR|WEFR|MTWTHF|MTWRF|TWTHF|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|TH|SU|SA|TU|WE|MO|FR|M|T|W|R|F|S|U)\b/gi;
 
 /**
  * Extracts DayOfWeek[] from any raw string or array of tokens.
@@ -383,9 +383,13 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
     if (!row) continue;
     let matchCount = 0;
     for (const cell of row) {
-      const text = sanitizeString(cell).toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (HEADER_KEYWORDS.some((kw) => text.includes(kw))) {
-        matchCount++;
+      const rawText = sanitizeString(cell).toLowerCase().trim();
+      if (!rawText) continue;
+      if (rawText.length <= 40) {
+        const words = rawText.split(/[\s_\-/\\:]+/).filter(Boolean);
+        if (words.some((w) => HEADER_KEYWORDS.includes(w))) {
+          matchCount++;
+        }
       }
     }
     if (matchCount >= 2) {
@@ -840,15 +844,23 @@ export function parseExcelRowsToCourses(
     // Path 1: Combined schedule column e.g. "(DD) 01:45PM - 03:15PM TF"
     if (mapping.schedule) {
       const scheduleRaw = getCell(row, mapping.schedule);
-      const scheduleParsed = parseScheduleString(scheduleRaw);
-      if (scheduleParsed) {
-        rowSessions = scheduleParsed.days.map((day, sIdx) => ({
-          id: `s_${courseId}_${sIdx}`,
-          day,
-          startTime: scheduleParsed.startTime,
-          endTime: scheduleParsed.endTime,
-          room: room || undefined,
-        }));
+      if (scheduleRaw) {
+        // Support multi-meeting schedule strings separated by semicolon, newline, pipe, or double-slash
+        const segments = scheduleRaw.split(/[;\n|]+|\s*\/\/\s*/).map((s) => s.trim()).filter(Boolean);
+        for (const seg of segments) {
+          const scheduleParsed = parseScheduleString(seg);
+          if (scheduleParsed) {
+            for (const day of scheduleParsed.days) {
+              rowSessions.push({
+                id: `s_${courseId}_${rowSessions.length}`,
+                day,
+                startTime: scheduleParsed.startTime,
+                endTime: scheduleParsed.endTime,
+                room: room || undefined,
+              });
+            }
+          }
+        }
       }
     }
 
@@ -907,16 +919,13 @@ export function parseExcelRowsToCourses(
 
     // Path 3: Fallback if no sessions parsed (e.g. online/async or unmapped schedule)
     if (rowSessions.length === 0) {
-      const isOnline = isOnlineOrTBA(getCell(row, mapping.schedule)) || isOnlineOrTBA(room);
-      rowSessions = [
-        {
-          id: `s_${courseId}_0`,
-          day: 'monday',
-          startTime: '09:00',
-          endTime: '10:15',
-          room: isOnline ? 'Online / Flexible' : room || undefined,
-        },
-      ];
+      const scheduleRaw = getCell(row, mapping.schedule);
+      const isOnline = isOnlineOrTBA(scheduleRaw) || isOnlineOrTBA(room);
+      if (isOnline) {
+        warnings.push(`Row ${r + 1}: "${code || name}" marked as Online / Asynchronous (no calendar meetings assigned)`);
+      } else if (scheduleRaw) {
+        warnings.push(`Row ${r + 1}: "${code || name}" has unparseable schedule "${scheduleRaw}"`);
+      }
     }
 
     const colorIdx = (startColorIndex + courses.length) % COURSE_COLORS.length;

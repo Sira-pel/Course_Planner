@@ -102,13 +102,84 @@ const TIME_RANGE_REGEX =
 const TIME_RANGE_GLOBAL_REGEX = new RegExp(TIME_RANGE_REGEX.source, 'gi');
 
 const BRACKET_ROOM_REGEX = /\[\s*([A-Za-z0-9\s-]+)\s*\]/;
-const EXPLICIT_SECTION_REGEX = /\b(?:sec(?:tion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i;
-const LECTURE_SECTION_REGEX = /\b(?:lec(?:ture)?\.?|lab(?:oratory)?\.?|rec(?:itation)?\.?|disc(?:ussion)?\.?)\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i;
+const EXPLICIT_SECTION_REGEX = /\b(?:sec(?:tion)?)\b\.?\s*[-_:#]?\s*([0-9A-Za-z]{1,5})\b/i;
+const LECTURE_SECTION_REGEX = /\b(?:lec(?:ture)?|lab(?:oratory)?|rec(?:itation)?|disc(?:ussion)?)\b\.?\s*[-_:#]?\s*([0-9A-Za-z]{1,5})\b/i;
 const CREDITS_REGEX = /\b([1-6](?:\.[05])?)\s*(?:credits?|cr\.?|units?|hrs?\.?)\b/i;
-const ROOM_REGEX = /\b(?:room|rm|hall|auditorium|aud|bldg|center|ctr)\.?\s*([A-Za-z0-9-]+)\b/i;
-const PROF_REGEX = /\b(?:prof(?:essor)?\.?|dr\.?)\s+([A-Za-z\s.'-]+)\b/i;
+const ROOM_REGEX = /\b(?:room|rm|hall|auditorium|aud|bldg|center|ctr)\b\.?\s*([A-Za-z0-9#-]+)\b/i;
+const TITLE_START_WORDS = new Set([
+  'INTRO', 'INTRODUCTION', 'PRINCIPLES', 'FUNDAMENTALS', 'FOUNDATIONS',
+  'BASIC', 'BASICS', 'ADVANCED', 'APPLIED', 'GENERAL', 'TOPICS',
+  'SPECIAL', 'SEMINAR', 'CONCEPTS', 'THEORY', 'SURVEY', 'ELEMENTARY',
+  'INTERMEDIATE', 'STUDIES', 'COMPUTER', 'PROGRAMMING', 'DATA', 'SOFTWARE',
+  'ALGORITHMS', 'CALCULUS', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'ECONOMICS',
+  'HISTORY', 'ENGLISH', 'PSYCHOLOGY', 'NETWORKS', 'SECURITY', 'SYSTEMS',
+]);
+
+const PREPOSITIONS = new Set(['TO', 'OF', 'IN', 'FOR', 'AND', 'THE', 'WITH', 'ON', 'BY', 'VIA', 'A', 'AN']);
+
+const INVALID_SECTION_TOKENS = new Set([
+  'IN', 'ON', 'OF', 'TO', 'FOR', 'AT', 'BY', 'WITH', 'AND', 'THE', 'AN', 'IS', 'AS', 'OR',
+  'SERIES', 'WORK', 'STUDY', 'EXAM', 'TEST', 'FINAL', 'MID', 'MEET', 'HOUR', 'HOURS', 'DAY', 'DAYS',
+]);
+
+const PROF_PREFIX_REGEX = /\b(?:prof(?:essor)?|dr)\b\.?/i;
+
+/**
+ * Extracts instructor when prefixed by Prof/Dr, stopping before course title keywords.
+ */
+function extractInstructorWithTitle(str: string): { instructor: string; rawMatch: string } | null {
+  const prefixMatch = str.match(PROF_PREFIX_REGEX);
+  if (!prefixMatch) return null;
+  const startIndex = prefixMatch.index ?? 0;
+  const afterSlice = str.slice(startIndex + prefixMatch[0].length);
+  const leadingSpaceMatch = afterSlice.match(/^\s+/);
+  if (!leadingSpaceMatch) return null;
+
+  const afterPrefix = afterSlice.slice(leadingSpaceMatch[0].length);
+  const words = afterPrefix.split(/\s+/);
+  const nameParts: string[] = [];
+  let consumedLength = 0;
+
+  for (let i = 0; i < words.length && nameParts.length < 3; i++) {
+    const rawWord = words[i];
+    const strippedWord = rawWord.replace(/[^a-zA-Z.'-]/g, '');
+    const cleanWord = strippedWord.replace(/[.'-]/g, '');
+    const upper = cleanWord.toUpperCase();
+
+    if (!cleanWord || !/^[A-Z]/.test(strippedWord)) break;
+    if (TITLE_START_WORDS.has(upper)) break;
+
+    const nextWord = words[i + 1]?.replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (nextWord && PREPOSITIONS.has(nextWord)) {
+      break;
+    }
+
+    nameParts.push(strippedWord);
+    consumedLength = afterPrefix.indexOf(rawWord) + rawWord.length;
+
+    if (/[,;:]$/.test(rawWord)) {
+      break;
+    }
+  }
+
+  if (nameParts.length === 0) return null;
+
+  const matchedRaw = str.slice(
+    startIndex,
+    startIndex + prefixMatch[0].length + leadingSpaceMatch[0].length + consumedLength
+  );
+
+  return {
+    instructor: `${prefixMatch[0]} ${nameParts.join(' ')}`,
+    rawMatch: matchedRaw,
+  };
+}
+
 const TRAILING_NAME_REGEX = /,\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*$/;
 const CODE_WITH_PAREN_TITLE_REGEX = /\b([A-Za-z]{2,6})\s*[-_.]?\s*([0-9]{2,4}[A-Za-z]?)\s*\(\s*([^)]+)\s*\)/i;
+
+const DAYS_MULTI_TOKEN_REGEX =
+  /\b(MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU)\b/gi;
 
 /**
  * Normalizes raw day tokens into standard DayOfWeek array.
@@ -255,6 +326,7 @@ export function normalizeDays(tokens: string[]): DayOfWeek[] {
       if (upper === 'TRF' || upper === 'TTHF') {
         days.add('tuesday');
         days.add('thursday');
+        days.add('friday');
         continue;
       }
       if (upper === 'FS' || upper === 'FRSA' || upper === 'FRISAT') {
@@ -699,8 +771,9 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
       }
     }
 
-    if (!instructor && PROF_REGEX.test(col)) {
-      instructor = col;
+    if (!instructor && (PROF_PREFIX_REGEX.test(col) || extractInstructorWithTitle(col))) {
+      const parsedInst = extractInstructorWithTitle(col);
+      instructor = parsedInst ? parsedInst.instructor : col;
       continue;
     }
 
@@ -951,16 +1024,17 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
     // -------------------------------------------------------------
     if (!section && lineWorking) {
       const explicitSectionMatch = lineWorking.match(EXPLICIT_SECTION_REGEX);
-      if (explicitSectionMatch) {
+      if (explicitSectionMatch && !INVALID_SECTION_TOKENS.has(explicitSectionMatch[1].toUpperCase())) {
         section = explicitSectionMatch[1];
         lineWorking = lineWorking.replace(explicitSectionMatch[0], ' ');
       } else {
         const lectureSectionMatch = lineWorking.match(LECTURE_SECTION_REGEX);
         if (lectureSectionMatch) {
           const candidateSection = lectureSectionMatch[1];
-          // Do not treat a day code (e.g. "Lab T" where T is Tuesday) as section!
+          // Do not treat a day code (e.g. "Lab T" where T is Tuesday) or preposition (e.g. "Laboratory in") as section!
           const isDayToken = normalizeDays([candidateSection]).length > 0;
-          if (!isDayToken) {
+          const isInvalidToken = INVALID_SECTION_TOKENS.has(candidateSection.toUpperCase());
+          if (!isDayToken && !isInvalidToken) {
             section = candidateSection;
             lineWorking = lineWorking.replace(lectureSectionMatch[0], ' ');
           }
@@ -993,7 +1067,11 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
           }
         }
         lineWorking = lineWorking.replace(TIME_RANGE_GLOBAL_REGEX, ' ');
-        lineWorking = lineWorking.replace(DAYS_COMPOUND_REGEX, ' ').replace(DAYS_SINGLE_TOKEN_REGEX, ' ');
+        lineWorking = lineWorking
+          .replace(DAYS_COMPOUND_REGEX, ' ')
+          .replace(DAYS_MULTI_TOKEN_REGEX, ' ')
+          .replace(/\b([MTWRFSU])\s*(?=\d{1,2}[:.]\d{2}|\d{3,4}\b)/gi, ' ')
+          .replace(/(?<=(?:am|pm|\d{2}))\s*([MTWRFSU])\b/gi, ' ');
       } else {
         const parsedSeg = parseScheduleSegment(lineWorking, TIME_RANGE_REGEX);
         if (parsedSeg) {
@@ -1001,8 +1079,8 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
         } else {
           // If line has days but no time range specified (e.g. "CS 101 Computer science MF")
           const dCompound = lineWorking.match(DAYS_COMPOUND_REGEX);
-          const dSingle = lineWorking.match(DAYS_SINGLE_TOKEN_REGEX);
-          const dTokens = dCompound || dSingle;
+          const dMulti = lineWorking.match(DAYS_MULTI_TOKEN_REGEX);
+          const dTokens = dCompound || dMulti;
           if (dTokens && dTokens.length > 0) {
             const detectedDays = normalizeDays(dTokens);
             if (detectedDays.length > 0) {
@@ -1017,11 +1095,16 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
         }
 
         // Remove time range & day tokens from lineWorking
+        lineWorking = lineWorking
+          .replace(/\b([MTWRFSU])\s*(?=\d{1,2}[:.]\d{2}|\d{3,4}\b)/gi, ' ')
+          .replace(/(?<=(?:am|pm|\d{2}))\s*([MTWRFSU])\b/gi, ' ')
+          .replace(DAYS_COMPOUND_REGEX, ' ')
+          .replace(DAYS_MULTI_TOKEN_REGEX, ' ');
+
         const tMatch = lineWorking.match(TIME_RANGE_REGEX);
         if (tMatch) {
           lineWorking = lineWorking.replace(tMatch[0], ' ');
         }
-        lineWorking = lineWorking.replace(DAYS_COMPOUND_REGEX, ' ').replace(DAYS_SINGLE_TOKEN_REGEX, ' ');
       }
     }
 
@@ -1049,10 +1132,10 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       }
 
       // Extract Instructor
-      const profMatch = lineWorking.match(PROF_REGEX);
-      if (profMatch) {
-        instructor = profMatch[0].trim();
-        lineWorking = lineWorking.replace(profMatch[0], ' ');
+      const profResult = extractInstructorWithTitle(lineWorking);
+      if (profResult) {
+        instructor = profResult.instructor;
+        lineWorking = lineWorking.replace(profResult.rawMatch, ' ');
       } else {
         const trailingNameMatch = lineWorking.match(TRAILING_NAME_REGEX);
         if (trailingNameMatch) {
