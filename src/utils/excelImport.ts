@@ -331,7 +331,7 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
     return trimmed;
   });
 
-  const sampleScanRows = Math.min(trimmedRows.length, 35);
+  const sampleScanRows = Math.min(trimmedRows.length, 100);
 
   // Detect header row index
   let headerRowIndex = -1;
@@ -454,7 +454,7 @@ export function autoDetectColumns(
   const mapping = getEmptyMapping();
   if (columns.length === 0 || rawRows.length === 0) return mapping;
 
-  const scanEnd = Math.min(rawRows.length, dataStartRow + 40);
+  const scanEnd = Math.min(rawRows.length, dataStartRow + 500);
   const totalSampleRows = Math.max(1, scanEnd - dataStartRow);
 
   interface FieldScore {

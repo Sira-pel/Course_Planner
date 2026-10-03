@@ -1246,7 +1246,7 @@ export function parseBulkCourses(text: string, existingCourseCount: number = 0):
     .map((l) => l.trim().replace(/^[`'"]+|[`'"]+$/g, '').trim())
     .filter(Boolean)
     .filter((l) => !isPlanHeaderLine(l))
-    .slice(0, 100);
+    .slice(0, 5000);
 
   return lines.map((line, index) => parseCourseLine(line, existingCourseCount + index));
 }
