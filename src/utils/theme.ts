@@ -11,6 +11,12 @@ export function applyDomTheme(theme: ThemeName): void {
   const root = document.documentElement;
   root.classList.toggle('dark', theme === 'dark');
   root.style.colorScheme = theme;
+
+  // The mobile phone status bar and PWA title bar are always kept black (#020617)
+  const meta = document.getElementById('theme-color-meta');
+  if (meta) {
+    meta.setAttribute('content', '#020617');
+  }
 }
 
 export function persistTheme(theme: ThemeName): void {

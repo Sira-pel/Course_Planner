@@ -49,6 +49,10 @@ body,
   width: 100%;
 }
 
+html {
+  background-color: #020617;
+}
+
 body {
   height: 100%;
   background-color: #f7f8fb;

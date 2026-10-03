@@ -17,7 +17,7 @@ export default defineConfig(() => {
           name: 'Uniplan - University Schedule Planner',
           short_name: 'Uniplan',
           description: 'University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter.',
-          theme_color: '#4f46e5',
+          theme_color: '#020617',
           background_color: '#020617',
           display: 'standalone',
           start_url: '/',
