@@ -11,7 +11,7 @@ import {
 } from './meetingPatterns';
 
 const inputClass =
-  'course-input w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0';
+  'course-input w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-[11px] sm:placeholder:text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0';
 
 const labelClass = 'block text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
 

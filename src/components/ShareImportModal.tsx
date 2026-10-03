@@ -142,7 +142,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                     onChange={(e) => handleParseInput(e.target.value)}
                     placeholder="https://...#share=... or paste code directly"
                     rows={3}
-                    className="w-full max-w-full min-w-0 text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none break-all whitespace-pre-wrap"
+                    className="w-full max-w-full min-w-0 text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-[11px] sm:placeholder:text-xs placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none break-all whitespace-pre-wrap"
                   />
                   {errorMessage && (
                     <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">

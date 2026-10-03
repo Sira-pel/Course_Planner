@@ -389,7 +389,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
                         type="text"
                         readOnly
                         value={shareUrl}
-                        className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono truncate"
+                        className="w-full text-[11px] sm:text-xs p-2 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono truncate select-all"
                       />
                       <button
                         type="button"
