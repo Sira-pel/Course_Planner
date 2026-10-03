@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
 import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
-import { PWAInstallModal } from '../pwa/PWAInstallModal';
+
+const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
 
 export interface MobileDockProps {
   isMoreOpen: boolean;
@@ -250,11 +251,13 @@ export function MobileDock({
         )}
       {typeof document !== 'undefined' &&
         createPortal(
-          <PWAInstallModal
-            isOpen={showInstallGuide}
-            onClose={() => setShowInstallGuide(false)}
-            isIOS={isIOS}
-          />,
+          <Suspense fallback={null}>
+            <PWAInstallModal
+              isOpen={showInstallGuide}
+              onClose={() => setShowInstallGuide(false)}
+              isIOS={isIOS}
+            />
+          </Suspense>,
           document.body
         )}
     </>

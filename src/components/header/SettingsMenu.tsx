@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
@@ -16,8 +16,9 @@ import {
   X,
 } from 'lucide-react';
 import { usePWAInstall } from '../../utils/usePWAInstall';
-import { PWAInstallModal } from '../pwa/PWAInstallModal';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
+
+const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
 
 interface SettingsMenuProps {
   isPhone: boolean;
@@ -371,11 +372,13 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
         </AnimatePresence>
       )}
 
-      <PWAInstallModal
-        isOpen={showInstallGuide}
-        onClose={() => setShowInstallGuide(false)}
-        isIOS={isIOS}
-      />
+      <Suspense fallback={null}>
+        <PWAInstallModal
+          isOpen={showInstallGuide}
+          onClose={() => setShowInstallGuide(false)}
+          isIOS={isIOS}
+        />
+      </Suspense>
     </div>
   );
 };

@@ -3,25 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/header/Header';
 import { CalendarGrid } from './components/CalendarGrid';
-import { CourseModal } from './components/course-modal/CourseModal';
-import { ExportModal, ExportTabType } from './components/export/ExportModal';
-import { ImportModal, ImportTabType } from './components/import/ImportModal';
+import type { ExportTabType } from './components/export/ExportModal';
+import type { ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
-import { HelpModal, HelpTabType } from './components/HelpModal';
-import { ShareImportModal } from './components/ShareImportModal';
+import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { PWAReloadPrompt } from './components/pwa/PWAReloadPrompt';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme } from './utils/theme';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
+
+const CourseModal = lazy(() => import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
+const ExportModal = lazy(() => import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
+const ImportModal = lazy(() => import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
+const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
+const ShareImportModal = lazy(() => import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
+const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 export default function App() {
   const plans = useScheduleStore((state) => state.plans);
@@ -306,49 +310,52 @@ export default function App() {
       />
 
       {/* Modal Dialogs */}
-      <CourseModal
-        isOpen={isCourseModalOpen}
-        onClose={handleCloseCourseModal}
-        editingCourseId={editingCourseId}
-        targetPlanId={editingCoursePlanId}
-        initialDay={modalInitialDay}
-        initialStartTime={modalInitialStartTime}
-        initialMode={modalInitialMode}
-      />
+      <Suspense fallback={null}>
+        <CourseModal
+          isOpen={isCourseModalOpen}
+          onClose={handleCloseCourseModal}
+          editingCourseId={editingCourseId}
+          targetPlanId={editingCoursePlanId}
+          initialDay={modalInitialDay}
+          initialStartTime={modalInitialStartTime}
+          initialMode={modalInitialMode}
+        />
 
-      <ExportModal
-        isOpen={isExportOpen}
-        initialTab={exportInitialTab}
-        onClose={handleCloseExport}
-      />
+        <ExportModal
+          isOpen={isExportOpen}
+          initialTab={exportInitialTab}
+          onClose={handleCloseExport}
+        />
 
-      <ImportModal
-        isOpen={isImportOpen}
-        initialTab={importInitialTab}
-        onClose={handleCloseImport}
-      />
+        <ImportModal
+          isOpen={isImportOpen}
+          initialTab={importInitialTab}
+          onClose={handleCloseImport}
+        />
 
-      <HelpModal
-        isOpen={isHelpOpen}
-        initialTab={helpInitialTab}
-        onClose={handleCloseHelp}
-        onOpenImport={handleOpenImport}
-        onOpenExport={() => handleOpenExport('text')}
-        onOpenCatalog={() => setIsPoolCollapsed(false)}
-        onOpenShortcuts={handleOpenShortcuts}
-      />
+        <HelpModal
+          isOpen={isHelpOpen}
+          initialTab={helpInitialTab}
+          onClose={handleCloseHelp}
+          onOpenImport={handleOpenImport}
+          onOpenExport={() => handleOpenExport('text')}
+          onOpenCatalog={() => setIsPoolCollapsed(false)}
+          onOpenShortcuts={handleOpenShortcuts}
+        />
 
-      <ShareImportModal
-        isOpen={isShareImportOpen}
-        onClose={() => setIsShareImportOpen(false)}
-        sharedPlan={sharedPlan}
-        onCompareWithSchedule={handleCompareWithSharedPlan}
-        onOpenAsActivePlan={handleOpenSharedPlanAsActive}
-        initialManualPaste={initialManualPaste}
-      />
+        <ShareImportModal
+          isOpen={isShareImportOpen}
+          onClose={() => setIsShareImportOpen(false)}
+          sharedPlan={sharedPlan}
+          onCompareWithSchedule={handleCompareWithSharedPlan}
+          onOpenAsActivePlan={handleOpenSharedPlanAsActive}
+          initialManualPaste={initialManualPaste}
+        />
+
+        <PWAReloadPrompt />
+      </Suspense>
 
       <OfflineIndicator />
-      <PWAReloadPrompt />
     </div>
   );
 }

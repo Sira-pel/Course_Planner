@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
@@ -16,14 +16,14 @@ import {
   X,
   HelpCircle,
 } from 'lucide-react';
-import { parseIcsContent } from '../../utils/icsImport';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import type { SchedulePlan } from '../../types/schedule';
 import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
-import { ConflictModal } from './ConflictModal';
 import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, MENU_OPEN_TRANSITION, MENU_CLOSE_TRANSITION } from '../../utils/motion';
+
+const ConflictModal = lazy(() => import('./ConflictModal').then((m) => ({ default: m.ConflictModal })));
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
@@ -224,10 +224,11 @@ export const Header: React.FC<HeaderProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result;
       if (typeof content === 'string') {
         try {
+          const { parseIcsContent } = await import('../../utils/icsImport');
           const courses = parseIcsContent(content);
           if (courses.length > 0) {
             useScheduleStore.getState().bulkAddCourses(courses, activePlanId);
@@ -589,13 +590,15 @@ export const Header: React.FC<HeaderProps> = ({
         />
       </div>
 
-      <ConflictModal
-        open={conflictModalOpen}
-        conflicts={conflicts}
-        activePlanName={activePlan?.name}
-        reduceMotion={reduceMotion}
-        onClose={() => setConflictModalOpen(false)}
-      />
+      <Suspense fallback={null}>
+        <ConflictModal
+          open={conflictModalOpen}
+          conflicts={conflicts}
+          activePlanName={activePlan?.name}
+          reduceMotion={reduceMotion}
+          onClose={() => setConflictModalOpen(false)}
+        />
+      </Suspense>
 
       <AnimatePresence>
         {toastMessage && (
