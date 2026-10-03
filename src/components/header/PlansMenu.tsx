@@ -101,15 +101,17 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
 
   const renderContent = () => (
     <>
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
-        <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-          <FolderKanban className="w-3.5 h-3.5 text-slate-500" />
-          Schedule plans
-        </span>
-        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
-          {plans.length} total
-        </span>
-      </div>
+      {!isPhone && (
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+          <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <FolderKanban className="w-3.5 h-3.5 text-slate-500" />
+            Schedule plans
+          </span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+            {plans.length} total
+          </span>
+        </div>
+      )}
 
       <div className="space-y-1 max-h-56 overflow-y-auto pr-0.5 mb-2.5">
         <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 px-1 pb-1">

@@ -69,21 +69,23 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
 
   const renderContent = () => (
     <>
-      <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-200 dark:border-slate-800 px-1">
-        <div className="flex items-center gap-1.5">
-          <Layers className="w-3.5 h-3.5" style={{ color: 'var(--up-ink)' }} />
-          <span className="font-bold" style={{ color: 'var(--up-ink)' }}>Compare</span>
+      {!isPhone && (
+        <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-200 dark:border-slate-800 px-1">
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5" style={{ color: 'var(--up-ink)' }} />
+            <span className="font-bold" style={{ color: 'var(--up-ink)' }}>Compare plans</span>
+          </div>
+          {ghostPlanIds.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearGhosts}
+              className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-medium px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
+            >
+              Clear all
+            </button>
+          )}
         </div>
-        {ghostPlanIds.length > 0 && (
-          <button
-            type="button"
-            onClick={onClearGhosts}
-            className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-medium px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
+      )}
 
       {plans.length <= 1 ? (
         <div className="up-sheet-empty">
@@ -297,14 +299,25 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                       <Layers className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Compare plans</h2>
                     </div>
-                    <button
-                      type="button"
-                      onClick={onToggleOpen}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
-                      aria-label="Close compare"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {ghostPlanIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={onClearGhosts}
+                          className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-medium px-2 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={onToggleOpen}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
+                        aria-label="Close compare"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   <div className="up-mobile-sheet-body up-scroll pt-2">
                     {renderContent()}
