@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
-import { Layers, Plus, Copy, ChevronDown, Share2, UserPlus, X } from 'lucide-react';
+import { Layers, Plus, Copy, ChevronDown, Share2, UserPlus, X, Check } from 'lucide-react';
 import { getPlanGhostColor } from '../../types/schedule';
 import type { SchedulePlan } from '../../types/schedule';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
@@ -127,7 +127,12 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                     key={p.id}
                     className="flex items-center justify-between px-2 py-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-semibold"
                   >
-                    <span className="truncate">{p.name}</span>
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-4 h-4 rounded flex items-center justify-center bg-indigo-600 text-white shrink-0 shadow-2xs">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </span>
+                      <span className="truncate text-xs">{p.name}</span>
+                    </div>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
                       Active
                     </span>
@@ -136,37 +141,47 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
               }
 
               return (
-                <div
+                <button
+                  type="button"
                   key={p.id}
                   onClick={() => onToggleGhost(p.id)}
-                  className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+                  role="checkbox"
+                  aria-checked={isGhosted}
+                  className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors up-chrome-btn ${
                     isGhosted
                       ? 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <span
-                      className="w-2.5 h-2.5 rounded-sm shrink-0 border"
-                      style={{
-                        backgroundColor: isGhosted ? ghostStyle.bg : 'transparent',
-                        borderColor: ghostStyle.border,
-                      }}
-                    />
+                    {isGhosted ? (
+                      <span
+                        className="w-4 h-4 rounded flex items-center justify-center text-white shrink-0 shadow-2xs transition-transform"
+                        style={{ backgroundColor: ghostStyle.dot }}
+                      >
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </span>
+                    ) : (
+                      <span
+                        className="w-4 h-4 rounded border-2 bg-white dark:bg-slate-900 shrink-0 transition-colors opacity-75"
+                        style={{ borderColor: ghostStyle.dot }}
+                      />
+                    )}
                     <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-200">
                       {p.name}
                     </span>
                   </div>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
                       isGhosted
                         ? 'font-medium bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                         : 'text-slate-400 dark:text-slate-500'
                     }`}
                   >
+                    {isGhosted && <Check className="w-2.5 h-2.5 stroke-[2.5]" />}
                     {isGhosted ? 'Showing' : 'Click to overlay'}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
