@@ -863,6 +863,10 @@ html.dark .up-settings-select option,
   -webkit-backdrop-filter: blur(4px);
 }
 
+.course-modal-backdrop {
+  z-index: 100 !important;
+}
+
 /* Touch and low-end hardware optimizations:
    Multi-pass Gaussian blur on the entire viewport causes massive GPU fill-rate hitching
    during sheet translate animations. On touch/coarse screens and low-end devices, we replace
@@ -1294,13 +1298,23 @@ body[data-up-pool-open] .up-fab-cluster {
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
-  width: min(20rem, 90vw);
+  z-index: 90;
+  width: min(22rem, 90vw);
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--up-line);
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: -16px 0 48px rgb(0 0 0 / 0.35);
+  background: var(--up-raised);
+}
+
+html:not(.dark) .up-pool-drawer {
+  background: #ffffff;
+}
+
+html.dark .up-pool-drawer,
+.dark .up-pool-drawer {
+  background: #121826;
 }
 
 .up-pool-sheet,

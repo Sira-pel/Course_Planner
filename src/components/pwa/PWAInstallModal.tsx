@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Share, PlusSquare, X, Smartphone, CheckCircle2 } from 'lucide-react';
 import { EASE_OUT } from '../../utils/motion';
@@ -14,16 +15,18 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   onClose,
   isIOS,
 }) => {
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] course-modal-backdrop flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: EASE_OUT }}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs"
             onClick={onClose}
           />
           <motion.div
@@ -110,6 +113,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
