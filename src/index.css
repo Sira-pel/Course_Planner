@@ -1353,9 +1353,10 @@ html.dark .up-pool-drawer,
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
   background: var(--up-raised);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  contain: layout;
+  contain: layout style;
   will-change: transform;
 }
 

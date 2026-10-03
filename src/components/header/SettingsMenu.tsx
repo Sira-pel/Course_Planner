@@ -309,7 +309,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   aria-label="Settings"
                   className="up-mobile-sheet up-settings"
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
-                  animate={{ opacity: 1, y: 0 }}
+                  animate={reduceMotion ? { opacity: 1 } : { y: 0 }}
                   exit={
                     reduceMotion
                       ? { opacity: 0, transition: { duration: 0 } }

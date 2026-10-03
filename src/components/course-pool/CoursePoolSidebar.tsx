@@ -526,7 +526,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 aria-labelledby="course-pool-title"
                 className="up-pool-sheet"
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={reduceMotion ? { opacity: 1 } : { y: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
