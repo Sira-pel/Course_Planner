@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { Course, DayOfWeek } from '../../types/schedule';
@@ -180,12 +180,19 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
   const unusedInAnyPlanCount = catalogCourses.length - usedInAnyPlanCount;
 
-  const panelOpenTransition = reduceMotion
+  const panelOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.18, ease: EASE_OUT };
-  const panelCloseTransition = reduceMotion
+  const panelCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.12, ease: EASE_OUT };
+
+  const sheetOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+  const sheetCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.2, ease: EASE_OUT };
 
   useEffect(() => {
     pillPaintedRef.current = false;
@@ -252,7 +259,6 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     const overlayOpen = !isCollapsed && layout !== 'desktop';
     if (overlayOpen) {
       wasOverlayOpenRef.current = true;
-      searchRef.current?.focus();
       return;
     }
     if (!wasOverlayOpenRef.current) return;
@@ -491,14 +497,14 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
                 className="up-pool-drawer will-change-transform"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: '100%' }}
+                initial={reduceMotion ? { opacity: 0 } : { x: '100%' }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, x: '100%', transition: panelCloseTransition }
+                    : { x: '100%', transition: sheetCloseTransition }
                 }
-                transition={panelOpenTransition}
+                transition={sheetOpenTransition}
               >
                 {renderPoolPanel(false)}
               </motion.aside>
@@ -519,14 +525,14 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
                 className="up-pool-sheet will-change-transform"
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: '100%' }}
+                initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
                   reduceMotion
                     ? { opacity: 0, transition: { duration: 0 } }
-                    : { opacity: 0, y: '100%', transition: panelCloseTransition }
+                    : { y: '100%', transition: sheetCloseTransition }
                 }
-                transition={panelOpenTransition}
+                transition={sheetOpenTransition}
               >
                 <button
                   type="button"

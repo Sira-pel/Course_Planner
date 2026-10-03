@@ -857,8 +857,10 @@ html.dark .up-settings-select option,
 .up-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
-  background: rgb(8 12 20 / 0.72);
+  z-index: 80;
+  background: rgb(8 12 20 / 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* Faceplate: document does not scroll at any breakpoint. Calendar is the
@@ -1287,7 +1289,7 @@ body[data-up-pool-open] .up-fab-cluster {
   border-top: 1px solid var(--up-line);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: none;
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
 }
 
 .up-pool-handle-hit {
