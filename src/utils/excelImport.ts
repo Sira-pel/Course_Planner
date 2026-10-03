@@ -233,6 +233,16 @@ export function parseScheduleString(raw: unknown): {
 }
 
 /**
+ * Returns sheet names excluding hidden / very-hidden sheets (e.g. stale
+ * previous-semester data). Falls back to all sheets if every sheet is hidden.
+ */
+export function getVisibleSheetNames(workbook: XLSX.WorkBook): string[] {
+  const meta = workbook.Workbook?.Sheets;
+  const visible = workbook.SheetNames.filter((_, i) => !meta?.[i]?.Hidden);
+  return visible.length > 0 ? visible : workbook.SheetNames;
+}
+
+/**
  * Reads workbook file from ArrayBuffer and inspects sheet structure.
  */
 export function readExcelFile(data: ArrayBuffer): {
@@ -247,7 +257,7 @@ export function readExcelFile(data: ArrayBuffer): {
 
   return {
     workbook,
-    sheets: workbook.SheetNames,
+    sheets: getVisibleSheetNames(workbook),
   };
 }
 
@@ -301,7 +311,7 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
   const sheet = workbook.Sheets[sheetName];
   if (!sheet) {
     return {
-      sheets: workbook.SheetNames,
+      sheets: getVisibleSheetNames(workbook),
       currentSheet: sheetName,
       columns: [],
       rawRows: [],
@@ -323,7 +333,7 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
 
   if (rawRows.length === 0) {
     return {
-      sheets: workbook.SheetNames,
+      sheets: getVisibleSheetNames(workbook),
       currentSheet: sheetName,
       columns: [],
       rawRows: [],
@@ -440,7 +450,7 @@ export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): Excel
   const detectedMapping = autoDetectColumns(trimmedRows, dataStartRow, columns);
 
   return {
-    sheets: workbook.SheetNames,
+    sheets: getVisibleSheetNames(workbook),
     currentSheet: sheetName,
     columns,
     rawRows: trimmedRows,
