@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
@@ -52,6 +52,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   const layout = usePoolLayout();
   // Held here so a layout-branch remount of PoolPanel does not clear search/filter/confirm.
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [confirmDeleteCourseId, setConfirmDeleteCourseId] = useState<string | null>(null);
   const [targetPlanId, setTargetPlanId] = useState<string>(activePlanId);
@@ -140,7 +141,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
   );
 
   const filteredCourses = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = deferredSearchQuery.trim().toLowerCase();
     return catalogCourses.filter((c) => {
       const matchesSearch =
         !q ||
@@ -156,7 +157,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       if (filterMode === 'not_in_plan') return !inPlan;
       return true;
     });
-  }, [catalogCourses, searchQuery, filterMode, isEnrolledInTargetPlan]);
+  }, [catalogCourses, deferredSearchQuery, filterMode, isEnrolledInTargetPlan]);
 
   const totalInPlan = useMemo(() => {
     return targetPlan ? targetPlan.courses.length : 0;

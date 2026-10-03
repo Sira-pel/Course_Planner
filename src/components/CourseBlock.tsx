@@ -61,6 +61,7 @@ export const CourseBlock = memo(function CourseBlock({
           height: `calc(${heightPercent}% - 2px)`,
           left: `calc(${leftPercent}% + 1px)`,
           width: `calc(${widthPercent}% - 2px)`,
+          contain: 'layout style',
         }}
         title={`[Comparing: ${planName}] ${course.code} - ${course.name} (Click to edit in ${planName})`}
       >
@@ -177,6 +178,7 @@ export const CourseBlock = memo(function CourseBlock({
         left: `calc(${leftPercent}% + 1px)`,
         width: `calc(${widthPercent}% - 2px)`,
         zIndex: 20 + colIndex,
+        contain: 'layout style',
       }}
     >
       {/* Top row: Code + Section and Quick Actions */}

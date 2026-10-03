@@ -48,6 +48,8 @@ body,
   overflow-y: hidden;
   max-width: 100%;
   width: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -106,6 +108,14 @@ html.dark body {
   .dark option {
     background-color: #0f172a;
     color: #f8fafc;
+  }
+
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 }
 
