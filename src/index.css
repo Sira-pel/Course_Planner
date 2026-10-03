@@ -2055,48 +2055,6 @@ html:not(.is-theme-revealing) .up-theme-moon {
 }
 
 /* Add Course dialog: ledger faceplate + modal / tabs / accordion recipes */
-.course-modal-backdrop {
-  opacity: 0;
-  scrollbar-width: none;
-  transition: opacity var(--dur-open) var(--ease-out);
-}
-
-.course-modal-backdrop::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.course-modal-backdrop.is-open {
-  opacity: 1;
-}
-
-.course-modal-backdrop.is-closing {
-  opacity: 0;
-  transition-duration: var(--dur-close);
-}
-
-.course-modal-sheet {
-  opacity: 0;
-  transform: scale(var(--scale-modal));
-  transform-origin: center center;
-  min-height: 0;
-  transition:
-    opacity var(--dur-open) var(--ease-out),
-    transform var(--dur-open) var(--ease-out);
-}
-
-.course-modal-sheet.is-open {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.course-modal-sheet.is-closing {
-  opacity: 0;
-  transform: scale(var(--scale-close));
-  transition-duration: var(--dur-close);
-}
-
 .course-tab-track {
   position: relative;
 }
@@ -2280,8 +2238,6 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .course-modal-backdrop,
-  .course-modal-sheet,
   .course-tab-pill,
   .course-morph,
   .course-acc,
@@ -2297,7 +2253,6 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
     filter: none !important;
   }
 
-  .course-modal-sheet,
   .course-acc-body,
   .course-row,
   .course-field,
@@ -2306,8 +2261,6 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
     transform: none !important;
   }
 
-  .course-modal-backdrop.is-open,
-  .course-modal-sheet.is-open,
   .course-color-menu.is-open {
     opacity: 1;
   }

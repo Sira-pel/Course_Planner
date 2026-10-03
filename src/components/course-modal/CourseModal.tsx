@@ -41,7 +41,15 @@ function isTabbable(el: HTMLElement): boolean {
   return el.getClientRects().length > 0;
 }
 
-export const CourseModal: React.FC<CourseModalProps> = ({
+export const CourseModal: React.FC<CourseModalProps> = (props) => {
+  return (
+    <AnimatePresence>
+      {props.isOpen && <CourseModalBody {...props} />}
+    </AnimatePresence>
+  );
+};
+
+const CourseModalBody: React.FC<CourseModalProps> = ({
   isOpen,
   onClose,
   editingCourseId,
@@ -92,8 +100,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     );
   }, [editingCourseId, currentPlan?.courses, catalogCourses]);
 
-  const [mode, setMode] = useState<'form' | 'quick'>('form');
-  const [phase, setPhase] = useState<'hidden' | 'open' | 'closing'>('hidden');
+  const [mode, setMode] = useState<'form' | 'quick'>(initialMode);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shakeField, setShakeField] = useState<'code' | 'name' | 'times' | null>(null);
 
@@ -130,27 +137,6 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const [recognizedItems, setRecognizedItems] = useState<EditableRecognizedItem[]>([]);
 
   useEffect(() => {
-    if (isOpen) {
-      let inner = 0;
-      const outer = requestAnimationFrame(() => {
-        inner = requestAnimationFrame(() => setPhase('open'));
-      });
-      return () => {
-        cancelAnimationFrame(outer);
-        cancelAnimationFrame(inner);
-      };
-    }
-
-    setPhase((current) => {
-      if (current === 'hidden') return 'hidden';
-      return 'closing';
-    });
-    const timeout = window.setTimeout(() => setPhase('hidden'), CLOSE_MS);
-    return () => window.clearTimeout(timeout);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
     const active = document.activeElement;
     if (active instanceof HTMLElement) returnFocusRef.current = active;
     const previous = document.body.style.overflow;
@@ -160,7 +146,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       const restore = returnFocusRef.current;
       if (restore && document.contains(restore)) restore.focus();
     };
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
     if (!rawText.trim()) {
@@ -305,13 +291,12 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   };
 
   useEffect(() => {
-    if (phase !== 'open') return;
     if (mode === 'form') {
       codeInputRef.current?.focus({ preventScroll: true });
     } else {
       pasteInputRef.current?.focus({ preventScroll: true });
     }
-  }, [mode, phase]);
+  }, [mode]);
 
   const handleToggleSelectItem = (id: string) => {
     setRecognizedItems((prev) =>
@@ -532,9 +517,6 @@ export const CourseModal: React.FC<CourseModalProps> = ({
     }
   };
 
-  if (phase === 'hidden' && !isOpen) return null;
-
-  const phaseClass = phase === 'open' ? 'is-open' : phase === 'closing' ? 'is-closing' : '';
   const detailsSummary = [credits ? `${credits} cr` : null, section.trim() || null, instructor.trim() || null]
     .filter(Boolean)
     .join(' · ');
@@ -542,8 +524,13 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   const isCustomColor = !COURSE_COLORS.some((c) => c.toLowerCase() === color.toLowerCase());
 
   return (
-    <div
-      className={`course-modal-backdrop ${phaseClass} fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-slate-950/55 overflow-x-hidden overflow-y-auto`}
+    <motion.div
+      key="course-modal-overlay"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: EASE_OUT }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -580,12 +567,16 @@ export const CourseModal: React.FC<CourseModalProps> = ({
         }
       }}
     >
-      <div
+      <motion.div
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="course-modal-title"
-        className={`course-modal-sheet ${phaseClass} bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-[0_4px_8px_rgb(15_23_42_/_0.18)] max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100svh-1.5rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden`}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden will-change-transform"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 4 }}
+        transition={{ duration: 0.2, ease: EASE_OUT }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 pb-3 shrink-0">
@@ -818,7 +809,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
