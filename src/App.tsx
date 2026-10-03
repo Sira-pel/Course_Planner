@@ -79,13 +79,6 @@ export default function App() {
 
   useEffect(() => {
     applyDomTheme(useScheduleStore.getState().theme);
-    const splash = document.getElementById('app-splash');
-    if (splash) {
-      requestAnimationFrame(() => {
-        splash.classList.add('app-splash-hidden');
-        setTimeout(() => splash.remove(), 400);
-      });
-    }
     return useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
     });
