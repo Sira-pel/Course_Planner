@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Share, PlusSquare, X, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Share, PlusSquare, X, CheckCircle2 } from 'lucide-react';
 import { EASE_OUT } from '../../utils/motion';
 
 interface PWAInstallModalProps {
@@ -41,9 +41,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <Smartphone className="w-4 h-4" />
-                </div>
+                <img src="/icon.svg" alt="Uniplan" className="w-8 h-8 rounded-lg shadow-sm shrink-0" />
                 <h3 id="pwa-install-title" className="font-bold text-sm">
                   {isIOS ? 'Install on iPhone / iPad' : 'Install Uniplan'}
                 </h3>
