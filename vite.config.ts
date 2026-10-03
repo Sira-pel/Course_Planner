@@ -10,7 +10,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg', 'icon-maskable.svg'],
         manifest: {
           id: '/',
@@ -19,7 +19,8 @@ export default defineConfig(() => {
           description: 'University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter.',
           theme_color: '#020617',
           background_color: '#020617',
-          display: 'browser',
+          display: 'standalone',
+          orientation: 'any',
           start_url: '/',
           scope: '/',
           icons: [

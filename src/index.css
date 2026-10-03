@@ -50,10 +50,6 @@ body,
   width: 100%;
 }
 
-html {
-  background-color: #020617;
-}
-
 body {
   height: 100%;
   background-color: #f7f8fb;
@@ -964,8 +960,10 @@ html[data-lite-motion] .course-modal-backdrop {
 
 body.up-sheet-open .up-fab-cluster,
 body[data-up-pool-open] .up-fab-cluster {
-  visibility: hidden;
+  opacity: 0;
+  transform: translateY(10px);
   pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.3, 0.55, 0.3, 1);
 }
 
 .up-fab-more,
@@ -1353,11 +1351,11 @@ html.dark .up-pool-drawer,
   border-top: 1px solid var(--up-line);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.32);
+  box-shadow: 0 -12px 36px rgb(0 0 0 / 0.28);
   background: var(--up-raised);
-  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  touch-action: pan-y;
 }
 
 html:not(.dark) .up-mobile-sheet {

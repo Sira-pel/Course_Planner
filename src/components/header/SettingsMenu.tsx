@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { PWAInstallModal } from '../pwa/PWAInstallModal';
-import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface SettingsMenuProps {
   isPhone: boolean;
@@ -81,6 +81,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   const sheetCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
     : SHEET_CLOSE_TRANSITION;
+  const backdropOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_OPEN_TRANSITION;
+  const backdropCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_CLOSE_TRANSITION;
 
   useEffect(() => {
     if (!isSettingsOpen) setIsConfirmingClear(false);
@@ -291,9 +297,9 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   animate={{ opacity: 1 }}
                   exit={{
                     opacity: 0,
-                    transition: reduceMotion ? { duration: 0 } : sheetCloseTransition,
+                    transition: backdropCloseTransition,
                   }}
-                  transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
+                  transition={backdropOpenTransition}
                   onClick={onToggleOpen}
                 />
                 <motion.div
@@ -301,7 +307,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Settings"
-                  className="up-mobile-sheet up-settings will-change-transform"
+                  className="up-mobile-sheet up-settings"
+                  drag="y"
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={{ top: 0, bottom: 0.4 }}
+                  onDragEnd={(_e, info) => {
+                    if (info.offset.y > 80 || info.velocity.y > 350) {
+                      onToggleOpen();
+                    }
+                  }}
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={

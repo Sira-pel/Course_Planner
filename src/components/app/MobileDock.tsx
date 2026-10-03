@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
-import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { PWAInstallModal } from '../pwa/PWAInstallModal';
 
@@ -53,6 +53,12 @@ export function MobileDock({
   const menuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
     : SHEET_CLOSE_TRANSITION;
+  const backdropOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_OPEN_TRANSITION;
+  const backdropCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_CLOSE_TRANSITION;
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -134,9 +140,9 @@ export function MobileDock({
                 animate={{ opacity: 1 }}
                 exit={{
                   opacity: 0,
-                  transition: reduceMotion ? { duration: 0 } : menuCloseTransition,
+                  transition: backdropCloseTransition,
                 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
+                transition={backdropOpenTransition}
                 onClick={onCloseMoreMenu}
               />
             )}
@@ -145,7 +151,15 @@ export function MobileDock({
                 key="more-menu"
                 role="menu"
                 aria-label="More actions"
-                className="up-menu up-more-menu will-change-transform"
+                className="up-menu up-more-menu"
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.4 }}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.y > 70 || info.velocity.y > 350) {
+                    onCloseMoreMenu();
+                  }
+                }}
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={

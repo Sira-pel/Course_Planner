@@ -9,7 +9,7 @@ import { usePoolLayout } from '../../utils/usePoolLayout';
 import { courseIdentityKey, sameCourseIdentity } from '../../utils/courseIdentity';
 import { ShoppingBag } from 'lucide-react';
 import { PoolPanel, type FilterMode } from './PoolPanel';
-import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface CoursePoolSidebarProps {
   isCollapsed: boolean;
@@ -404,6 +404,13 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
     />
   );
 
+  const backdropOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_OPEN_TRANSITION;
+  const backdropCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : SHEET_BACKDROP_CLOSE_TRANSITION;
+
   const overlayBackdrop = (key: string) => (
     <motion.div
       key={key}
@@ -412,9 +419,9 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       animate={{ opacity: 1 }}
       exit={{
         opacity: 0,
-        transition: reduceMotion ? { duration: 0 } : panelCloseTransition,
+        transition: backdropCloseTransition,
       }}
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
+      transition={backdropOpenTransition}
       onClick={onToggleCollapse}
     />
   );
@@ -517,7 +524,15 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="course-pool-title"
-                className="up-pool-sheet will-change-transform"
+                className="up-pool-sheet"
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0, bottom: 0.4 }}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.y > 80 || info.velocity.y > 350) {
+                    onToggleCollapse();
+                  }
+                }}
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={
