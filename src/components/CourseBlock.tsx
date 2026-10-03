@@ -55,7 +55,7 @@ export const CourseBlock = memo(function CourseBlock({
         onDoubleClick={(e) => {
           e.stopPropagation();
         }}
-        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} backdrop-blur-[2px] transition-[box-shadow,filter] duration-150 cursor-pointer hover:shadow-md hover:brightness-105 p-2 overflow-hidden select-none z-10 active:scale-95`}
+        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} transition-[box-shadow,filter] duration-150 cursor-pointer hover:shadow-md hover:brightness-105 p-2 overflow-hidden select-none z-10 active:scale-95`}
         style={{
           top: `${topPercent}%`,
           height: `calc(${heightPercent}% - 2px)`,
@@ -90,7 +90,7 @@ export const CourseBlock = memo(function CourseBlock({
           </span>
 
           {/* Hover Action Buttons - identical in style, sizing and behavior to normal course blocks */}
-          <div className="hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-slate-900/80 dark:bg-black/80 backdrop-blur-xs rounded px-1 py-0.5 shadow-xs">
+          <div className="hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-slate-900/90 dark:bg-black/90 rounded px-1 py-0.5 shadow-xs">
             <button
               type="button"
               id={`btn-edit-ghost-${course.id}`}
@@ -197,7 +197,7 @@ export const CourseBlock = memo(function CourseBlock({
         </div>
 
         {/* Hover Action Buttons */}
-        <div className="hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-black/20 backdrop-blur-xs rounded px-1 py-0.5">
+        <div className="hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-black/40 rounded px-1 py-0.5">
           <button
             type="button"
             id={`btn-edit-${course.id}`}

@@ -23,3 +23,18 @@ export const TAB_CONTENT_ANIMATION = {
   exit: { opacity: 0, y: -4 },
   transition: { duration: 0.24, ease: EASE_OUT },
 };
+
+export function isLowEndDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  if (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4) return true;
+  if (typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency <= 4) return true;
+  return false;
+}
+
+export function initLiteMotion(): void {
+  if (typeof document === 'undefined') return;
+  if (isLowEndDevice()) {
+    document.documentElement.setAttribute('data-lite-motion', '');
+  }
+}
