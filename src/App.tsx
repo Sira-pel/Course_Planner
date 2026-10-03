@@ -17,6 +17,8 @@ import { ShareImportModal } from './components/ShareImportModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { PWAReloadPrompt } from './components/pwa/PWAReloadPrompt';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme } from './utils/theme';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
@@ -337,6 +339,9 @@ export default function App() {
         onOpenAsActivePlan={handleOpenSharedPlanAsActive}
         initialManualPaste={initialManualPaste}
       />
+
+      <OfflineIndicator />
+      <PWAReloadPrompt />
     </div>
   );
 }

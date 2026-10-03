@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
+  CheckCircle2,
   Download,
   HelpCircle,
   Keyboard,
@@ -9,10 +10,13 @@ import {
   RotateCcw,
   Settings,
   ShoppingBag,
+  Smartphone,
   Sparkles,
   Sun,
   Upload,
 } from 'lucide-react';
+import { usePWAInstall } from '../../utils/usePWAInstall';
+import { PWAInstallModal } from '../pwa/PWAInstallModal';
 
 interface SettingsMenuProps {
   isPhone: boolean;
@@ -66,10 +70,23 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onClearAll,
 }) => {
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   useEffect(() => {
     if (!isSettingsOpen) setIsConfirmingClear(false);
   }, [isSettingsOpen]);
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      const outcome = await install();
+      if (!outcome) {
+        setShowInstallGuide(true);
+      }
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   return (
     <div className="up-settings-anchor" ref={settingsRef}>
@@ -145,6 +162,22 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
             </div>
 
             <div className="up-settings-group">
+              {!isInstalled ? (
+                <button
+                  type="button"
+                  id="btn-install-app"
+                  onClick={handleInstallClick}
+                  className="up-settings-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
+                >
+                  <Smartphone />
+                  <span>Install Uniplan app</span>
+                </button>
+              ) : (
+                <div className="up-settings-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
+                  <CheckCircle2 className="text-emerald-500" />
+                  <span>App installed</span>
+                </div>
+              )}
               <button
                 type="button"
                 id="btn-open-catalog"
@@ -245,6 +278,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PWAInstallModal
+        isOpen={showInstallGuide}
+        onClose={() => setShowInstallGuide(false)}
+        isIOS={isIOS}
+      />
     </div>
   );
 };

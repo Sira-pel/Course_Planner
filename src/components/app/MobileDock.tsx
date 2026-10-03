@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
 import { EASE_OUT, EASE_POP } from '../../utils/motion';
+import { usePWAInstall } from '../../utils/usePWAInstall';
+import { PWAInstallModal } from '../pwa/PWAInstallModal';
 
 export interface MobileDockProps {
   isMoreOpen: boolean;
@@ -42,6 +44,9 @@ export function MobileDock({
   onCancelClear,
   onCloseMoreMenu,
 }: MobileDockProps) {
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
   const menuOpenTransition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.18, ease: EASE_OUT };
@@ -170,6 +175,31 @@ export function MobileDock({
                   </div>
                 ) : (
                   <>
+                    {!isInstalled ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        id="btn-mobile-install-app"
+                        className="up-more-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
+                        onClick={async () => {
+                          onCloseMoreMenu();
+                          if (isInstallable) {
+                            const outcome = await install();
+                            if (!outcome) setShowInstallGuide(true);
+                          } else {
+                            setShowInstallGuide(true);
+                          }
+                        }}
+                      >
+                        <Smartphone className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        Install Uniplan app
+                      </button>
+                    ) : (
+                      <div className="up-more-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        App installed
+                      </div>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -210,6 +240,15 @@ export function MobileDock({
               </motion.div>
             )}
           </AnimatePresence>,
+          document.body
+        )}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <PWAInstallModal
+            isOpen={showInstallGuide}
+            onClose={() => setShowInstallGuide(false)}
+            isIOS={isIOS}
+          />,
           document.body
         )}
     </>
