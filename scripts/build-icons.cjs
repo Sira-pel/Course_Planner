@@ -3,11 +3,14 @@ const path = require('path');
 const sharp = require('sharp');
 
 function createSvg(isMaskable = false) {
-  // Calendar card dimensions
+  // Calendar card dimensions - precisely centered on 512x512 canvas
+  // Total visual height of calendar + rings = 38px rings (-18px above card) + 312px card = 330px
+  // Top margin = (512 - 330) / 2 = 91px
+  // Bottom margin = 91px
   const cardX = 84;
-  const cardY = 138;
+  const cardY = 109;
   const cardW = 344;
-  const cardH = 314;
+  const cardH = 312;
   const cardRx = 42;
   const headerH = 74;
 
@@ -20,32 +23,32 @@ function createSvg(isMaskable = false) {
         <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${headerH}" fill="#584fe6" />
       </g>
 
-      <!-- 3 Binder Rings across the top edge -->
+      <!-- 3 Binder Rings across the top edge (centered vertically over top edge of header) -->
       <g filter="url(#loopShadow)">
-        <rect x="164" y="117" width="22" height="42" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
-        <rect x="245" y="117" width="22" height="42" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
-        <rect x="326" y="117" width="22" height="42" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
+        <rect x="164" y="91" width="22" height="38" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
+        <rect x="245" y="91" width="22" height="38" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
+        <rect x="326" y="91" width="22" height="38" rx="11" ry="11" fill="none" stroke="#ffffff" stroke-width="4.8" stroke-linecap="round" />
       </g>
 
       <!-- Calendar Schedule Blocks -->
       <!-- Column 1: x = 110, width = 86 -->
-      <rect x="110" y="232" width="86" height="62" rx="14" ry="14" fill="#42a2f8" />
-      <rect x="110" y="308" width="86" height="120" rx="14" ry="14" fill="#27be7c" />
+      <rect x="110" y="203" width="86" height="62" rx="14" ry="14" fill="#42a2f8" />
+      <rect x="110" y="279" width="86" height="120" rx="14" ry="14" fill="#27be7c" />
 
       <!-- Column 2: x = 213, width = 86 -->
-      <rect x="213" y="232" width="86" height="120" rx="14" ry="14" fill="#f5771e" />
-      <rect x="213" y="366" width="86" height="62" rx="14" ry="14" fill="#9b67ea" />
+      <rect x="213" y="203" width="86" height="120" rx="14" ry="14" fill="#f5771e" />
+      <rect x="213" y="337" width="86" height="62" rx="14" ry="14" fill="#9b67ea" />
 
       <!-- Column 3: x = 316, width = 86 -->
-      <rect x="316" y="232" width="86" height="78" rx="14" ry="14" fill="#eb4987" />
-      <rect x="316" y="324" width="86" height="104" rx="14" ry="14" fill="#151b3d" />
+      <rect x="316" y="203" width="86" height="78" rx="14" ry="14" fill="#eb4987" />
+      <rect x="316" y="295" width="86" height="104" rx="14" ry="14" fill="#151b3d" />
 
-      <!-- Graduation Cap in Midnight Navy Tile (cx=359, cy=376) -->
+      <!-- Graduation Cap in Midnight Navy Tile (center cx=359, cy=347) -->
       <g stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" fill="none">
-        <polygon points="359,357 386,368 359,379 332,368" stroke-width="4.2" />
-        <path d="M 340,373 L 340,383 C 340,392 378,392 378,383 L 378,373" stroke-width="3.8" />
-        <path d="M 386,368 L 388,385 C 388,389 384,391 381,391" stroke-width="3.5" />
-        <circle cx="380" cy="391" r="2.2" fill="#ffffff" stroke="none" />
+        <polygon points="359,328 386,339 359,350 332,339" stroke-width="4.2" />
+        <path d="M 340,344 L 340,354 C 340,363 378,363 378,354 L 378,344" stroke-width="3.8" />
+        <path d="M 386,339 L 388,356 C 388,360 384,362 381,362" stroke-width="3.5" />
+        <circle cx="380" cy="362" r="2.2" fill="#ffffff" stroke="none" />
       </g>
     </g>
   `;
@@ -54,7 +57,7 @@ function createSvg(isMaskable = false) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#2a2fb8" />
+      <stop offset="0%" stop-color="#2a2eb8" />
       <stop offset="100%" stop-color="#1f2398" />
     </linearGradient>
     <filter id="cardShadow" x="-20%" y="-15%" width="140%" height="145%">
@@ -72,7 +75,7 @@ function createSvg(isMaskable = false) {
   <rect width="512" height="512" fill="url(#bgGrad)" />
 
   <!-- Centered in 78% safe-zone -->
-  <g transform="translate(56, 56) scale(0.78)">
+  <g transform="translate(56.32, 56.32) scale(0.78)">
     ${cardContent}
   </g>
 </svg>`;
@@ -81,7 +84,7 @@ function createSvg(isMaskable = false) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#2a2fb8" />
+      <stop offset="0%" stop-color="#2a2eb8" />
       <stop offset="100%" stop-color="#1f2398" />
     </linearGradient>
     <filter id="cardShadow" x="-20%" y="-15%" width="140%" height="145%">
@@ -123,7 +126,7 @@ async function run() {
   const faviconBuffer = await sharp(stdBuffer).resize(48, 48).png().toBuffer();
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), faviconBuffer);
 
-  console.log('Successfully generated all PWA icons with updated artwork!');
+  console.log('Successfully re-centered and built all PWA icon assets!');
 }
 
 run().catch(err => {
