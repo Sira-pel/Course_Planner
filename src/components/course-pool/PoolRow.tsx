@@ -1,18 +1,15 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import type { Course } from '../../types/schedule';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
 import { Check, Trash2, Edit2, AlertTriangle, X, Plus } from 'lucide-react';
-import { EASE_OUT } from '../../utils/motion';
 
 export interface PoolRowProps {
   item: Course;
   inActivePlan: boolean;
   conflict: Course | null;
   confirmDelete: boolean;
-  stagger: boolean;
-  index: number;
-  reduceMotion: boolean | null;
+  index?: number;
+  reduceMotion?: boolean | null;
   activePlanName: string | undefined;
   onEdit: (id: string) => void;
   onRequestDelete: (id: string) => void;
@@ -27,8 +24,6 @@ export const PoolRow = React.memo(function PoolRow({
   inActivePlan,
   conflict,
   confirmDelete,
-  stagger,
-  index,
   activePlanName,
   onEdit,
   onRequestDelete,
@@ -38,16 +33,7 @@ export const PoolRow = React.memo(function PoolRow({
   onRemoveFromPlan,
 }: PoolRowProps) {
   return (
-    <motion.div
-      className="up-pool-row group"
-      initial={stagger ? { opacity: 0, y: 6 } : false}
-      animate={{ opacity: 1, y: 0 }}
-      transition={
-        stagger
-          ? { duration: 0.18, ease: EASE_OUT, delay: Math.min(index * 0.02, 0.16) }
-          : { duration: 0 }
-      }
-    >
+    <div className="up-pool-row group">
       <div className="flex items-start justify-between gap-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="up-pool-swatch" style={{ backgroundColor: item.color }} />
@@ -163,6 +149,6 @@ export const PoolRow = React.memo(function PoolRow({
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 });

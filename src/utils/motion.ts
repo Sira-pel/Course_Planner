@@ -1,7 +1,18 @@
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+export const EASE_DECEL = [0.16, 1, 0.3, 1] as const;
 export const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
 export const EASE_SNAP = [0.2, 0.8, 0.2, 1] as const;
 export const EASE_IN_OUT = [0.65, 0, 0.35, 1] as const;
+
+export const SHEET_OPEN_TRANSITION = {
+  duration: 0.26,
+  ease: EASE_DECEL,
+} as const;
+
+export const SHEET_CLOSE_TRANSITION = {
+  duration: 0.18,
+  ease: EASE_OUT,
+} as const;
 
 export const MODAL_BACKDROP_ANIMATION = {
   initial: { opacity: 0 },

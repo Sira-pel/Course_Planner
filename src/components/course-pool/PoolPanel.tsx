@@ -333,12 +333,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-list">
-        <motion.div
-          className="up-pool-list-ink will-change-[opacity,transform] transform-gpu"
-          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
-        >
+        <div className="up-pool-list-ink">
           {filteredCourses.length === 0 ? (
             <div className="up-pool-empty">
               <ShoppingBag className="w-6 h-6" style={{ color: 'var(--up-line)' }} />
@@ -401,7 +396,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
             filteredCourses.map((item, index) => {
               const inActivePlan = isEnrolled(item);
               const conflict = !inActivePlan ? findConflict(item) : null;
-              const stagger = !reduceMotion && index < 8;
 
               return (
                 <PoolRow
@@ -410,7 +404,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   inActivePlan={inActivePlan}
                   conflict={conflict}
                   confirmDelete={confirmDeleteCourseId === item.id}
-                  stagger={stagger}
                   index={index}
                   reduceMotion={reduceMotion}
                   activePlanName={activePlanName}
@@ -424,7 +417,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               );
             })
           )}
-        </motion.div>
+        </div>
       </div>
 
       <div className="up-pool-foot">

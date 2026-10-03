@@ -624,7 +624,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                 left: 4,
                 width: 'calc(50% - 4px)',
               }}
-              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
             />
             <button
               type="button"

@@ -23,7 +23,7 @@ import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { ConflictModal } from './ConflictModal';
-import { EASE_OUT, EASE_POP } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
@@ -141,10 +141,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const sheetOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+    : SHEET_OPEN_TRANSITION;
   const sheetCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.2, ease: EASE_OUT };
+    : SHEET_CLOSE_TRANSITION;
 
   const desktopMenuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }

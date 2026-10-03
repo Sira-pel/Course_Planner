@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
-import { EASE_OUT, EASE_POP } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { PWAInstallModal } from '../pwa/PWAInstallModal';
 
@@ -49,10 +49,10 @@ export function MobileDock({
 
   const menuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+    : SHEET_OPEN_TRANSITION;
   const menuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.2, ease: EASE_OUT };
+    : SHEET_CLOSE_TRANSITION;
 
   useEffect(() => {
     if (!isMoreOpen) return;

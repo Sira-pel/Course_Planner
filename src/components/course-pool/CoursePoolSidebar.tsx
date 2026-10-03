@@ -9,7 +9,7 @@ import { usePoolLayout } from '../../utils/usePoolLayout';
 import { courseIdentityKey, sameCourseIdentity } from '../../utils/courseIdentity';
 import { ShoppingBag } from 'lucide-react';
 import { PoolPanel, type FilterMode } from './PoolPanel';
-import { EASE_OUT, EASE_POP } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface CoursePoolSidebarProps {
   isCollapsed: boolean;
@@ -189,10 +189,10 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
 
   const sheetOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+    : SHEET_OPEN_TRANSITION;
   const sheetCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.2, ease: EASE_OUT };
+    : SHEET_CLOSE_TRANSITION;
 
   useEffect(() => {
     pillPaintedRef.current = false;
@@ -216,14 +216,7 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
       : 'transform var(--dur-chrome) var(--ease-out), width var(--dur-chrome) var(--ease-out)';
     pill.style.transform = `translateX(${x}px)`;
     pill.style.width = `${w}px`;
-    if (!pillPaintedRef.current) {
-      void pill.offsetWidth;
-      pillPaintedRef.current = true;
-      if (!reduceMotion) {
-        pill.style.transition =
-          'transform var(--dur-chrome) var(--ease-out), width var(--dur-chrome) var(--ease-out)';
-      }
-    }
+    pillPaintedRef.current = true;
   }, [reduceMotion, filterMode]);
 
   useLayoutEffect(() => {
