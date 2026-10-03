@@ -127,6 +127,15 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageTheme, setImageTheme] = useState<'light' | 'dark'>(theme);
 
+  // Revoke object URL on unmount or when imagePreviewUrl changes to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
+
   // Generate preview image smoothly with debounce when activeTab becomes 'image'
   useEffect(() => {
     if (isOpen && activeTab === 'image' && !imagePreviewUrl && !generatingImage) {
@@ -175,7 +184,10 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         startHour,
         endHour,
       });
-      setImagePreviewUrl(url);
+      setImagePreviewUrl((prev) => {
+        if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return url;
+      });
     } catch (e) {
       console.error(e);
     } finally {

@@ -61,7 +61,7 @@ export function minutesToTime(minutes: number, format12h: boolean = true): strin
   if (isNaN(minutes)) return format12h ? '12:00 AM' : '00:00';
   const rounded = Math.round(minutes);
   if (rounded >= 1440) {
-    return format12h ? '12:00 AM' : '24:00';
+    return format12h ? '12:00 AM' : '23:59';
   }
   const clamped = Math.max(0, Math.min(1439, rounded));
   const h24 = Math.floor(clamped / 60);

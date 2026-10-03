@@ -52,6 +52,9 @@ export const CourseBlock = memo(function CourseBlock({
         onClick={() => {
           onEdit(course.id, planId);
         }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+        }}
         className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} backdrop-blur-[2px] transition-[box-shadow,filter] duration-150 cursor-pointer hover:shadow-md hover:brightness-105 p-2 overflow-hidden select-none z-10 active:scale-95`}
         style={{
           top: `${topPercent}%`,
@@ -159,6 +162,9 @@ export const CourseBlock = memo(function CourseBlock({
     <div
       id={`course-block-${course.id}-${session.id}`}
       onClick={() => onEdit(course.id, planId)}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+      }}
       className={`group absolute rounded-lg transition-[box-shadow,filter,border-color] duration-150 cursor-pointer select-none p-2 overflow-hidden shadow-xs hover:shadow-md hover:z-30 hover:brightness-[1.04] ${
         hasConflict
           ? 'ring-2 ring-inset ring-red-500 animate-pulse'
