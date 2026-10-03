@@ -182,10 +182,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
+      if (isPhone) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor')) return;
       if (document.documentElement.classList.contains('is-theme-revealing')) return;
-      if (Date.now() - lastSettingsToggleAt.current < 350) return;
       if (ghostDropdownRef.current && !ghostDropdownRef.current.contains(e.target as Node)) {
         setGhostMenuOpen(false);
       }
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isPhone]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -218,17 +218,6 @@ export const Header: React.FC<HeaderProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editingPlanId, conflictModalOpen]);
-
-  useEffect(() => {
-    if (!isPhone || !anyMenuOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.body.classList.add('up-sheet-open');
-    return () => {
-      document.body.style.overflow = previous;
-      document.body.classList.remove('up-sheet-open');
-    };
-  }, [isPhone, anyMenuOpen]);
 
   const handleIcsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -475,9 +464,6 @@ export const Header: React.FC<HeaderProps> = ({
             showWeekends={showWeekends}
             theme={theme}
             onToggleOpen={() => {
-              const now = Date.now();
-              if (now - lastSettingsToggleAt.current < 350) return;
-              lastSettingsToggleAt.current = now;
               setPlansMenuOpen(false);
               setGhostMenuOpen(false);
               setIsSettingsOpen((open) => !open);
@@ -660,27 +646,6 @@ export const Header: React.FC<HeaderProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {isPhone && typeof document !== 'undefined' &&
-        createPortal(
-          <AnimatePresence>
-            {anyMenuOpen && (
-              <motion.div
-                key="header-sheet-backdrop"
-                className="up-sheet-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{
-                  opacity: 0,
-                  transition: reduceMotion ? { duration: 0 } : sheetCloseTransition,
-                }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
-                onClick={closeAllMenus}
-              />
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
     </header>
   );
 };

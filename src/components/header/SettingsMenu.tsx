@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   CheckCircle2,
   Download,
   HelpCircle,
-  Keyboard,
   Moon,
   RotateCcw,
   Settings,
@@ -13,9 +13,11 @@ import {
   Sparkles,
   Sun,
   Upload,
+  X,
 } from 'lucide-react';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { PWAInstallModal } from '../pwa/PWAInstallModal';
+import { EASE_OUT } from '../../utils/motion';
 
 interface SettingsMenuProps {
   isPhone: boolean;
@@ -71,10 +73,29 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  const sheetOpenTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring', damping: 30, stiffness: 350, mass: 0.8 };
+  const sheetCloseTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.2, ease: EASE_OUT };
 
   useEffect(() => {
     if (!isSettingsOpen) setIsConfirmingClear(false);
   }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (!isPhone || !isSettingsOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('up-sheet-open');
+    return () => {
+      document.body.style.overflow = previous;
+      document.body.classList.remove('up-sheet-open');
+    };
+  }, [isPhone, isSettingsOpen]);
 
   const handleInstallClick = async () => {
     if (isInstallable) {
@@ -86,6 +107,162 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       setShowInstallGuide(true);
     }
   };
+
+  const renderContent = () => (
+    <>
+      <div className="up-settings-controls">
+        <div>
+          <label className="up-settings-field-label" htmlFor="settings-start-hour">
+            Time range
+          </label>
+          <div className="up-settings-range">
+            <select
+              id="settings-start-hour"
+              value={startHour}
+              onChange={(e) => onSetTimeRange(Number(e.target.value), endHour)}
+              className="up-settings-select"
+              aria-label="Calendar start hour"
+            >
+              {Array.from({ length: 8 }, (_, i) => i + 5).map((h) => (
+                <option key={`start-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
+              ))}
+            </select>
+            <span className="up-settings-range-sep">to</span>
+            <select
+              id="settings-end-hour"
+              value={endHour}
+              onChange={(e) => onSetTimeRange(startHour, Number(e.target.value))}
+              className="up-settings-select up-settings-select-end"
+              aria-label="Calendar end hour"
+            >
+              {Array.from({ length: 9 }, (_, i) => i + 16).map((h) => (
+                <option key={`end-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="up-settings-toggle-row">
+          <span className="up-settings-toggle-label">Show weekends</span>
+          <button
+            type="button"
+            onClick={() => onSetShowWeekends(!showWeekends)}
+            className={`up-settings-switch up-chrome-btn ${showWeekends ? 'is-on' : ''}`}
+            aria-pressed={showWeekends}
+            aria-label="Show weekends"
+          >
+            <span aria-hidden="true" className="up-settings-switch-knob" />
+          </button>
+        </div>
+      </div>
+
+      <div className="up-settings-group">
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className="up-settings-item up-chrome-btn"
+        >
+          <Sun className="hidden dark:block" />
+          <Moon className="block dark:hidden" />
+          <span className="hidden dark:inline">Light mode</span>
+          <span className="inline dark:hidden">Dark mode</span>
+        </button>
+        <button
+          type="button"
+          id="btn-open-import"
+          onClick={() => {
+            if (onOpenImport) onOpenImport('excel');
+            else onImportIcsClick();
+          }}
+          className="up-settings-item up-chrome-btn"
+        >
+          <Upload />
+          Import
+        </button>
+        <button
+          type="button"
+          onClick={onOpenExport}
+          className="up-settings-item up-chrome-btn"
+        >
+          <Download />
+          Export
+        </button>
+        <button
+          type="button"
+          id="btn-open-help"
+          onClick={onOpenHelp}
+          className="up-settings-item up-chrome-btn"
+        >
+          <HelpCircle />
+          Help & Shortcuts
+        </button>
+        {!isInstalled ? (
+          <button
+            type="button"
+            id="btn-install-app"
+            onClick={handleInstallClick}
+            className="up-settings-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
+          >
+            <Smartphone />
+            <span>Install Uniplan app</span>
+          </button>
+        ) : (
+          <div className="up-settings-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
+            <CheckCircle2 className="text-emerald-500" />
+            <span>App installed</span>
+          </div>
+        )}
+      </div>
+
+      <div className="up-settings-group">
+        <button
+          type="button"
+          id="btn-load-demo"
+          onClick={onLoadDemo}
+          className="up-settings-item up-chrome-btn"
+        >
+          <Sparkles />
+          Load demo
+        </button>
+        {isConfirmingClear ? (
+          <div className="up-settings-confirm" role="group" aria-label="Confirm clear all">
+            <p>Clear all plans and the course pool?</p>
+            <div className="up-settings-confirm-actions">
+              <button
+                type="button"
+                id="btn-clear-all-confirm"
+                className="up-settings-confirm-yes up-chrome-btn"
+                onClick={onClearAll}
+              >
+                Yes, clear all
+              </button>
+              <button
+                type="button"
+                className="up-settings-confirm-no up-chrome-btn"
+                onClick={() => setIsConfirmingClear(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            id="btn-clear-all"
+            onClick={() => setIsConfirmingClear(true)}
+            className="up-settings-item is-danger up-chrome-btn"
+          >
+            <RotateCcw />
+            Clear all
+          </button>
+        )}
+      </div>
+
+      <p className="up-settings-tip">
+        Double-click a time slot on the week to add a class.
+      </p>
+    </>
+  );
 
   return (
     <div className="up-settings-anchor" ref={settingsRef}>
@@ -102,172 +279,88 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
         <Settings className="w-4 h-4" />
       </button>
 
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div
-            role="dialog"
-            aria-label="Settings"
-            initial={menuEnter}
-            animate={menuShown}
-            exit={menuLeave}
-            transition={menuOpenTransition}
-            style={{ transformOrigin: isPhone ? 'bottom center' : 'top right' }}
-            className="up-menu up-settings up-scroll"
-          >
-            <div className="up-settings-controls">
-              <div>
-                <label className="up-settings-field-label" htmlFor="settings-start-hour">
-                  Time range
-                </label>
-                <div className="up-settings-range">
-                  <select
-                    id="settings-start-hour"
-                    value={startHour}
-                    onChange={(e) => onSetTimeRange(Number(e.target.value), endHour)}
-                    className="up-settings-select"
-                    aria-label="Calendar start hour"
-                  >
-                    {Array.from({ length: 8 }, (_, i) => i + 5).map((h) => (
-                      <option key={`start-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
-                    ))}
-                  </select>
-                  <span className="up-settings-range-sep">to</span>
-                  <select
-                    id="settings-end-hour"
-                    value={endHour}
-                    onChange={(e) => onSetTimeRange(startHour, Number(e.target.value))}
-                    className="up-settings-select up-settings-select-end"
-                    aria-label="Calendar end hour"
-                  >
-                    {Array.from({ length: 9 }, (_, i) => i + 16).map((h) => (
-                      <option key={`end-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="up-settings-toggle-row">
-                <span className="up-settings-toggle-label">Show weekends</span>
-                <button
-                  type="button"
-                  onClick={() => onSetShowWeekends(!showWeekends)}
-                  className={`up-settings-switch up-chrome-btn ${showWeekends ? 'is-on' : ''}`}
-                  aria-pressed={showWeekends}
-                  aria-label="Show weekends"
+      {isPhone && typeof document !== 'undefined' ? (
+        createPortal(
+          <AnimatePresence>
+            {isSettingsOpen && (
+              <>
+                <motion.div
+                  key="settings-backdrop"
+                  className="up-sheet-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{
+                    opacity: 0,
+                    transition: reduceMotion ? { duration: 0 } : sheetCloseTransition,
+                  }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_OUT }}
+                  onClick={onToggleOpen}
+                />
+                <motion.div
+                  key="settings-sheet"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Settings"
+                  className="up-mobile-sheet up-settings will-change-transform"
+                  initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={
+                    reduceMotion
+                      ? { opacity: 0, transition: { duration: 0 } }
+                      : { y: '100%', transition: sheetCloseTransition }
+                  }
+                  transition={sheetOpenTransition}
                 >
-                  <span aria-hidden="true" className="up-settings-switch-knob" />
-                </button>
-              </div>
-            </div>
-
-            <div className="up-settings-group">
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Sun className="hidden dark:block" />
-                <Moon className="block dark:hidden" />
-                <span className="hidden dark:inline">Light mode</span>
-                <span className="inline dark:hidden">Dark mode</span>
-              </button>
-              <button
-                type="button"
-                id="btn-open-import"
-                onClick={() => {
-                  if (onOpenImport) onOpenImport('excel');
-                  else onImportIcsClick();
-                }}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Upload />
-                Import
-              </button>
-              <button
-                type="button"
-                onClick={onOpenExport}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Download />
-                Export
-              </button>
-              <button
-                type="button"
-                id="btn-open-help"
-                onClick={onOpenHelp}
-                className="up-settings-item up-chrome-btn"
-              >
-                <HelpCircle />
-                Help & Shortcuts
-              </button>
-              {!isInstalled ? (
-                <button
-                  type="button"
-                  id="btn-install-app"
-                  onClick={handleInstallClick}
-                  className="up-settings-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
-                >
-                  <Smartphone />
-                  <span>Install Uniplan app</span>
-                </button>
-              ) : (
-                <div className="up-settings-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
-                  <CheckCircle2 className="text-emerald-500" />
-                  <span>App installed</span>
-                </div>
-              )}
-            </div>
-
-            <div className="up-settings-group">
-              <button
-                type="button"
-                id="btn-load-demo"
-                onClick={onLoadDemo}
-                className="up-settings-item up-chrome-btn"
-              >
-                <Sparkles />
-                Load demo
-              </button>
-              {isConfirmingClear ? (
-                <div className="up-settings-confirm" role="group" aria-label="Confirm clear all">
-                  <p>Clear all plans and the course pool?</p>
-                  <div className="up-settings-confirm-actions">
+                  <button
+                    type="button"
+                    className="up-pool-handle-hit"
+                    onClick={onToggleOpen}
+                    aria-label="Close settings"
+                  >
+                    <span className="up-pool-handle" />
+                  </button>
+                  <div className="up-pool-head px-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                      <h2 className="up-pool-title">Settings</h2>
+                    </div>
                     <button
                       type="button"
-                      id="btn-clear-all-confirm"
-                      className="up-settings-confirm-yes up-chrome-btn"
-                      onClick={onClearAll}
+                      onClick={onToggleOpen}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
+                      aria-label="Close settings"
                     >
-                      Yes, clear all
-                    </button>
-                    <button
-                      type="button"
-                      className="up-settings-confirm-no up-chrome-btn"
-                      onClick={() => setIsConfirmingClear(false)}
-                    >
-                      Cancel
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  id="btn-clear-all"
-                  onClick={() => setIsConfirmingClear(true)}
-                  className="up-settings-item is-danger up-chrome-btn"
-                >
-                  <RotateCcw />
-                  Clear all
-                </button>
-              )}
-            </div>
-
-            <p className="up-settings-tip">
-              Double-click a time slot on the week to add a class.
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <div className="up-mobile-sheet-body up-scroll">
+                    {renderContent()}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )
+      ) : (
+        <AnimatePresence>
+          {isSettingsOpen && (
+            <motion.div
+              key="settings-dropdown"
+              role="dialog"
+              aria-label="Settings"
+              initial={menuEnter}
+              animate={menuShown}
+              exit={menuLeave}
+              transition={menuOpenTransition}
+              style={{ transformOrigin: 'top right' }}
+              className="up-menu up-settings up-scroll"
+            >
+              {renderContent()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       <PWAInstallModal
         isOpen={showInstallGuide}

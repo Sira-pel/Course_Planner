@@ -1078,10 +1078,11 @@ body[data-up-pool-open] .up-fab-cluster {
     padding-top: 4px;
     padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
     z-index: 90 !important;
-    background: #171e2c !important;
+    background: var(--up-raised) !important;
+    color: var(--up-ink) !important;
     border: 0;
     border-top: 1px solid var(--up-line) !important;
-    box-shadow: 0 -12px 40px rgb(15 23 42 / 0.45);
+    box-shadow: 0 -16px 48px rgb(0 0 0 / 0.4) !important;
     transform-origin: bottom center;
     padding-left: 16px !important;
     padding-right: 16px !important;
@@ -1093,12 +1094,17 @@ body[data-up-pool-open] .up-fab-cluster {
     width: 36px;
     height: 4px;
     border-radius: 99px;
-    background: var(--up-line, #2a3342);
-    margin: 8px auto 10px;
+    background: var(--up-line);
+    margin: 8px auto 12px;
   }
 
   html:not(.dark) .up-menu {
-    background: #f7f8fb !important;
+    background: #ffffff !important;
+  }
+
+  html.dark .up-menu,
+  .dark .up-menu {
+    background: #121826 !important;
   }
 
   .up-more-menu {
@@ -1276,20 +1282,41 @@ body[data-up-pool-open] .up-fab-cluster {
   box-shadow: none;
 }
 
-.up-pool-sheet {
+.up-pool-sheet,
+.up-mobile-sheet {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 90;
-  max-height: min(85dvh, 40rem);
+  max-height: min(85dvh, 42rem);
   display: flex;
   flex-direction: column;
   border-radius: 16px 16px 0 0;
   border-top: 1px solid var(--up-line);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.32);
+  background: var(--up-raised);
+}
+
+html:not(.dark) .up-mobile-sheet {
+  background: #ffffff;
+}
+
+html.dark .up-mobile-sheet,
+.dark .up-mobile-sheet {
+  background: #121826;
+}
+
+.up-mobile-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 16px;
 }
 
 .up-pool-handle-hit {
