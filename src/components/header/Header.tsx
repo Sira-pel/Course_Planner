@@ -295,19 +295,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="up-header">
-      <AnimatePresence>
-        {isPhone && anyMenuOpen && (
-          <motion.div
-            key="sheet-backdrop"
-            className="up-sheet-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT } }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }}
-            onClick={closeAllMenus}
-          />
-        )}
-      </AnimatePresence>
       <div className="up-header-row up-header-row-primary">
         <div className="up-header-brand">
           <span className="up-grid-mark" aria-hidden="true">

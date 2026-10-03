@@ -45,6 +45,9 @@ interface SettingsMenuProps {
   onClearAll: () => void;
 }
 
+const START_HOURS = Array.from({ length: 8 }, (_, i) => i + 5);
+const END_HOURS = Array.from({ length: 9 }, (_, i) => i + 16);
+
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   isPhone,
   menuEnter,
@@ -129,7 +132,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               className="up-settings-select"
               aria-label="Calendar start hour"
             >
-              {Array.from({ length: 8 }, (_, i) => i + 5).map((h) => (
+              {START_HOURS.map((h) => (
                 <option key={`start-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
               ))}
             </select>
@@ -141,7 +144,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               className="up-settings-select up-settings-select-end"
               aria-label="Calendar end hour"
             >
-              {Array.from({ length: 9 }, (_, i) => i + 16).map((h) => (
+              {END_HOURS.map((h) => (
                 <option key={`end-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
               ))}
             </select>
@@ -307,7 +310,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Settings"
-                  className="up-mobile-sheet up-settings"
+                  className="up-mobile-sheet up-settings will-change-transform"
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={reduceMotion ? { opacity: 1 } : { y: 0 }}
                   exit={

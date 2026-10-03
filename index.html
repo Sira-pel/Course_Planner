@@ -34,20 +34,76 @@
             }
           }
           var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var meta = document.getElementById('theme-color-meta');
           if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.style.colorScheme = 'dark';
+            if (meta) meta.setAttribute('content', '#020617');
           } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.style.colorScheme = 'light';
+            if (meta) meta.setAttribute('content', '#f7f8fb');
           }
-          var meta = document.getElementById('theme-color-meta');
-          if (meta) meta.setAttribute('content', '#020617');
         } catch (e) {}
       })();
     </script>
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #020617;
+        transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.32s ease;
+        pointer-events: none;
+        will-change: opacity;
+      }
+      html:not(.dark) #app-splash {
+        background-color: #f7f8fb;
+      }
+      .app-splash-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        animation: splashPulse 1.2s ease-out infinite alternate;
+        transform: translateZ(0);
+      }
+      .app-splash-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+      }
+      .app-splash-text {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #f8fafc;
+      }
+      html:not(.dark) .app-splash-text {
+        color: #0f172a;
+      }
+      @keyframes splashPulse {
+        0% { transform: scale(0.98); opacity: 0.92; }
+        100% { transform: scale(1.02); opacity: 1; }
+      }
+      #app-splash.app-splash-hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+    </style>
   </head>
   <body class="bg-[#f7f8fb] dark:bg-[#121826] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+    <div id="app-splash" aria-hidden="true">
+      <div class="app-splash-content">
+        <img src="/icon.svg" alt="Uniplan" width="72" height="72" class="app-splash-icon" />
+        <div class="app-splash-text">Uniplan</div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
