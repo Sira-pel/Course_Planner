@@ -7,7 +7,7 @@ import {
   storageWriteErrorMessage,
   subscribeStorageWriteError,
 } from '../store/storageWrite';
-import { EASE_OUT } from '../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
 
 export const StorageWriteBanner: React.FC = () => {
   const kind = useSyncExternalStore(
@@ -24,7 +24,7 @@ export const StorageWriteBanner: React.FC = () => {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT }}
+          transition={{ duration: 0.24, ease: EASE_SMOOTH }}
           className="shrink-0 overflow-hidden bg-amber-50 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-100"
         >
           <div className="px-3 py-2 max-w-[1720px] mx-auto flex items-start gap-2">

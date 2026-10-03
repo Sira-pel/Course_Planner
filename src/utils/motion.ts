@@ -1,3 +1,5 @@
+// Signature smooth curve matching the app's theme transition [0.3, 0.55, 0.3, 1]
+export const EASE_SMOOTH = [0.3, 0.55, 0.3, 1] as const;
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 export const EASE_DECEL = [0.16, 1, 0.3, 1] as const;
 export const EASE_POP = [0.34, 1.36, 0.64, 1] as const;
@@ -5,34 +7,44 @@ export const EASE_SNAP = [0.2, 0.8, 0.2, 1] as const;
 export const EASE_IN_OUT = [0.65, 0, 0.35, 1] as const;
 
 export const SHEET_OPEN_TRANSITION = {
-  duration: 0.26,
-  ease: EASE_DECEL,
+  duration: 0.28,
+  ease: EASE_SMOOTH,
 } as const;
 
 export const SHEET_CLOSE_TRANSITION = {
   duration: 0.18,
-  ease: EASE_OUT,
+  ease: EASE_SMOOTH,
+} as const;
+
+export const MENU_OPEN_TRANSITION = {
+  duration: 0.22,
+  ease: EASE_SMOOTH,
+} as const;
+
+export const MENU_CLOSE_TRANSITION = {
+  duration: 0.16,
+  ease: EASE_SMOOTH,
 } as const;
 
 export const MODAL_BACKDROP_ANIMATION = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
   exit: { opacity: 0 },
-  transition: { duration: 0.24, ease: EASE_OUT },
+  transition: { duration: 0.22, ease: EASE_SMOOTH },
 };
 
 export const MODAL_SHEET_ANIMATION = {
-  initial: { opacity: 0, scale: 0.96, y: 8 },
+  initial: { opacity: 0, scale: 0.97, y: 8 },
   animate: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.98, y: 5 },
-  transition: { duration: 0.26, ease: EASE_OUT },
+  exit: { opacity: 0, scale: 0.975, y: 4 },
+  transition: { duration: 0.24, ease: EASE_SMOOTH },
 };
 
 export const TAB_CONTENT_ANIMATION = {
-  initial: { opacity: 0, y: 6 },
+  initial: { opacity: 0.25, y: 4 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -4 },
-  transition: { duration: 0.24, ease: EASE_OUT },
+  exit: { opacity: 0, y: -3 },
+  transition: { duration: 0.2, ease: EASE_SMOOTH },
 };
 
 export function isLowEndDevice(): boolean {

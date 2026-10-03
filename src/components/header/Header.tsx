@@ -23,7 +23,7 @@ import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
 import { ConflictModal } from './ConflictModal';
-import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, MENU_OPEN_TRANSITION, MENU_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
@@ -148,10 +148,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const desktopMenuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.18, ease: EASE_OUT };
+    : MENU_OPEN_TRANSITION;
   const desktopMenuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.12, ease: EASE_OUT };
+    : MENU_CLOSE_TRANSITION;
 
   const menuOpenTransition: Transition = isPhone ? sheetOpenTransition : desktopMenuOpenTransition;
   const menuCloseTransition: Transition = isPhone ? sheetCloseTransition : desktopMenuCloseTransition;
@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
     ? { opacity: 0 }
     : isPhone
       ? { y: '100%' }
-      : { opacity: 0, scale: 0.98, y: -3 };
+      : { opacity: 0, scale: 0.97, y: -4 };
   const menuShown: TargetAndTransition = reduceMotion
     ? { opacity: 1 }
     : isPhone
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
     ? { opacity: 0, transition: menuCloseTransition }
     : isPhone
       ? { y: '100%', transition: menuCloseTransition }
-      : { opacity: 0, scale: 0.985, y: -2, transition: menuCloseTransition };
+      : { opacity: 0, scale: 0.975, y: -3, transition: menuCloseTransition };
 
   const closeAllMenus = () => {
     setGhostMenuOpen(false);

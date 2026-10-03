@@ -9,7 +9,7 @@ import { usePoolLayout } from '../../utils/usePoolLayout';
 import { courseIdentityKey, sameCourseIdentity } from '../../utils/courseIdentity';
 import { ShoppingBag } from 'lucide-react';
 import { PoolPanel, type FilterMode } from './PoolPanel';
-import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface CoursePoolSidebarProps {
   isCollapsed: boolean;
@@ -354,9 +354,9 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
           exit={
             reduceMotion
               ? { opacity: 0, transition: { duration: 0 } }
-              : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+              : { y: -8, opacity: 0, transition: { duration: 0.16, ease: EASE_SMOOTH } }
           }
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: EASE_SMOOTH }}
         >
           {catalogCourses.length}
         </motion.span>

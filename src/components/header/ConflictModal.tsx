@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Conflict } from '../../types/schedule';
-import { EASE_OUT } from '../../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
 
 interface ConflictModalProps {
   open: boolean;
@@ -30,8 +30,8 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : { duration: 0.15, ease: EASE_OUT } }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: EASE_OUT }}
+          exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : { duration: 0.16, ease: EASE_SMOOTH } }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: EASE_SMOOTH }}
           onClick={onClose}
         >
           <div className="absolute inset-0 bg-slate-950/65" />
@@ -39,10 +39,10 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="conflict-modal-title"
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.96, y: 6 }}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98, y: 4, transition: { duration: 0.16, ease: EASE_OUT } }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: EASE_OUT }}
+            exit={reduceMotion ? undefined : { opacity: 0, scale: 0.975, y: 4, transition: { duration: 0.16, ease: EASE_SMOOTH } }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: EASE_SMOOTH }}
             onClick={(e) => e.stopPropagation()}
             className="relative bg-white dark:bg-slate-900 rounded-lg border border-rose-200 dark:border-rose-900/60 shadow-[0_8px_24px_rgb(15_23_42/0.18)] max-w-md w-full min-w-0 p-5 will-change-transform"
           >

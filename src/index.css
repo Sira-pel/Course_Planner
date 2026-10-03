@@ -3,15 +3,16 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-smooth: cubic-bezier(0.3, 0.55, 0.3, 1);
+  --ease-out: cubic-bezier(0.3, 0.55, 0.3, 1);
   --ease-reveal: cubic-bezier(0.3, 0.55, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-snap: cubic-bezier(0.3, 0.55, 0.3, 1);
   --ease-pop: cubic-bezier(0.34, 1.36, 0.64, 1);
-  --dur-micro: 80ms;
-  --dur-chrome: 160ms;
-  --dur-close: 150ms;
-  --dur-open: 250ms;
+  --dur-micro: 90ms;
+  --dur-chrome: 180ms;
+  --dur-close: 160ms;
+  --dur-open: 260ms;
   --dur-ui: 240ms;
   --dur-emphasis: 500ms;
   --dur-scene: 620ms;
@@ -856,6 +857,21 @@ html.dark .up-settings-select option,
 
 .up-conflict-icon {
   animation: up-conflict-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+.animate-fade-in {
+  animation: up-fade-in 240ms var(--ease-smooth) both;
+}
+
+@keyframes up-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .up-sheet-backdrop {

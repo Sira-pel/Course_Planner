@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Share, PlusSquare, X, CheckCircle2 } from 'lucide-react';
-import { EASE_OUT } from '../../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
 
 interface PWAInstallModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: EASE_OUT }}
+            transition={{ duration: 0.22, ease: EASE_SMOOTH }}
             className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs"
             onClick={onClose}
           />
@@ -33,10 +33,10 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="pwa-install-title"
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 4 }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
+            exit={{ opacity: 0, scale: 0.975, y: 4 }}
+            transition={{ duration: 0.24, ease: EASE_SMOOTH }}
             className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full p-5 z-10 text-slate-900 dark:text-slate-100"
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">

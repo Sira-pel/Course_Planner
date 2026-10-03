@@ -19,7 +19,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { encodePlanToShareUrl } from '../../utils/shareLink';
-import { EASE_OUT } from '../../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
 import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
@@ -285,7 +285,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT }}
+          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -294,10 +294,10 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
             role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 5 }}
-        transition={{ duration: 0.26, ease: EASE_OUT }}
+        exit={{ opacity: 0, scale: 0.975, y: 4 }}
+        transition={{ duration: 0.24, ease: EASE_SMOOTH }}
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-3 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
       >
         {/* Header - Compact on mobile */}
@@ -351,9 +351,9 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         >
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0.2 }}
+            initial={{ opacity: 0.25 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
+            transition={{ duration: 0.2, ease: EASE_SMOOTH }}
             className="w-full will-change-[opacity] transform-gpu"
           >
               {activeTab === 'text' && (

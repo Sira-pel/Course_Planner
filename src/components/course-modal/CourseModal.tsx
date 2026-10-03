@@ -7,7 +7,7 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
-import { EASE_OUT } from '../../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -533,7 +533,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: EASE_OUT }}
+      transition={{ duration: 0.22, ease: EASE_SMOOTH }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -576,10 +576,10 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         aria-modal="true"
         aria-labelledby="course-modal-title"
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden will-change-transform"
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 4 }}
-        transition={{ duration: 0.2, ease: EASE_OUT }}
+        exit={{ opacity: 0, scale: 0.975, y: 4 }}
+        transition={{ duration: 0.24, ease: EASE_SMOOTH }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 pb-3 shrink-0">
@@ -624,7 +624,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                 left: 4,
                 width: 'calc(50% - 4px)',
               }}
-              transition={{ duration: 0.18, ease: EASE_OUT }}
+              transition={{ duration: 0.22, ease: EASE_SMOOTH }}
             />
             <button
               type="button"

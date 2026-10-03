@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
-import { EASE_OUT } from '../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
 
 export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
 
@@ -125,7 +125,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT }}
+          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="help-modal-title"
@@ -134,10 +134,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 4 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
+            exit={{ opacity: 0, scale: 0.975, y: 4 }}
+            transition={{ duration: 0.24, ease: EASE_SMOOTH }}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
@@ -198,9 +198,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             >
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0.2 }}
+                initial={{ opacity: 0.25 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.22, ease: EASE_OUT }}
+                transition={{ duration: 0.2, ease: EASE_SMOOTH }}
                 className="w-full will-change-[opacity] transform-gpu"
               >
                   {activeTab === 'shortcuts' && (

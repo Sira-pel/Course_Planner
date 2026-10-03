@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import type { Course, SchedulePlan } from '../../types/schedule';
 import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
-import { EASE_OUT } from '../../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
 import { ExcelImportTab } from './ExcelImportTab';
 import { IcsImportTab } from './IcsImportTab';
 import { BackupRestoreTab } from './BackupRestoreTab';
@@ -127,7 +127,7 @@ const ImportModalBody: React.FC<{
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT }}
+          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -136,10 +136,10 @@ const ImportModalBody: React.FC<{
             role="dialog"
         aria-modal="true"
         aria-labelledby="import-modal-title"
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        initial={{ opacity: 0, scale: 0.97, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 5 }}
-        transition={{ duration: 0.26, ease: EASE_OUT }}
+        exit={{ opacity: 0, scale: 0.975, y: 4 }}
+        transition={{ duration: 0.24, ease: EASE_SMOOTH }}
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-3 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
       >
         {/* Header - Compact on mobile */}
@@ -210,9 +210,9 @@ const ImportModalBody: React.FC<{
         >
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0.2 }}
+            initial={{ opacity: 0.25 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
+            transition={{ duration: 0.2, ease: EASE_SMOOTH }}
             className="w-full flex-1 flex flex-col min-h-0 will-change-[opacity] transform-gpu"
           >
             {activeTab === 'excel' && (

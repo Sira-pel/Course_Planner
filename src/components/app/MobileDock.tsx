@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
-import { EASE_OUT, EASE_POP, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { PWAInstallModal } from '../pwa/PWAInstallModal';
 
@@ -100,9 +100,9 @@ export function MobileDock({
                   exit={
                     reduceMotion
                       ? { opacity: 0, transition: { duration: 0 } }
-                      : { y: -8, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }
+                      : { y: -8, opacity: 0, transition: { duration: 0.16, ease: EASE_SMOOTH } }
                   }
-                  transition={reduceMotion ? { duration: 0 } : { duration: 0.5, ease: EASE_POP }}
+                  transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: EASE_SMOOTH }}
                 >
                   {catalogCount}
                 </motion.span>

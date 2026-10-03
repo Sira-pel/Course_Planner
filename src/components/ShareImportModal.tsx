@@ -5,7 +5,7 @@ import { SchedulePlan } from '../types/schedule';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { Layers, Check, X, Share2, AlertCircle, ArrowRight } from 'lucide-react';
-import { EASE_OUT } from '../utils/motion';
+import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
 
 interface ShareImportModalProps {
   isOpen: boolean;
@@ -86,7 +86,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT }}
+          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -95,10 +95,10 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-import-modal-title"
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 4 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
+            exit={{ opacity: 0, scale: 0.975, y: 4 }}
+            transition={{ duration: 0.24, ease: EASE_SMOOTH }}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
           >
             {/* Header */}
