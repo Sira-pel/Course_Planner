@@ -12,10 +12,10 @@ export function applyDomTheme(theme: ThemeName): void {
   root.classList.toggle('dark', theme === 'dark');
   root.style.colorScheme = theme;
 
-  // The mobile phone status bar and PWA title bar are always kept black (#020617)
+  // Sync the mobile browser status bar and PWA title bar color with active theme
   const meta = document.getElementById('theme-color-meta');
   if (meta) {
-    meta.setAttribute('content', '#020617');
+    meta.setAttribute('content', theme === 'dark' ? '#020617' : '#f7f8fb');
   }
 }
 

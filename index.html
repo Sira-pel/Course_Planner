@@ -4,14 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#020617" id="theme-color-meta" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f8fb" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
     <meta name="google-site-verification" content="-7Pv4KbpvWcJ3ExK0pFdbLNpIh5k8Jit3VOIit7by9Y" />
     <meta name="robots" content="index, follow" />
     <title>Uniplan</title>
     <meta name="description" content="University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter." />
-    <meta name="screen-orientation" content="portrait" />
-    <meta name="x5-orientation" content="portrait" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -54,11 +50,24 @@
           if (standalone) {
             document.documentElement.classList.add('up-standalone');
             try {
-              if (screen.orientation && typeof screen.orientation.lock === 'function') {
+              if (window.innerWidth < 640 && screen.orientation && typeof screen.orientation.lock === 'function') {
                 screen.orientation.lock('portrait').catch(function() {});
               }
             } catch (err) {}
           }
+
+          // Fail-safe: ensure launch splash is never permanently stuck if app boot encounters errors
+          setTimeout(function() {
+            var splash = document.getElementById('app-launch-splash');
+            if (splash) {
+              splash.classList.add('is-hidden');
+              setTimeout(function() {
+                if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+              }, 320);
+              document.documentElement.classList.remove('up-preload');
+              document.documentElement.classList.add('up-ready');
+            }
+          }, 5000);
         } catch (e) {}
       })();
     </script>

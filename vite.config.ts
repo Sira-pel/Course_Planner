@@ -21,7 +21,7 @@ export default defineConfig(() => {
           background_color: '#020617',
           display: 'standalone',
           display_override: ['standalone', 'minimal-ui', 'window-controls-overlay'],
-          orientation: 'portrait',
+          orientation: 'any',
           start_url: '/',
           scope: '/',
           categories: ['education', 'productivity'],
