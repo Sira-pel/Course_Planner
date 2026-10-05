@@ -77,17 +77,6 @@ html.dark body {
   background-color: #020617;
 }
 
-/* Installed app: smoothly cross-fade from the splash background to the mounted UI,
-   preventing visual snap/pop and jank during the PWA launch handoff. */
-html.up-boot body {
-  opacity: 0;
-  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity;
-}
-
-html.up-boot.up-ready body {
-  opacity: 1;
-}
 
 ::view-transition {
   background: transparent !important;

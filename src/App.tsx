@@ -98,10 +98,14 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    // Wait for the initial frame paint to complete before revealing the app,
-    // ensuring a silky-smooth crossfade from the PWA splash screen without hitching.
+    // Wait for the initial frame paint to complete before triggering the smooth splash dissolve
+    let timer: number | undefined;
     const raf = requestAnimationFrame(() => {
       document.documentElement.classList.add('up-ready');
+      timer = window.setTimeout(() => {
+        const splash = document.getElementById('pwa-splash');
+        if (splash) splash.remove();
+      }, 350);
     });
     applyDomTheme(useScheduleStore.getState().theme);
     const unsub = useScheduleStore.subscribe((state, previous) => {
@@ -109,6 +113,7 @@ export default function App() {
     });
     return () => {
       cancelAnimationFrame(raf);
+      if (timer) clearTimeout(timer);
       unsub();
     };
   }, []);

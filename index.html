@@ -8,6 +8,8 @@
     <meta name="robots" content="index, follow" />
     <title>Uniplan</title>
     <meta name="description" content="University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter." />
+    <meta name="screen-orientation" content="portrait" />
+    <meta name="x5-orientation" content="portrait" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -49,6 +51,11 @@
             || window.navigator.standalone === true;
           if (standalone) {
             document.documentElement.classList.add('up-standalone', 'up-boot');
+            try {
+              if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                screen.orientation.lock('portrait-primary').catch(function() {});
+              }
+            } catch (err) {}
             setTimeout(function () {
               document.documentElement.classList.add('up-ready');
             }, 2500);
@@ -59,9 +66,44 @@
     <style>
       html, body, #root { background-color: #f7f8fb; }
       html.dark, html.dark body, html.dark #root { background-color: #020617; }
+
+      #pwa-splash {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background-color: #f7f8fb;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        will-change: opacity, transform;
+        transition: opacity 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      html.dark #pwa-splash {
+        background-color: #020617;
+      }
+      html.up-boot:not(.up-ready) #pwa-splash {
+        display: flex;
+      }
+      .pwa-splash-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+      html.up-ready #pwa-splash {
+        display: flex;
+        opacity: 0;
+        transform: scale(1.05);
+      }
     </style>
   </head>
   <body class="bg-[#f7f8fb] dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+    <div id="pwa-splash" aria-hidden="true">
+      <img src="/pwa-192x192.png" width="80" height="80" alt="" class="pwa-splash-logo" />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
