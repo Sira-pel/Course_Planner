@@ -1000,7 +1000,7 @@ html[data-lite-motion] .course-modal-backdrop {
   width: 100%;
   max-width: 100%;
   z-index: 40;
-  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -1173,7 +1173,7 @@ body[data-up-pool-open] .up-fab-cluster {
     overscroll-behavior: contain;
     border-radius: 16px 16px 0 0;
     padding-top: 4px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
     z-index: 90 !important;
     background: var(--up-raised) !important;
     color: var(--up-ink) !important;
@@ -1405,7 +1405,7 @@ html.dark .up-pool-drawer,
   border-radius: 16px 16px 0 0;
   border-top: 1px solid var(--up-line);
   overflow: hidden;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
   box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
   background: var(--up-raised);
   transform: translate3d(0, 0, 0);
