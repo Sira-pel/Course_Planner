@@ -1000,7 +1000,7 @@ html[data-lite-motion] .course-modal-backdrop {
   width: 100%;
   max-width: 100%;
   z-index: 40;
-  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
+  padding: 10px 12px 10px;
   background: transparent;
   border: 0;
   border-radius: 0;
