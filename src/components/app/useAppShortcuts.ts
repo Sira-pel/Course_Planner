@@ -8,7 +8,7 @@ import type { DayOfWeek, SchedulePlan } from '../../types/schedule';
 import { useScheduleStore } from '../../store/useScheduleStore';
 
 export interface UseAppShortcutsArgs {
-  plans: SchedulePlan[];
+  plans?: SchedulePlan[];
   activePlanId: string;
   isMoreOpen: boolean;
   isConfirmingClear: boolean;
@@ -80,7 +80,6 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const {
-        plans,
         activePlanId,
         isMoreOpen,
         isConfirmingClear,
@@ -244,9 +243,10 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
       // Number keys 1-9 to switch plans (only when no modal is open and without modifiers)
       if (!isAnyModalOpen && !e.ctrlKey && !e.altKey && !e.metaKey) {
         const num = parseInt(e.key, 10);
-        if (!isNaN(num) && num >= 1 && num <= plans.length) {
+        const currentPlans = useScheduleStore.getState().plans;
+        if (!isNaN(num) && num >= 1 && num <= currentPlans.length) {
           e.preventDefault();
-          onSetActivePlan(plans[num - 1].id);
+          onSetActivePlan(currentPlans[num - 1].id);
         }
       }
     };

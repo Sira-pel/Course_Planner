@@ -44,7 +44,6 @@ function DeferredDialog({ mounted, children }: { mounted: boolean; children: Rea
 }
 
 export default function App() {
-  const plans = useScheduleStore((state) => state.plans);
   const activePlanId = useScheduleStore((state) => state.activePlanId);
   const catalogCount = useScheduleStore((state) => state.catalogCourses.length);
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
@@ -302,7 +301,6 @@ export default function App() {
   }, [commitTheme]);
 
   useAppShortcuts({
-    plans,
     activePlanId,
     isMoreOpen,
     isConfirmingClear,

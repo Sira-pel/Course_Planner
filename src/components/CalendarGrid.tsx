@@ -160,6 +160,8 @@ export const CalendarGrid = memo(function CalendarGrid({
     return arr;
   }, [effectiveStartHour, effectiveEndHour]);
 
+  const hourSlots = useMemo(() => Array.from({ length: numHours }, (_, i) => i), [numHours]);
+
   const planIndexMap = useMemo(() => {
     const map = new Map<string, number>();
     plans.forEach((p, idx) => map.set(p.id, idx));
@@ -311,7 +313,7 @@ export const CalendarGrid = memo(function CalendarGrid({
             className="absolute top-0 bottom-0 right-0 pointer-events-none z-0"
             style={{ left: `${gutterWidth}px` }}
           >
-            {Array.from({ length: numHours }).map((_, slotIdx) => (
+            {hourSlots.map((slotIdx) => (
               <div
                 key={`hour-slot-${slotIdx}`}
                 style={{

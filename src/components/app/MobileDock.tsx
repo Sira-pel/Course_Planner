@@ -29,7 +29,7 @@ export interface MobileDockProps {
   onCloseMoreMenu: () => void;
 }
 
-export function MobileDock({
+export const MobileDock = React.memo(function MobileDock({
   isMoreOpen,
   isConfirmingClear,
   catalogCount,
@@ -262,4 +262,4 @@ export function MobileDock({
         )}
     </>
   );
-}
+});

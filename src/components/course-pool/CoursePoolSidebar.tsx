@@ -19,13 +19,13 @@ interface CoursePoolSidebarProps {
   onEditCourse: (courseId: string) => void;
 }
 
-export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
+export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   isCollapsed,
   onToggleCollapse,
   onOpenNewCourse,
   onOpenImport,
   onEditCourse,
-}) => {
+}: CoursePoolSidebarProps) {
   const {
     plans,
     activePlanId,
@@ -553,4 +553,4 @@ export const CoursePoolSidebar: React.FC<CoursePoolSidebarProps> = ({
         )}
     </>
   );
-};
+});

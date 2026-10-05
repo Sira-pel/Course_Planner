@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Suspense, lazy, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
@@ -36,7 +36,7 @@ interface HeaderProps {
   onOpenImportShare?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({
+export const Header = memo(function Header({
   onOpenNewCourse,
   onOpenExport,
   onOpenImport,
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCatalog,
   onOpenShare,
   onOpenImportShare,
-}) => {
+}: HeaderProps) {
   const {
     plans,
     activePlanId,
@@ -645,4 +645,4 @@ export const Header: React.FC<HeaderProps> = ({
       </AnimatePresence>
     </header>
   );
-};
+});

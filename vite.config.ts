@@ -148,10 +148,11 @@ export default defineConfig(() => {
       },
     },
     build: {
+      chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom'],
+            vendor: ['react', 'react-dom', 'react-dom/client'],
             firebase: ['firebase/app', 'firebase/auth'],
             xlsx: ['xlsx'],
             motion: ['motion'],
