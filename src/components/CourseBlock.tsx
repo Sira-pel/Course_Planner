@@ -55,7 +55,7 @@ export const CourseBlock = memo(function CourseBlock({
         onDoubleClick={(e) => {
           e.stopPropagation();
         }}
-        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} transition-[box-shadow,filter,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer hover:shadow-md hover:brightness-105 p-2 overflow-hidden select-none z-10 active:scale-[0.98]`}
+        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} transition-[box-shadow,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer hover:shadow-md p-2 overflow-hidden select-none z-10 active:scale-[0.98]`}
         style={{
           top: `${topPercent}%`,
           height: `calc(${heightPercent}% - 2px)`,
@@ -166,7 +166,7 @@ export const CourseBlock = memo(function CourseBlock({
       onDoubleClick={(e) => {
         e.stopPropagation();
       }}
-      className={`group absolute rounded-lg transition-[box-shadow,filter,border-color,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer select-none p-2 overflow-hidden shadow-xs hover:shadow-md hover:z-30 hover:brightness-[1.04] active:scale-[0.985] ${
+      className={`group absolute rounded-lg transition-[box-shadow,border-color,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer select-none p-2 overflow-hidden shadow-xs hover:shadow-md hover:z-30 active:scale-[0.98] ${
         hasConflict
           ? 'ring-2 ring-inset ring-red-500 animate-pulse'
           : 'border border-black/15 dark:border-white/20 hover:border-black/30 dark:hover:border-white/40'

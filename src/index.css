@@ -372,7 +372,6 @@ html.dark body {
   transition-timing-function: var(--ease-out);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  will-change: transform;
 }
 
 .up-chrome-btn:focus {
@@ -936,6 +935,11 @@ html.dark .up-settings-select option,
     -webkit-backdrop-filter: none !important;
     background: rgb(8 12 20 / 0.68) !important;
   }
+
+  /* Main-thread blur inside the course modal accordion janks on mid-range phones. */
+  .course-acc-body {
+    filter: none;
+  }
 }
 
 html[data-lite-motion] .up-sheet-backdrop,
@@ -943,6 +947,16 @@ html[data-lite-motion] .course-modal-backdrop {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background: rgb(8 12 20 / 0.68) !important;
+}
+
+/* Tablet: full-viewport Gaussian blur re-rasterizes during sheet scale on mid-GPU
+   devices. Keep the modal blur desktop-only; the dim scrim alone is sufficient below 1024px. */
+@media (max-width: 1023px) {
+  .course-modal-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgb(8 12 20 / 0.68) !important;
+  }
 }
 
 /* Faceplate: document does not scroll at any breakpoint. Calendar is the
@@ -992,6 +1006,7 @@ html[data-lite-motion] .course-modal-backdrop {
   border-radius: 0;
   gap: 8px;
   align-items: center;
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.3, 0.55, 0.3, 1);
 }
 
 @media (max-width: 639px) {
@@ -1005,7 +1020,6 @@ body[data-up-pool-open] .up-fab-cluster {
   opacity: 0;
   transform: translateY(10px);
   pointer-events: none;
-  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.3, 0.55, 0.3, 1);
 }
 
 .up-fab-more,
@@ -1029,7 +1043,6 @@ body[data-up-pool-open] .up-fab-cluster {
   transition-duration: var(--dur-chrome);
   transition-timing-function: var(--ease-out);
   -webkit-tap-highlight-color: transparent;
-  will-change: transform;
 }
 
 .up-fab-more {
@@ -2126,6 +2139,7 @@ html:not(.is-theme-revealing) .up-theme-moon {
 
   .up-menu,
   .up-sheet-backdrop,
+  .up-fab-cluster,
   .up-fab-primary,
   .up-fab-secondary {
     transition: none;
