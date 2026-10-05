@@ -46,7 +46,41 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // Dialogs and SheetJS load on demand. Leave them out of the
+          // install precache so the first visit does not download them.
+          globIgnores: [
+            '**/node_modules/**/*',
+            '**/xlsx-*.js',
+            '**/firebase-*.js',
+            '**/GoogleCalendarSync-*.js',
+            '**/CourseModal-*.js',
+            '**/ExportModal-*.js',
+            '**/ImportModal-*.js',
+            '**/HelpModal-*.js',
+            '**/ShareImportModal-*.js',
+            '**/textParser-*.js',
+            '**/icsImport-*.js',
+            '**/calendar-*.js',
+            '**/database-*.js',
+            '**/file-spreadsheet-*.js',
+            '**/circle-alert-*.js',
+          ],
           runtimeCaching: [
+            {
+              // Hashed deferred scripts, cached after the screen that needs them opens.
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'deferred-js',
+                expiration: {
+                  maxEntries: 32,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
