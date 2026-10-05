@@ -51,8 +51,12 @@
         } catch (e) {}
       })();
     </script>
+    <style>
+      html, body, #root { background-color: #f7f8fb; }
+      html.dark, html.dark body, html.dark #root { background-color: #020617; }
+    </style>
   </head>
-  <body class="bg-[#f7f8fb] dark:bg-[#121826] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+  <body class="bg-[#f7f8fb] dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -63,7 +63,7 @@ body {
 
 html.dark {
   color-scheme: dark;
-  background-color: #121826;
+  background-color: #020617;
   --up-raised: #121826;
   --up-ink: #e8edf4;
   --up-muted: #8b959e;
@@ -74,7 +74,7 @@ html.dark {
 }
 
 html.dark body {
-  background-color: #121826;
+  background-color: #020617;
 }
 
 ::view-transition {
