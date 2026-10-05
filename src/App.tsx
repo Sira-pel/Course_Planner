@@ -98,22 +98,12 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    // Wait for the initial frame paint to complete before triggering the smooth splash dissolve
-    let timer: number | undefined;
-    const raf = requestAnimationFrame(() => {
-      document.documentElement.classList.add('up-ready');
-      timer = window.setTimeout(() => {
-        const splash = document.getElementById('pwa-splash');
-        if (splash) splash.remove();
-      }, 350);
-    });
+    document.documentElement.classList.add('up-ready');
     applyDomTheme(useScheduleStore.getState().theme);
     const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
     });
     return () => {
-      cancelAnimationFrame(raf);
-      if (timer) clearTimeout(timer);
       unsub();
     };
   }, []);
