@@ -77,6 +77,17 @@ html.dark body {
   background-color: #020617;
 }
 
+/* Installed app: keep the splash color on screen until the first React paint,
+   so the icon does not fade into an empty page. A normal browser tab never
+   gets .up-boot. */
+html.up-boot body {
+  opacity: 0;
+}
+
+html.up-boot.up-ready body {
+  opacity: 1;
+}
+
 ::view-transition {
   background: transparent !important;
 }
@@ -1013,6 +1024,19 @@ html[data-lite-motion] .course-modal-backdrop {
   .up-fab-cluster {
     display: flex;
   }
+}
+
+/* Browser tabs stay 10px from the bottom. The installed app draws under the
+   gesture bar, and that inset is often 0 on the first frame, so the 48px
+   pills need a floor that does not depend on env(). */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .up-fab-cluster {
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+html.up-standalone .up-fab-cluster {
+  padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
 }
 
 body.up-sheet-open .up-fab-cluster,

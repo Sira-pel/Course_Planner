@@ -98,6 +98,7 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
+    document.documentElement.classList.add('up-ready');
     applyDomTheme(useScheduleStore.getState().theme);
     return useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);

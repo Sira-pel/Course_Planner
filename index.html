@@ -48,6 +48,15 @@
             document.documentElement.style.colorScheme = 'light';
             if (meta) meta.setAttribute('content', '#f7f8fb');
           }
+          var standalone = window.matchMedia('(display-mode: standalone)').matches
+            || window.matchMedia('(display-mode: fullscreen)').matches
+            || window.navigator.standalone === true;
+          if (standalone) {
+            document.documentElement.classList.add('up-standalone', 'up-boot');
+            setTimeout(function () {
+              document.documentElement.classList.add('up-ready');
+            }, 2500);
+          }
         } catch (e) {}
       })();
     </script>

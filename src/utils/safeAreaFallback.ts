@@ -58,18 +58,26 @@ function applySafeAreaFallback(): void {
 export function installSafeAreaFallback(): () => void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
 
-  applySafeAreaFallback();
-  const frame = requestAnimationFrame(applySafeAreaFallback);
-  const timer = window.setTimeout(applySafeAreaFallback, 300);
+  // Measuring inserts a node and forces layout. Keep that off the splash
+  // handoff and the first paint of the pills.
+  let ready = false;
+  const start = () => {
+    if (ready) return;
+    ready = true;
+    applySafeAreaFallback();
+  };
+  const timer = window.setTimeout(start, 1500);
 
-  const onChange = () => applySafeAreaFallback();
+  const onChange = () => {
+    if (!ready) return;
+    applySafeAreaFallback();
+  };
   window.addEventListener('resize', onChange);
   window.addEventListener('orientationchange', onChange);
   window.addEventListener('pageshow', onChange);
   document.addEventListener('visibilitychange', onChange);
 
   return () => {
-    cancelAnimationFrame(frame);
     window.clearTimeout(timer);
     window.removeEventListener('resize', onChange);
     window.removeEventListener('orientationchange', onChange);
