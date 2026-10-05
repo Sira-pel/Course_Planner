@@ -98,11 +98,19 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    document.documentElement.classList.add('up-ready');
+    // Wait for the initial frame paint to complete before revealing the app,
+    // ensuring a silky-smooth crossfade from the PWA splash screen without hitching.
+    const raf = requestAnimationFrame(() => {
+      document.documentElement.classList.add('up-ready');
+    });
     applyDomTheme(useScheduleStore.getState().theme);
-    return useScheduleStore.subscribe((state, previous) => {
+    const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
     });
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub();
+    };
   }, []);
 
   // Listen for #share=<payload> in URL on mount and on hash change

@@ -41,9 +41,12 @@ export const CalendarGrid = memo(function CalendarGrid({
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(() =>
-    typeof window !== 'undefined' ? Math.min(1200, window.innerWidth) : 1000
-  );
+  const [containerWidth, setContainerWidth] = useState(() => {
+    if (typeof window === 'undefined') return 1000;
+    // Account for workspace padding (p-2.5 on mobile = 20px, sm:p-4 = 32px, md:p-5 = 40px)
+    const padding = window.innerWidth < 640 ? 20 : window.innerWidth < 768 ? 32 : 40;
+    return Math.max(300, Math.min(1200, window.innerWidth - padding));
+  });
 
   // Width changes the gutter and day labels. Row height is a percentage, so
   // vertical resizes (mobile browser chrome) do not need a React update.
