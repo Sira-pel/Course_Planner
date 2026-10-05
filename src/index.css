@@ -974,9 +974,9 @@ html[data-lite-motion] .course-modal-backdrop {
    scrolling region. Locking this only on phone left 640–1023 as a hole where
    a classic scrollbar could add/remove ~15px and oscillate matchMedia. */
 .up-app {
-  min-height: 100dvh;
-  height: 100dvh;
-  max-height: 100dvh;
+  min-height: 100%;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
 }
 
@@ -1011,7 +1011,8 @@ html[data-lite-motion] .course-modal-backdrop {
   width: 100%;
   max-width: 100%;
   z-index: 40;
-  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -1026,16 +1027,14 @@ html[data-lite-motion] .course-modal-backdrop {
   }
 }
 
-/* Mobile dock padding: match website 10px baseline while respecting safe-area-inset-bottom
-   on devices with navigation bars or gesture home indicators. */
 @media (display-mode: standalone), (display-mode: fullscreen) {
   .up-fab-cluster {
-    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   }
 }
 
 html.up-standalone .up-fab-cluster {
-  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
 }
 
 body.up-sheet-open .up-fab-cluster,
