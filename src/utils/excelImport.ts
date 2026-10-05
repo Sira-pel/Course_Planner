@@ -1,7 +1,33 @@
-import * as XLSX from 'xlsx';
+import type { WorkBook, WorkSheet } from 'xlsx';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
 import { prefixedId } from './id';
 import { parseTimeRange, parseSingleTimeToken, normalizeDays } from './textParser';
+
+type XlsxModule = typeof import('xlsx');
+
+export type ExcelWorkbook = WorkBook;
+
+let xlsxModule: XlsxModule | null = null;
+let xlsxLoading: Promise<XlsxModule> | null = null;
+
+/** Loads SheetJS the first time a workbook is read or written. */
+export function loadXlsx(): Promise<XlsxModule> {
+  if (xlsxModule) return Promise.resolve(xlsxModule);
+  if (!xlsxLoading) {
+    xlsxLoading = import('xlsx').then((mod) => {
+      xlsxModule = mod;
+      return mod;
+    });
+  }
+  return xlsxLoading;
+}
+
+function requireXlsx(): XlsxModule {
+  if (!xlsxModule) {
+    throw new Error('Spreadsheet parser is not loaded.');
+  }
+  return xlsxModule;
+}
 
 export interface ColumnOption {
   key: string;         // e.g. "col_0", "col_1"
@@ -236,7 +262,7 @@ export function parseScheduleString(raw: unknown): {
  * Returns sheet names excluding hidden / very-hidden sheets (e.g. stale
  * previous-semester data). Falls back to all sheets if every sheet is hidden.
  */
-export function getVisibleSheetNames(workbook: XLSX.WorkBook): string[] {
+export function getVisibleSheetNames(workbook: WorkBook): string[] {
   const meta = workbook.Workbook?.Sheets;
   const visible = workbook.SheetNames.filter((_, i) => !meta?.[i]?.Hidden);
   return visible.length > 0 ? visible : workbook.SheetNames;
@@ -245,10 +271,11 @@ export function getVisibleSheetNames(workbook: XLSX.WorkBook): string[] {
 /**
  * Reads workbook file from ArrayBuffer and inspects sheet structure.
  */
-export function readExcelFile(data: ArrayBuffer): {
-  workbook: XLSX.WorkBook;
+export async function readExcelFile(data: ArrayBuffer): Promise<{
+  workbook: WorkBook;
   sheets: string[];
-} {
+}> {
+  const XLSX = await loadXlsx();
   const workbook = XLSX.read(data, {
     type: 'array',
     cellDates: false,
@@ -264,8 +291,9 @@ export function readExcelFile(data: ArrayBuffer): {
 /**
  * Clamps the sheet's !ref range to only rows and columns that contain actual non-empty data.
  */
-export function clampSheetRange(sheet: XLSX.WorkSheet, maxAllowedCols = 60, maxAllowedRows = 10000): void {
+export function clampSheetRange(sheet: WorkSheet, maxAllowedCols = 60, maxAllowedRows = 10000): void {
   if (!sheet) return;
+  const XLSX = requireXlsx();
 
   let maxR = -1;
   let maxC = -1;
@@ -307,7 +335,8 @@ export function clampSheetRange(sheet: XLSX.WorkSheet, maxAllowedCols = 60, maxA
 /**
  * Inspects a sheet, detects columns, sample values, header rows, and content mappings.
  */
-export function loadSheetData(workbook: XLSX.WorkBook, sheetName: string): ExcelWorkbookData {
+export function loadSheetData(workbook: WorkBook, sheetName: string): ExcelWorkbookData {
+  const XLSX = requireXlsx();
   const sheet = workbook.Sheets[sheetName];
   if (!sheet) {
     return {

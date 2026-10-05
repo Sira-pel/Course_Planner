@@ -27,6 +27,21 @@ const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ def
 const ShareImportModal = lazy(() => import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
+// A lazy component starts downloading when it is rendered. Keep dialogs out of
+// the first render, then leave them mounted so their close animation can finish.
+function useMountWhenOpened(open: boolean): boolean {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (open) setMounted(true);
+  }, [open]);
+  return mounted;
+}
+
+function DeferredDialog({ mounted, children }: { mounted: boolean; children: React.ReactNode }) {
+  if (!mounted) return null;
+  return <Suspense fallback={null}>{children}</Suspense>;
+}
+
 export default function App() {
   const plans = useScheduleStore((state) => state.plans);
   const activePlanId = useScheduleStore((state) => state.activePlanId);
@@ -59,6 +74,11 @@ export default function App() {
   const [helpInitialTab, setHelpInitialTab] = useState<HelpTabType>('workflow');
 
   const [isShareImportOpen, setIsShareImportOpen] = useState(false);
+  const courseModalMounted = useMountWhenOpened(isCourseModalOpen);
+  const exportModalMounted = useMountWhenOpened(isExportOpen);
+  const importModalMounted = useMountWhenOpened(isImportOpen);
+  const helpModalMounted = useMountWhenOpened(isHelpOpen);
+  const shareImportMounted = useMountWhenOpened(isShareImportOpen);
   const [sharedPlan, setSharedPlan] = useState<SchedulePlan | null>(null);
   const [initialManualPaste, setInitialManualPaste] = useState(false);
 
@@ -302,8 +322,7 @@ export default function App() {
         onCloseMoreMenu={closeMoreMenu}
       />
 
-      {/* Modal Dialogs */}
-      <Suspense fallback={null}>
+      <DeferredDialog mounted={courseModalMounted}>
         <CourseModal
           isOpen={isCourseModalOpen}
           onClose={handleCloseCourseModal}
@@ -313,19 +332,25 @@ export default function App() {
           initialStartTime={modalInitialStartTime}
           initialMode={modalInitialMode}
         />
+      </DeferredDialog>
 
+      <DeferredDialog mounted={exportModalMounted}>
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
           onClose={handleCloseExport}
         />
+      </DeferredDialog>
 
+      <DeferredDialog mounted={importModalMounted}>
         <ImportModal
           isOpen={isImportOpen}
           initialTab={importInitialTab}
           onClose={handleCloseImport}
         />
+      </DeferredDialog>
 
+      <DeferredDialog mounted={helpModalMounted}>
         <HelpModal
           isOpen={isHelpOpen}
           initialTab={helpInitialTab}
@@ -335,7 +360,9 @@ export default function App() {
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShortcuts={handleOpenShortcuts}
         />
+      </DeferredDialog>
 
+      <DeferredDialog mounted={shareImportMounted}>
         <ShareImportModal
           isOpen={isShareImportOpen}
           onClose={() => setIsShareImportOpen(false)}
@@ -344,7 +371,9 @@ export default function App() {
           onOpenAsActivePlan={handleOpenSharedPlanAsActive}
           initialManualPaste={initialManualPaste}
         />
+      </DeferredDialog>
 
+      <Suspense fallback={null}>
         <PWAReloadPrompt />
       </Suspense>
 

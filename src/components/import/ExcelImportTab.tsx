@@ -14,15 +14,15 @@ import {
   Info,
   X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import type { Course, SchedulePlan } from '../../types/schedule';
 import {
+  loadXlsx,
   readExcelFile,
   loadSheetData,
   parseExcelRowsToCourses,
-  ColumnMapping,
-  ColumnOption,
-  ExcelWorkbookData,
+  type ColumnMapping,
+  type ExcelWorkbook,
+  type ExcelWorkbookData,
 } from '../../utils/excelImport';
 
 interface ExcelImportTabProps {
@@ -127,10 +127,11 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPreparingTemplate, setIsPreparingTemplate] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Workbook data
-  const [workbookRef, setWorkbookRef] = useState<XLSX.WorkBook | null>(null);
+  const [workbookRef, setWorkbookRef] = useState<ExcelWorkbook | null>(null);
   const [sheetData, setSheetData] = useState<ExcelWorkbookData | null>(null);
   const [activeMapping, setActiveMapping] = useState<ColumnMapping | null>(null);
   const [showColumnSetup, setShowColumnSetup] = useState(false);
@@ -174,7 +175,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const { workbook, sheets } = readExcelFile(arrayBuffer);
+      const { workbook, sheets } = await readExcelFile(arrayBuffer);
 
       if (sheets.length === 0) {
         setErrorMessage('The uploaded workbook contains no readable sheets.');
@@ -285,7 +286,10 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     setIsImporting(false);
   };
 
-  const handleDownloadSampleTemplate = () => {
+  const handleDownloadSampleTemplate = async () => {
+    if (isPreparingTemplate) return;
+    setIsPreparingTemplate(true);
+    setErrorMessage(null);
     const sampleRows = [
       {
         Dept: 'IT',
@@ -319,10 +323,18 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
       },
     ];
 
-    const ws = XLSX.utils.json_to_sheet(sampleRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Course Schedule');
-    XLSX.writeFile(wb, 'Uniplan_Course_Template.xlsx');
+    try {
+      const XLSX = await loadXlsx();
+      const ws = XLSX.utils.json_to_sheet(sampleRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Course Schedule');
+      XLSX.writeFile(wb, 'Uniplan_Course_Template.xlsx');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setErrorMessage(`Failed to prepare the sample template: ${msg}`);
+    } finally {
+      setIsPreparingTemplate(false);
+    }
   };
 
   return (
@@ -375,11 +387,12 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDownloadSampleTemplate();
+                  void handleDownloadSampleTemplate();
                 }}
-                className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-0.5 ml-1"
+                disabled={isPreparingTemplate}
+                className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-0.5 ml-1 disabled:opacity-60 disabled:pointer-events-none"
               >
-                Download Sample
+                {isPreparingTemplate ? 'Preparing…' : 'Download Sample'}
               </button>
             </div>
           </div>
