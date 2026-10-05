@@ -21,6 +21,22 @@ function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
 }
 
+function getInitialCalendarWidth(): number {
+  if (typeof window === 'undefined') return 1000;
+  const w = window.innerWidth;
+  if (w < 640) {
+    // Mobile: workspace p-2.5 (20px) + grid border (2px)
+    return Math.max(280, w - 22);
+  }
+  if (w < 1024) {
+    // Tablet: workspace sm:p-4 (32px) + grid border (2px)
+    return Math.max(400, w - 34);
+  }
+  // Desktop: max workspace 1720px, md:p-5 (40px total), gap-3 (12px), pool rail (48px), grid border (2px)
+  const maxW = Math.min(1720, w);
+  return Math.max(500, maxW - 40 - 12 - 48 - 2);
+}
+
 interface CalendarGridProps {
   onEditCourse: (courseId: string, planId?: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
@@ -41,12 +57,7 @@ export const CalendarGrid = memo(function CalendarGrid({
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(() => {
-    if (typeof window === 'undefined') return 1000;
-    // Account for workspace padding (p-2.5 on mobile = 20px, sm:p-4 = 32px, md:p-5 = 40px)
-    const padding = window.innerWidth < 640 ? 20 : window.innerWidth < 768 ? 32 : 40;
-    return Math.max(300, Math.min(1200, window.innerWidth - padding));
-  });
+  const [containerWidth, setContainerWidth] = useState(getInitialCalendarWidth);
 
   // Width changes the gutter and day labels. Row height is a percentage, so
   // vertical resizes (mobile browser chrome) do not need a React update.
@@ -54,17 +65,26 @@ export const CalendarGrid = memo(function CalendarGrid({
     const node = containerRef.current;
     if (!node) return;
 
+    let rafId = 0;
     const apply = (measured: number) => {
-      setContainerWidth((previous) => nextMeasuredWidth(previous, measured));
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setContainerWidth((previous) => nextMeasuredWidth(previous, measured, 2));
+      });
     };
 
-    apply(node.getBoundingClientRect().width);
-
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) apply(entry.contentRect.width);
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          apply(entry.contentRect.width);
+        }
+      }
     });
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, []);
 
   const activePlan = useMemo(() => plans.find(p => p.id === activePlanId) || plans[0], [plans, activePlanId]);

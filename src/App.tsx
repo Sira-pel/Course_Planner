@@ -98,7 +98,11 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    document.documentElement.classList.add('up-ready');
+    // Reveal transitions only after first frame paint to eliminate launch stutter
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove('up-preload');
+      document.documentElement.classList.add('up-ready');
+    });
     applyDomTheme(useScheduleStore.getState().theme);
     const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
@@ -106,25 +110,6 @@ export default function App() {
     return () => {
       unsub();
     };
-  }, []);
-
-  // Listen for #share=<payload> in URL on mount and on hash change
-  useEffect(() => {
-    const checkHash = () => {
-      const payload = extractSharePayloadFromUrl(window.location.hash);
-      if (payload) {
-        const res = decodePlanFromSharePayload(payload);
-        if (res.success && res.plan) {
-          setSharedPlan(res.plan);
-          setInitialManualPaste(false);
-          setIsShareImportOpen(true);
-        }
-      }
-    };
-
-    checkHash();
-    window.addEventListener('hashchange', checkHash);
-    return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
   // Handlers for Shared Plan import
@@ -194,6 +179,38 @@ export default function App() {
     setExportInitialTab(tab);
     setIsExportOpen(true);
   }, []);
+
+  // Listen for #share=<payload> and native quick shortcut hashes in URL on mount and on hash change
+  useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash;
+      if (!hash) return;
+      if (hash.includes('share=')) {
+        const payload = extractSharePayloadFromUrl(hash);
+        if (payload) {
+          const res = decodePlanFromSharePayload(payload);
+          if (res.success && res.plan) {
+            setSharedPlan(res.plan);
+            setInitialManualPaste(false);
+            setIsShareImportOpen(true);
+          }
+        }
+      } else if (hash === '#add') {
+        handleOpenNewCourse('monday', '09:00', 'form');
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else if (hash === '#pool') {
+        setIsPoolCollapsed(false);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else if (hash === '#export') {
+        handleOpenExport('share');
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, [handleOpenNewCourse, handleOpenExport]);
 
   const handleOpenShareModal = useCallback((plan?: SchedulePlan) => {
     if (plan && plan.id !== activePlanId) {

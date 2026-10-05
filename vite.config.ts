@@ -20,9 +20,34 @@ export default defineConfig(() => {
           theme_color: '#020617',
           background_color: '#020617',
           display: 'standalone',
+          display_override: ['standalone', 'minimal-ui', 'window-controls-overlay'],
           orientation: 'portrait',
           start_url: '/',
           scope: '/',
+          categories: ['education', 'productivity'],
+          shortcuts: [
+            {
+              name: 'Add Course',
+              short_name: 'Add',
+              description: 'Quickly create or schedule a new course',
+              url: '/#add',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Course Pool',
+              short_name: 'Pool',
+              description: 'Open the course catalog pool',
+              url: '/#pool',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Export Schedule',
+              short_name: 'Export',
+              description: 'Export or share your schedule',
+              url: '/#export',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+          ],
           icons: [
             {
               src: '/pwa-192x192.png',
