@@ -17,7 +17,8 @@ import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
-import { applyDomTheme } from './utils/theme';
+import { applyDomTheme, persistTheme } from './utils/theme';
+import { isThemeRevealing, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
 const CourseModal = lazy(() => import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
@@ -49,7 +50,7 @@ export default function App() {
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const duplicatePlan = useScheduleStore((state) => state.duplicatePlan);
   const importPlan = useScheduleStore((state) => state.importPlan);
-  const toggleTheme = useScheduleStore((state) => state.toggleTheme);
+  const commitTheme = useScheduleStore((state) => state.commitTheme);
   const undo = useScheduleStore((state) => state.undo);
   const redo = useScheduleStore((state) => state.redo);
   const resetToBlank = useScheduleStore((state) => state.resetToBlank);
@@ -275,6 +276,31 @@ export default function App() {
   const isAnyModalOpen =
     isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen;
 
+  const handleShortcutToggleTheme = useCallback(() => {
+    if (isThemeRevealing()) return;
+    const currentTheme = useScheduleStore.getState().theme;
+    const goingToDark = currentTheme !== 'dark';
+    const next = goingToDark ? 'dark' : 'light';
+
+    const event = {
+      clientX: window.innerWidth / 2,
+      clientY: window.innerHeight / 2,
+      currentTarget: null,
+    };
+
+    runThemeReveal({
+      event,
+      goingToDark,
+      apply: () => {
+        applyDomTheme(next);
+        persistTheme(next);
+      },
+      commit: () => {
+        commitTheme(next);
+      },
+    });
+  }, [commitTheme]);
+
   useAppShortcuts({
     plans,
     activePlanId,
@@ -286,7 +312,7 @@ export default function App() {
     onOpenImport: () => handleOpenImport('excel'),
     onOpenShare: handleOpenShareModal,
     onTogglePool: () => setIsPoolCollapsed((prev) => !prev),
-    onToggleTheme: toggleTheme,
+    onToggleTheme: handleShortcutToggleTheme,
     onOpenHelp: handleOpenHelp,
     onOpenShortcuts: handleOpenShortcuts,
     onDuplicatePlan: duplicatePlan,

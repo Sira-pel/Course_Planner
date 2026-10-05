@@ -219,7 +219,7 @@ export function isMobileScreen(): boolean {
 
 function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
   let target = event.currentTarget;
-  if (isMobileScreen()) {
+  if (target && isMobileScreen()) {
     const mobileBtn = typeof document !== 'undefined' ? document.getElementById('btn-theme') : null;
     if (mobileBtn) {
       target = mobileBtn;
@@ -528,7 +528,7 @@ export function originRelativeTo(
   const frame = container.getBoundingClientRect();
   const target = event.currentTarget;
 
-  if (isMobileScreen()) {
+  if (target && isMobileScreen()) {
     const btn =
       (typeof document !== 'undefined' ? document.getElementById('btn-theme') : null) ||
       (target && typeof target === 'object' && 'getBoundingClientRect' in target ? (target as Element) : null);
