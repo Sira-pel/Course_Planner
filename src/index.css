@@ -1011,7 +1011,7 @@ html[data-lite-motion] .course-modal-backdrop {
   width: 100%;
   max-width: 100%;
   z-index: 40;
-  padding: 10px 12px 10px;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -1026,17 +1026,16 @@ html[data-lite-motion] .course-modal-backdrop {
   }
 }
 
-/* Browser tabs stay 10px from the bottom. The installed app draws under the
-   gesture bar, and that inset is often 0 on the first frame, so the 48px
-   pills need a floor that does not depend on env(). */
+/* Mobile dock padding: match website 10px baseline while respecting safe-area-inset-bottom
+   on devices with navigation bars or gesture home indicators. */
 @media (display-mode: standalone), (display-mode: fullscreen) {
   .up-fab-cluster {
-    padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
   }
 }
 
 html.up-standalone .up-fab-cluster {
-  padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--up-safe-bottom, 0px));
 }
 
 body.up-sheet-open .up-fab-cluster,

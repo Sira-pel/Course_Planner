@@ -109,6 +109,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
   const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  const [conflictModalMounted, setConflictModalMounted] = useState(false);
+
+  useEffect(() => {
+    if (conflictModalOpen) setConflictModalMounted(true);
+  }, [conflictModalOpen]);
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
@@ -590,15 +595,17 @@ export const Header: React.FC<HeaderProps> = ({
         />
       </div>
 
-      <Suspense fallback={null}>
-        <ConflictModal
-          open={conflictModalOpen}
-          conflicts={conflicts}
-          activePlanName={activePlan?.name}
-          reduceMotion={reduceMotion}
-          onClose={() => setConflictModalOpen(false)}
-        />
-      </Suspense>
+      {conflictModalMounted && (
+        <Suspense fallback={null}>
+          <ConflictModal
+            open={conflictModalOpen}
+            conflicts={conflicts}
+            activePlanName={activePlan?.name}
+            reduceMotion={reduceMotion}
+            onClose={() => setConflictModalOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <AnimatePresence>
         {toastMessage && (

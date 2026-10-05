@@ -1,24 +1,43 @@
-import React from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 import { RefreshCw, X } from 'lucide-react';
 
 export const PWAReloadPrompt: React.FC = () => {
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(r) {
-      if (r) {
-        // Periodic check for SW updates every hour
-        setInterval(() => {
-          r.update();
-        }, 60 * 60 * 1000);
+  const [needRefresh, setNeedRefresh] = useState(false);
+  const updateFnRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    let intervalId: number | undefined;
+
+    const updateServiceWorker = registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        if (mounted) {
+          setNeedRefresh(true);
+        }
+      },
+      onRegistered(r) {
+        if (r && mounted) {
+          intervalId = window.setInterval(() => {
+            r.update();
+          }, 60 * 60 * 1000);
+        }
+      },
+      onRegisterError(error) {
+        console.warn('SW registration error', error);
+      },
+    });
+
+    updateFnRef.current = updateServiceWorker;
+
+    return () => {
+      mounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
       }
-    },
-    onRegisterError(error) {
-      console.warn('SW registration error', error);
-    },
-  });
+    };
+  }, []);
 
   if (!needRefresh) return null;
 
@@ -34,7 +53,7 @@ export const PWAReloadPrompt: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => updateServiceWorker(true)}
+          onClick={() => updateFnRef.current?.(true)}
           className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center gap-1 transition-colors shadow-xs"
         >
           <RefreshCw className="w-3 h-3" />

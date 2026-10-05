@@ -1,6 +1,6 @@
-export const SAFE_BOTTOM_FALLBACK_PX = 48;
-/** Viewport already shorter than the screen by about a status bar plus nav bar. */
-export const EDGE_TO_EDGE_GAP_PX = 80;
+export const SAFE_BOTTOM_FALLBACK_PX = 16;
+/** Viewport already shorter than the screen by status bar or nav bar means system bars are external. */
+export const EDGE_TO_EDGE_GAP_PX = 16;
 export const SAFE_BOTTOM_VAR = '--up-safe-bottom';
 
 export interface SafeAreaSnapshot {
