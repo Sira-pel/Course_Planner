@@ -70,13 +70,13 @@ body {
   height: 100dvh;
 }
 
-/* Zero-stutter startup: suppress all CSS transitions and animations during initial page mount */
-html.up-preload *,
-html.up-preload *::before,
-html.up-preload *::after,
-html:not(.up-ready) *,
-html:not(.up-ready) *::before,
-html:not(.up-ready) *::after {
+/* Zero-stutter startup: suppress transitions inside #root while app-launch-splash covers the initial mount */
+html.up-preload #root *,
+html.up-preload #root *::before,
+html.up-preload #root *::after,
+html:not(.up-ready) #root *,
+html:not(.up-ready) #root *::before,
+html:not(.up-ready) #root *::after {
   transition: none !important;
   animation-duration: 0.001ms !important;
 }

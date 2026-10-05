@@ -98,11 +98,26 @@ export default function App() {
   const handleCollapsePool = useCallback(() => setIsPoolCollapsed(true), []);
 
   useEffect(() => {
-    // Reveal transitions only after first frame paint to eliminate launch stutter
-    requestAnimationFrame(() => {
+    // Seamless native-style splash dismiss once the first frame has painted on GPU
+    const dismissSplash = () => {
+      const splash = document.getElementById('app-launch-splash');
+      if (splash) {
+        splash.classList.add('is-hidden');
+        setTimeout(() => {
+          splash.remove();
+        }, 320);
+      }
       document.documentElement.classList.remove('up-preload');
       document.documentElement.classList.add('up-ready');
+    };
+
+    // Double requestAnimationFrame ensures React has committed DOM and browser has completed first composite
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        dismissSplash();
+      });
     });
+
     applyDomTheme(useScheduleStore.getState().theme);
     const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
