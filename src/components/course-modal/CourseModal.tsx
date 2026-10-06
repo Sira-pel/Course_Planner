@@ -8,7 +8,7 @@ import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useModalBackdropHandoff, useSkipContentEnter } from '../app/DeferredDialog';
+import { useSkipContentEnter } from '../app/DeferredDialog';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -87,7 +87,6 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       getNextColor: state.getNextColor,
     }))
   );
-  const backdropHandoff = useModalBackdropHandoff(isOpen);
   const skipContentEnter = useSkipContentEnter(isOpen);
 
   const effectivePlanId = targetPlanId || activePlanId;
@@ -533,7 +532,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     <motion.div
       key="course-modal-overlay"
       className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={{ opacity: backdropHandoff ? 1 : 0 }}
+      initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22, ease: EASE_SMOOTH }}

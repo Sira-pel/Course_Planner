@@ -24,7 +24,7 @@ import {
 import { useScheduleStore } from '../store/useScheduleStore';
 import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
 import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
-import { useModalBackdropHandoff, useSkipContentEnter } from './app/DeferredDialog';
+import { useSkipContentEnter } from './app/DeferredDialog';
 
 export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
 
@@ -53,7 +53,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<HelpTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
-  const backdropHandoff = useModalBackdropHandoff(isOpen);
   const skipContentEnter = useSkipContentEnter(isOpen);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
@@ -125,7 +124,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: backdropHandoff ? 1 : 0 }}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}

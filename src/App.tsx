@@ -22,11 +22,21 @@ import { applyDomTheme, persistTheme } from './utils/theme';
 import { isThemeRevealing, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
-const CourseModal = lazy(() => import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
-const ExportModal = lazy(() => import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
-const ImportModal = lazy(() => import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
-const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
-const ShareImportModal = lazy(() => import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
+// Start these with the app shell so the first open does not wait on a download.
+function loadDialog<T>(loader: Promise<T>): Promise<T> {
+  loader.catch(() => {});
+  return loader;
+}
+const courseModalModule = loadDialog(import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
+const exportModalModule = loadDialog(import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
+const importModalModule = loadDialog(import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
+const helpModalModule = loadDialog(import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
+const shareImportModalModule = loadDialog(import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
+const CourseModal = lazy(() => courseModalModule);
+const ExportModal = lazy(() => exportModalModule);
+const ImportModal = lazy(() => importModalModule);
+const HelpModal = lazy(() => helpModalModule);
+const ShareImportModal = lazy(() => shareImportModalModule);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 export default function App() {

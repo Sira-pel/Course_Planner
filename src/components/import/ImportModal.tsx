@@ -6,7 +6,7 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import type { Course, SchedulePlan } from '../../types/schedule';
 import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useModalBackdropHandoff, useSkipContentEnter } from '../app/DeferredDialog';
+import { useSkipContentEnter } from '../app/DeferredDialog';
 import { ExcelImportTab } from './ExcelImportTab';
 import { IcsImportTab } from './IcsImportTab';
 import { BackupRestoreTab } from './BackupRestoreTab';
@@ -54,7 +54,6 @@ const ImportModalBody: React.FC<{
         importPlan: state.importPlan,
       }))
     );
-  const backdropHandoff = useModalBackdropHandoff(isOpen);
   const skipContentEnter = useSkipContentEnter(isOpen);
 
   // Close modal when user presses Escape
@@ -127,7 +126,7 @@ const ImportModalBody: React.FC<{
         <motion.div
           key="import-modal-overlay"
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: backdropHandoff ? 1 : 0 }}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}

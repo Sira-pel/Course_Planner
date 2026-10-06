@@ -1,39 +1,4 @@
-import React, {
-  Component,
-  Suspense,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-
-type ModalLoadContextValue = {
-  markScrimShown: () => void;
-  takeHandoff: () => boolean;
-  markReady: () => void;
-};
-
-const ModalLoadContext = React.createContext<ModalLoadContextValue>({
-  markScrimShown: () => {},
-  takeHandoff: () => false,
-  markReady: () => {},
-});
-
-// True only when a loading scrim was actually painted before this dialog mounted.
-// A warm open resolves in the same commit, never paints the scrim, and fades normally.
-export function useModalBackdropHandoff(isOpen: boolean): boolean {
-  const { takeHandoff } = useContext(ModalLoadContext);
-  const handoff = useRef(false);
-  const wasOpen = useRef(false);
-  if (isOpen && !wasOpen.current) {
-    handoff.current = takeHandoff();
-  }
-  wasOpen.current = isOpen;
-  return handoff.current;
-}
+import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
 
 // Skip the content fade on the same open that already fades the backdrop.
 // Tab changes after the first frame still play their own fade.
@@ -48,20 +13,6 @@ export function useSkipContentEnter(isOpen: boolean): boolean {
     return () => cancelAnimationFrame(id);
   }, [isOpen]);
   return skip.current;
-}
-
-function ModalScrim({ onClose }: { onClose: () => void }) {
-  const { markScrimShown } = useContext(ModalLoadContext);
-  useLayoutEffect(() => {
-    markScrimShown();
-  }, [markScrimShown]);
-  return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/60 md:backdrop-blur-xs"
-      onMouseDown={onClose}
-      aria-hidden="true"
-    />
-  );
 }
 
 function DialogLoadError({ onClose }: { onClose: () => void }) {
@@ -119,14 +70,6 @@ class DialogErrorBoundary extends Component<
   }
 }
 
-function MarkReady({ children }: { children: ReactNode }) {
-  const { markReady } = useContext(ModalLoadContext);
-  useLayoutEffect(() => {
-    markReady();
-  }, [markReady]);
-  return children;
-}
-
 export function DeferredDialog({
   open,
   onClose,
@@ -138,34 +81,11 @@ export function DeferredDialog({
 }) {
   const [mounted, setMounted] = useState(false);
   if (open && !mounted) setMounted(true);
-
-  const [ready, setReady] = useState(false);
-  const scrimShown = useRef(false);
-
-  const markScrimShown = useCallback(() => {
-    scrimShown.current = true;
-  }, []);
-  const takeHandoff = useCallback(() => scrimShown.current, []);
-  const markReady = useCallback(() => {
-    scrimShown.current = false;
-    setReady(true);
-  }, []);
-
-  const loadContext = useMemo(
-    () => ({ markScrimShown, takeHandoff, markReady }),
-    [markScrimShown, takeHandoff, markReady]
-  );
-
   if (!mounted) return null;
 
   return (
-    <ModalLoadContext.Provider value={loadContext}>
-      <DialogErrorBoundary open={open} onClose={onClose}>
-        {open && !ready ? <ModalScrim onClose={onClose} /> : null}
-        <Suspense fallback={null}>
-          <MarkReady>{children}</MarkReady>
-        </Suspense>
-      </DialogErrorBoundary>
-    </ModalLoadContext.Provider>
+    <DialogErrorBoundary open={open} onClose={onClose}>
+      <Suspense fallback={null}>{children}</Suspense>
+    </DialogErrorBoundary>
   );
 }

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { encodePlanToShareUrl } from '../../utils/shareLink';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useModalBackdropHandoff, useSkipContentEnter } from '../app/DeferredDialog';
+import { useSkipContentEnter } from '../app/DeferredDialog';
 import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
@@ -71,7 +71,6 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
     }))
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
-  const backdropHandoff = useModalBackdropHandoff(isOpen);
   const skipContentEnter = useSkipContentEnter(isOpen);
 
   // Close modal when user presses Escape
@@ -285,7 +284,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         <motion.div
           key="export-modal-overlay"
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: backdropHandoff ? 1 : 0 }}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}
