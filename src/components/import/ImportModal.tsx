@@ -211,13 +211,13 @@ const ImportModalBody: React.FC<{
         <AnimatedBody
           activeKey={activeTab}
           scrollRef={contentRef}
-          className="min-h-0 max-h-[calc(100dvh-12rem)] sm:max-h-[calc(90vh-10rem)] overflow-y-auto overflow-x-hidden up-scroll overscroll-contain pr-0.5 [scrollbar-gutter:stable]"
-          contentClassName="pt-2 sm:pt-3"
+          className="min-h-0 max-h-[calc(100dvh-12rem)] sm:max-h-[calc(90vh-10rem)] overflow-y-auto overflow-x-hidden up-scroll overscroll-contain pr-0.5 [scrollbar-gutter:stable] flex flex-col"
+          contentClassName="pt-2 sm:pt-3 flex flex-col flex-1 min-h-0"
         >
           <motion.div
             key={activeTab}
             {...contentProps}
-            className="w-full will-change-[opacity]"
+            className="w-full min-h-0 flex-1 flex flex-col will-change-[opacity]"
           >
             {activeTab === 'excel' && (
               <ExcelImportTab

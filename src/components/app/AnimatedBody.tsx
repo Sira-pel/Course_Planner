@@ -36,7 +36,20 @@ export function AnimatedBody({
     if (!inner || instant) return;
 
     const measure = () => {
-      const next = Math.ceil(inner.scrollHeight);
+      const frame = inner.parentElement;
+      if (!frame) return;
+      // Read the content's own height. A stretched flex child would otherwise
+      // report the frame's current height and keep short tabs stuck open.
+      const previous = frame.style.height;
+      frame.style.height = 'auto';
+      let next = Math.ceil(inner.scrollHeight);
+      const fill = inner.querySelector('[data-fill-scroll]');
+      if (fill instanceof HTMLElement) {
+        next += Math.max(0, fill.scrollHeight - fill.clientHeight);
+        const max = parseFloat(getComputedStyle(frame).maxHeight);
+        if (Number.isFinite(max) && max > 0) next = Math.min(next, Math.ceil(max));
+      }
+      frame.style.height = previous;
       if (next <= 0) return;
       setHeight((prev) => (prev === next ? prev : next));
     };
@@ -44,7 +57,11 @@ export function AnimatedBody({
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(inner);
-    return () => observer.disconnect();
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [activeKey, instant]);
 
   useLayoutEffect(() => {

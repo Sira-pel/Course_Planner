@@ -142,7 +142,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-h-0 space-y-2.5">
+    <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
       {parsedCourses.length === 0 ? (
         <div>
           <div
@@ -264,7 +264,10 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
           </div>
 
           {/* Parsed courses list - Only this scrolls */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[42vh] sm:max-h-[48vh] min-h-[120px] flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
+          <div
+            data-fill-scroll
+            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-0 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
+          >
             {filteredCourses.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">
                 No courses match the current filter.
