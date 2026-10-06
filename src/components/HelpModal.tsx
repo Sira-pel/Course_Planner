@@ -206,7 +206,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             <div
               role="tablist"
               aria-label="Help topics"
-              className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative"
             >
               {helpTabs.map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -221,7 +221,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     aria-selected={isActive}
                     aria-controls={`help-panel-${tab.id}`}
                     tabIndex={isActive ? 0 : -1}
-                    className={`relative py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-all duration-150 z-10 shrink-0 ${
+                    className={`relative min-w-0 w-full py-2 px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-all duration-150 z-10 ${
                       isActive
                         ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
