@@ -142,14 +142,14 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-h-0 space-y-2.5">
+    <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
       {parsedCourses.length === 0 ? (
         <div>
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3"
+            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer up-modal-card flex flex-col items-center justify-center gap-3"
           >
             <input
               ref={fileInputRef}
@@ -225,7 +225,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search courses..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 transition-all"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 up-modal-card"
               />
               {searchQuery && (
                 <button
@@ -264,7 +264,10 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
           </div>
 
           {/* Parsed courses list - Only this scrolls */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[42vh] sm:max-h-[48vh] min-h-[120px] flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">
+          <div
+            data-fill-scroll
+            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-36 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
+          >
             {filteredCourses.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">
                 No courses match the current filter.
@@ -349,7 +352,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 type="button"
                 disabled={selectedCourseIds.size === 0}
                 onClick={handleImport}
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs up-modal-card flex items-center justify-center gap-1.5 shrink-0 ${
                   selectedCourseIds.size > 0
                     ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 active:scale-95'
                     : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'

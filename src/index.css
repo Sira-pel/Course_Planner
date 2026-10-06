@@ -2105,7 +2105,9 @@ html.is-theme-revealing .up-menu,
 html.is-theme-revealing .up-settings,
 html.is-theme-revealing .transition-colors,
 html.is-theme-revealing .transition-all,
-html.is-theme-revealing .transition-opacity {
+html.is-theme-revealing .transition-opacity,
+html.is-theme-revealing [role='dialog'] kbd,
+html.is-theme-revealing .up-modal-card {
   transition: none !important;
 }
 
@@ -2411,9 +2413,9 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
   min-width: 0;
   min-height: 2.5rem;
   transition:
-    background-color var(--dur-chrome) var(--ease-snap),
-    color var(--dur-chrome) var(--ease-snap),
-    border-color var(--dur-chrome) var(--ease-snap),
+    background-color var(--dur-chrome) var(--ease-out),
+    color var(--dur-chrome) var(--ease-out),
+    border-color var(--dur-chrome) var(--ease-out),
     transform var(--dur-micro) var(--ease-snap);
 }
 
@@ -2464,5 +2466,24 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
   .course-field.is-error {
     border-color: #e11d48;
   }
+}
+
+[role='dialog'] kbd,
+.up-modal-card {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: var(--dur-chrome);
+  transition-timing-function: var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [role='dialog'] kbd,
+  .up-modal-card {
+    transition: none;
+  }
+}
+
+html[data-lite-motion] [role='dialog'] kbd,
+html[data-lite-motion] .up-modal-card {
+  transition: none;
 }
 

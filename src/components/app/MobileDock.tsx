@@ -230,7 +230,7 @@ export const MobileDock = React.memo(function MobileDock({
                         }}
                       >
                         <HelpCircle className="w-4 h-4" />
-                        Help & Shortcuts
+                        Help
                       </button>
                     )}
                     <button

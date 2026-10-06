@@ -201,7 +201,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         return;
       }
 
-      // 9. Help & Guide
+      // 9. Help
       const helpKey = getBinding('help', 'Alt+H');
       if (isKeyMatch(e, helpKey)) {
         runModalShortcut('help');
