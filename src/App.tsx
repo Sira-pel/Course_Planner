@@ -319,7 +319,7 @@ export default function App() {
       return;
     }
 
-    setReplaceAppear(true);
+    setReplaceAppear(isAnyModalOpen);
     setIsPoolCollapsed(true);
 
     if (surface === 'course-form' || surface === 'course-quick') {
