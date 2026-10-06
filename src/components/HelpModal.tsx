@@ -278,7 +278,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             <AnimatedBody
               activeKey={activeTab}
               scrollRef={contentRef}
-              className="flex-none min-h-[240px] max-h-[calc(100dvh-16rem)] sm:max-h-[calc(85vh-10rem)] overflow-y-auto overflow-x-hidden text-xs sm:text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+              className="min-h-0 max-h-[calc(100dvh-16rem)] sm:max-h-[calc(85vh-10rem)] overflow-y-auto overflow-x-hidden text-xs sm:text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
               contentClassName="py-4 sm:py-5 pb-8"
             >
               <motion.div
@@ -412,7 +412,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                         </span>
                         <button
                           type="button"
-                          onClick={() => selectTab('shortcuts')}
+                          onClick={() => {
+                            selectTab('shortcuts');
+                            document.getElementById('help-tab-shortcuts')?.focus({ preventScroll: true });
+                          }}
                           className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1 up-chrome-btn"
                         >
                           Shortcuts <ArrowRight className="w-3 h-3" />
