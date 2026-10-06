@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import {
   FileSpreadsheet,
   Upload,
@@ -196,16 +196,6 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
       const parsedSheet = loadSheetData(workbook, defaultSheet);
       setSheetData(parsedSheet);
       setActiveMapping(parsedSheet.detectedMapping);
-
-      // Parse with auto-detected columns
-      const result = parseExcelRowsToCourses(
-        parsedSheet.rawRows,
-        parsedSheet.dataStartRow,
-        parsedSheet.detectedMapping
-      );
-
-      // Auto-select all parsed courses initially
-      setSelectedCourseIds(new Set(result.courses.map((c) => c.id)));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setErrorMessage(`Failed to read Excel file: ${msg}`);
@@ -219,12 +209,6 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     const parsedSheet = loadSheetData(workbookRef, newSheet);
     setSheetData(parsedSheet);
     setActiveMapping(parsedSheet.detectedMapping);
-    const result = parseExcelRowsToCourses(
-      parsedSheet.rawRows,
-      parsedSheet.dataStartRow,
-      parsedSheet.detectedMapping
-    );
-    setSelectedCourseIds(new Set(result.courses.map((c) => c.id)));
   };
 
   const handleMappingChange = useCallback((field: keyof ColumnMapping, colKey: string) => {
@@ -239,7 +223,13 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
   const allCourses = useMemo(() => parsedResult?.courses || [], [parsedResult]);
 
-  // Keep selection synchronized if courses are re-parsed
+  // Selection must use the same parse as the list. A second parse mints new ids,
+  // so every row looks unchecked and Import matches nothing.
+  useEffect(() => {
+    setSelectedCourseIds(new Set((parsedResult?.courses || []).map((c) => c.id)));
+  }, [parsedResult]);
+
+  const parseWarnings = parsedResult?.warnings ?? [];
   const filteredCourses = useMemo(() => {
     if (!searchQuery.trim()) return allCourses;
     const q = searchQuery.toLowerCase().trim();
@@ -567,6 +557,17 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               </div>
             </div>
           </div>
+
+          {parseWarnings.length > 0 && (
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] space-y-0.5 shrink-0">
+              {parseWarnings.slice(0, 4).map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+              {parseWarnings.length > 4 && (
+                <p className="font-semibold">+{parseWarnings.length - 4} more</p>
+              )}
+            </div>
+          )}
 
           {/* Parsed Course List with interactive checkboxes - Only this scrolls */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden max-h-[42vh] sm:max-h-[48vh] min-h-[120px] flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain">

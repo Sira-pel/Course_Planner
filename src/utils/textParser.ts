@@ -96,8 +96,14 @@ const DAYS_COMPOUND_REGEX = new RegExp(
 const DAYS_SINGLE_TOKEN_REGEX =
   /\b(MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|THURS|THUR|FRI(?:DAY)?|SAT(?:URDAY)?|SUN(?:DAY)?|MO|TU|WE|TH|FR|SA|SU|M|T|W|R|F|S|U)\b/gi;
 
-const TIME_RANGE_REGEX =
-  /\b(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\s*(?:-|\b(?:to|until|till)\b)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|am|pm|a|p)?|[012]?\d[0-5]\d)\b/i;
+// 4-digit military times only. A 3-digit alternative also matches course numbers
+// such as "101-001" and would be consumed as a time range before the code is read.
+const MILITARY_TIME_PATTERN = '(?:[01]\\d|2[0-3])[0-5]\\d';
+const CLOCK_TIME_PATTERN = `\\d{1,2}(?:[:.]\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?|am|pm|a|p)?|${MILITARY_TIME_PATTERN}`;
+const TIME_RANGE_REGEX = new RegExp(
+  `\\b(${CLOCK_TIME_PATTERN})\\s*(?:-|\\b(?:to|until|till)\\b)\\s*(${CLOCK_TIME_PATTERN})\\b`,
+  'i'
+);
 
 const TIME_RANGE_GLOBAL_REGEX = new RegExp(TIME_RANGE_REGEX.source, 'gi');
 
@@ -758,17 +764,20 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
         continue;
       }
     }
-    if (!section && /^[0-9]{1,4}[A-Za-z]?$/.test(col) && col.length <= 4) {
-      section = col;
-      continue;
-    }
 
-    if (/^\b([1-6](?:\.[05])?)\s*(?:credits?|cr\.?|units?|hrs?\.?)?$/i.test(col)) {
-      const m = col.match(/^\b([1-6](?:\.[05])?)/);
+    // Bare 1–6 (and .0/.5) is a credit value. Check it before the generic
+    // numeric section rule, which would otherwise treat "3" or "4" as a section.
+    // Leading zeros ("001", "02") stay sections.
+    if (/^(?:[1-6](?:\.[05])?)\s*(?:credits?|cr\.?|units?|hrs?\.?)?$/i.test(col)) {
+      const m = col.match(/^([1-6](?:\.[05])?)/);
       if (m) {
         credits = parseFloat(m[1]);
         continue;
       }
+    }
+    if (!section && /^[0-9]{1,4}[A-Za-z]?$/.test(col) && col.length <= 4) {
+      section = col;
+      continue;
     }
 
     if (!instructor && (PROF_PREFIX_REGEX.test(col) || extractInstructorWithTitle(col))) {
@@ -1066,12 +1075,14 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
             });
           }
         }
-        lineWorking = lineWorking.replace(TIME_RANGE_GLOBAL_REGEX, ' ');
+        // Strip day letters that sit against a time before deleting the times.
+        // Doing it afterwards leaves "F" from "F 10:00-11:00" in the title.
         lineWorking = lineWorking
-          .replace(DAYS_COMPOUND_REGEX, ' ')
-          .replace(DAYS_MULTI_TOKEN_REGEX, ' ')
           .replace(/\b([MTWRFSU])\s*(?=\d{1,2}[:.]\d{2}|\d{3,4}\b)/gi, ' ')
-          .replace(/(?<=(?:am|pm|\d{2}))\s*([MTWRFSU])\b/gi, ' ');
+          .replace(/(?<=(?:am|pm|\d{2}))\s*([MTWRFSU])\b/gi, ' ')
+          .replace(TIME_RANGE_GLOBAL_REGEX, ' ')
+          .replace(DAYS_COMPOUND_REGEX, ' ')
+          .replace(DAYS_MULTI_TOKEN_REGEX, ' ');
       } else {
         const parsedSeg = parseScheduleSegment(lineWorking, TIME_RANGE_REGEX);
         if (parsedSeg) {

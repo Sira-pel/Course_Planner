@@ -2,6 +2,7 @@ import type { WorkBook, WorkSheet } from 'xlsx';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
 import { prefixedId } from './id';
 import { parseTimeRange, parseSingleTimeToken, normalizeDays } from './textParser';
+import { timeToMinutes } from './timeUtils';
 
 type XlsxModule = typeof import('xlsx');
 
@@ -906,6 +907,7 @@ export function parseExcelRowsToCourses(
         let startTime = '09:00';
         let endTime = '10:15';
 
+        let timesValid = true;
         if (timeRaw) {
           const timeParsed = extractTimeRange(timeRaw);
           if (timeParsed) {
@@ -913,27 +915,53 @@ export function parseExcelRowsToCourses(
             endTime = timeParsed.end;
           }
         } else if (startRaw || endRaw) {
-          const parsedStart = parseSingleTimeToken(startRaw, false);
-          const parsedEnd = parseSingleTimeToken(endRaw, true);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          let parsedStart = startRaw ? parseSingleTimeToken(startRaw, false) : null;
+          let parsedEnd = endRaw ? parseSingleTimeToken(endRaw, false) : null;
+          const startExplicit = /[ap]/i.test(startRaw);
+          const endExplicit = /[ap]/i.test(endRaw);
+
+          // "7:00" / "9:00" parses as 19:00 and 09:00. Move the end forward
+          // before giving up, so the session stays on the same afternoon.
+          if (parsedStart && parsedEnd) {
+            let startMinutes = parsedStart.h * 60 + parsedStart.m;
+            let endMinutes = parsedEnd.h * 60 + parsedEnd.m;
+            if (startMinutes >= endMinutes && parsedEnd.h < 12 && !endExplicit) {
+              parsedEnd = { ...parsedEnd, h: parsedEnd.h + 12 };
+              endMinutes = parsedEnd.h * 60 + parsedEnd.m;
+            }
+            if (startMinutes >= endMinutes && parsedStart.h >= 12 && !startExplicit) {
+              parsedStart = { ...parsedStart, h: parsedStart.h - 12 };
+              startMinutes = parsedStart.h * 60 + parsedStart.m;
+            }
+          }
 
           if (parsedStart) {
-            startTime = `${String(parsedStart.h).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
+            startTime = `${pad(parsedStart.h)}:${pad(parsedStart.m)}`;
           }
           if (parsedEnd) {
-            endTime = `${String(parsedEnd.h).padStart(2, '0')}:${String(parsedEnd.m).padStart(2, '0')}`;
-          } else if (parsedStart) {
-            const endH = (parsedStart.h + 1) % 24;
-            endTime = `${String(endH).padStart(2, '0')}:${String(parsedStart.m).padStart(2, '0')}`;
+            endTime = `${pad(parsedEnd.h)}:${pad(parsedEnd.m)}`;
+          } else if (parsedStart && parsedStart.h < 23) {
+            endTime = `${pad(parsedStart.h + 1)}:${pad(parsedStart.m)}`;
           }
         }
 
-        rowSessions = finalDays.map((day, sIdx) => ({
-          id: `s_${courseId}_${sIdx}`,
-          day,
-          startTime,
-          endTime,
-          room: room || undefined,
-        }));
+        if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
+          timesValid = false;
+          warnings.push(
+            `Row ${r + 1}: "${code || name}" has an invalid time range (${startRaw || startTime}-${endRaw || endTime})`
+          );
+        }
+
+        if (timesValid) {
+          rowSessions = finalDays.map((day, sIdx) => ({
+            id: `s_${courseId}_${sIdx}`,
+            day,
+            startTime,
+            endTime,
+            room: room || undefined,
+          }));
+        }
       }
     }
 
