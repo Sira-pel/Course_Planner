@@ -1,7 +1,10 @@
 import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
 
-/** True while a shortcut is swapping one dialog for another. */
+/** True only on the open that replaces a dialog already on screen. Cleared on the next frame. */
 export const DialogReplaceAppearContext = React.createContext(false);
+
+/** Set while a shortcut replaces the course dialog, so its unmount does not focus the opener. */
+export const SuppressFocusRestoreContext = React.createContext<React.MutableRefObject<boolean> | null>(null);
 
 /** Latch the replace flag for this open so the backdrop does not fade in from transparent. */
 export function useDialogReplaceAppear(isOpen: boolean): boolean {

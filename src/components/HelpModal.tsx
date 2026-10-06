@@ -36,6 +36,7 @@ interface HelpModalProps {
   onOpenExport?: () => void;
   onOpenCatalog?: () => void;
   onOpenShortcuts?: () => void;
+  onTabChange?: (tab: HelpTabType) => void;
 }
 
 export const HelpModal: React.FC<HelpModalProps> = ({
@@ -46,6 +47,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
   onOpenExport,
   onOpenCatalog,
   onOpenShortcuts,
+  onTabChange,
 }) => {
   const customShortcuts = useScheduleStore((state) => state.customShortcuts);
   const setCustomShortcut = useScheduleStore((state) => state.setCustomShortcut);
@@ -67,8 +69,14 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
+  const selectTab = (tab: HelpTabType) => {
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  };
+
   useEffect(() => {
-    setActiveTab(initialTab);
+    if (!isOpen) return;
+    selectTab(initialTab);
   }, [initialTab, isOpen]);
 
   // Inline key combination recorder
@@ -180,7 +188,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => selectTab(tab.id)}
                     className={`relative py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-all duration-150 z-10 ${
                       isActive
                         ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
@@ -361,7 +369,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                         <span>Tip: Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[10px]">Ctrl+Z</kbd> anytime to undo accidental changes.</span>
                         <button
                           type="button"
-                          onClick={() => setActiveTab('shortcuts')}
+                          onClick={() => selectTab('shortcuts')}
                           className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1 up-chrome-btn"
                         >
                           Shortcuts list <ArrowRight className="w-3 h-3" />

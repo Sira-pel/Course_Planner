@@ -137,8 +137,8 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
       }
 
       const runModalShortcut = (surface: ShortcutSurface) => {
-        if (e.repeat) return;
         e.preventDefault();
+        if (e.repeat) return;
         onModalShortcut(surface);
       };
 

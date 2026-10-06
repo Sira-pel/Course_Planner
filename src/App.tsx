@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/header/Header';
@@ -13,7 +13,7 @@ import type { ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
-import { DeferredDialog, DialogReplaceAppearContext } from './components/app/DeferredDialog';
+import { DeferredDialog, DialogReplaceAppearContext, SuppressFocusRestoreContext } from './components/app/DeferredDialog';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -38,6 +38,90 @@ const ImportModal = lazy(() => importModalModule);
 const HelpModal = lazy(() => helpModalModule);
 const ShareImportModal = lazy(() => shareImportModalModule);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
+
+function shortcutSurfaceForCourseMode(mode: 'form' | 'quick', editing: boolean): ShortcutSurface | null {
+  switch (mode) {
+    case 'quick':
+      return 'course-quick';
+    case 'form':
+      return editing ? null : 'course-form';
+    default: {
+      const exhaustive: never = mode;
+      return exhaustive;
+    }
+  }
+}
+
+function shortcutSurfaceForExportTab(tab: ExportTabType): ShortcutSurface | null {
+  switch (tab) {
+    case 'text':
+      return 'export';
+    case 'share':
+      return 'share';
+    case 'ics':
+    case 'image':
+    case 'backup':
+      return null;
+    default: {
+      const exhaustive: never = tab;
+      return exhaustive;
+    }
+  }
+}
+
+function shortcutSurfaceForHelpTab(tab: HelpTabType): ShortcutSurface | null {
+  switch (tab) {
+    case 'workflow':
+      return 'help';
+    case 'shortcuts':
+      return 'shortcuts';
+    case 'pool':
+    case 'import':
+    case 'export':
+      return null;
+    default: {
+      const exhaustive: never = tab;
+      return exhaustive;
+    }
+  }
+}
+
+function isOpenShortcutSurface(
+  surface: ShortcutSurface,
+  state: {
+    shortcutSurface: ShortcutSurface | null;
+    isCourseModalOpen: boolean;
+    editingCourseId: string | null;
+    isExportOpen: boolean;
+    isImportOpen: boolean;
+    isHelpOpen: boolean;
+    isPoolCollapsed: boolean;
+    isAnyModalOpen: boolean;
+  },
+): boolean {
+  switch (surface) {
+    case 'course-form':
+      return state.isCourseModalOpen && !state.editingCourseId && state.shortcutSurface === 'course-form';
+    case 'course-quick':
+      return state.isCourseModalOpen && state.shortcutSurface === 'course-quick';
+    case 'export':
+      return state.isExportOpen && state.shortcutSurface === 'export';
+    case 'share':
+      return state.isExportOpen && state.shortcutSurface === 'share';
+    case 'import':
+      return state.isImportOpen;
+    case 'help':
+      return state.isHelpOpen && state.shortcutSurface === 'help';
+    case 'shortcuts':
+      return state.isHelpOpen && state.shortcutSurface === 'shortcuts';
+    case 'pool':
+      return !state.isPoolCollapsed && !state.isAnyModalOpen;
+    default: {
+      const exhaustive: never = surface;
+      return exhaustive;
+    }
+  }
+}
 
 export default function App() {
   const activePlanId = useScheduleStore((state) => state.activePlanId);
@@ -77,6 +161,11 @@ export default function App() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [instantDismiss, setInstantDismiss] = useState(false);
   const [replaceAppear, setReplaceAppear] = useState(false);
+  const [shortcutSurface, setShortcutSurface] = useState<ShortcutSurface | null>(null);
+  const [courseSession, setCourseSession] = useState(0);
+  const [exportSession, setExportSession] = useState(0);
+  const [helpSession, setHelpSession] = useState(0);
+  const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
 
   const closeMoreMenu = useCallback(() => {
@@ -166,6 +255,7 @@ export default function App() {
       setModalInitialDay(day);
       setModalInitialStartTime(startTime);
       setModalInitialMode(mode);
+      setShortcutSurface(shortcutSurfaceForCourseMode(mode, false));
       setIsCourseModalOpen(true);
     },
     []
@@ -185,12 +275,14 @@ export default function App() {
     setEditingCourseId(courseId);
     setEditingCoursePlanId(planId || null);
     setModalInitialMode('form');
+    setShortcutSurface(null);
     setIsCourseModalOpen(true);
   }, []);
 
   const handleOpenExport = useCallback((tab: ExportTabType = 'text') => {
     setIsPoolCollapsed(true);
     setExportInitialTab(tab);
+    setShortcutSurface(shortcutSurfaceForExportTab(tab));
     setIsExportOpen(true);
   }, []);
 
@@ -236,13 +328,27 @@ export default function App() {
   const handleOpenImport = useCallback((tab: ImportTabType = 'excel') => {
     setIsPoolCollapsed(true);
     setImportInitialTab(tab);
+    setShortcutSurface('import');
     setIsImportOpen(true);
   }, []);
 
   const handleOpenHelp = useCallback((tab: HelpTabType = 'workflow') => {
     setIsPoolCollapsed(true);
     setHelpInitialTab(tab);
+    setShortcutSurface(shortcutSurfaceForHelpTab(tab));
     setIsHelpOpen(true);
+  }, []);
+
+  const handleCourseModeChange = useCallback((mode: 'form' | 'quick', editing: boolean) => {
+    setShortcutSurface(shortcutSurfaceForCourseMode(mode, editing));
+  }, []);
+
+  const handleExportTabChange = useCallback((tab: ExportTabType) => {
+    setShortcutSurface(shortcutSurfaceForExportTab(tab));
+  }, []);
+
+  const handleHelpTabChange = useCallback((tab: HelpTabType) => {
+    setShortcutSurface(shortcutSurfaceForHelpTab(tab));
   }, []);
 
   const handleOpenShortcuts = useCallback(() => {
@@ -281,20 +387,17 @@ export default function App() {
   }, [instantDismiss]);
 
   useEffect(() => {
-    if (!isAnyModalOpen && replaceAppear) setReplaceAppear(false);
-  }, [isAnyModalOpen, replaceAppear]);
+    if (!replaceAppear) return;
+    const id = requestAnimationFrame(() => setReplaceAppear(false));
+    return () => cancelAnimationFrame(id);
+  }, [replaceAppear]);
+
+  // Passive cleanups run before this, so a course dialog removed in the same commit still sees the flag.
+  useEffect(() => {
+    suppressFocusRestoreRef.current = false;
+  });
 
   const handleModalShortcut = useCallback((surface: ShortcutSurface) => {
-    const same =
-      (surface === 'course-form' && isCourseModalOpen && modalInitialMode !== 'quick') ||
-      (surface === 'course-quick' && isCourseModalOpen && modalInitialMode === 'quick') ||
-      (surface === 'export' && isExportOpen && exportInitialTab !== 'share') ||
-      (surface === 'share' && isExportOpen && exportInitialTab === 'share') ||
-      (surface === 'import' && isImportOpen) ||
-      (surface === 'help' && isHelpOpen && helpInitialTab !== 'shortcuts') ||
-      (surface === 'shortcuts' && isHelpOpen && helpInitialTab === 'shortcuts') ||
-      (surface === 'pool' && !isPoolCollapsed && !isAnyModalOpen);
-
     const closeDialogs = () => {
       setIsCourseModalOpen(false);
       setIsExportOpen(false);
@@ -303,59 +406,87 @@ export default function App() {
       setIsShareImportOpen(false);
     };
 
-    if (same) {
+    const current = {
+      shortcutSurface,
+      isCourseModalOpen,
+      editingCourseId,
+      isExportOpen,
+      isImportOpen,
+      isHelpOpen,
+      isPoolCollapsed,
+      isAnyModalOpen,
+    };
+
+    if (isOpenShortcutSurface(surface, current)) {
       setReplaceAppear(false);
+      setShortcutSurface(null);
       if (surface === 'pool') setIsPoolCollapsed(true);
       else closeDialogs();
       return;
     }
 
-    setInstantDismiss(true);
+    const replacingDialog = isAnyModalOpen && surface !== 'pool';
+    if (isCourseModalOpen) suppressFocusRestoreRef.current = true;
+    setInstantDismiss(isAnyModalOpen);
+    setReplaceAppear(replacingDialog);
     closeDialogs();
+    if (surface !== 'pool') setIsPoolCollapsed(true);
 
-    if (surface === 'pool') {
-      setReplaceAppear(false);
-      setIsPoolCollapsed(false);
-      return;
+    const remountIfOpen = (open: boolean, bump: () => void) => {
+      if (open) bump();
+    };
+
+    switch (surface) {
+      case 'course-form':
+        remountIfOpen(isCourseModalOpen, () => setCourseSession((session) => session + 1));
+        handleOpenNewCourse('monday', '09:00', 'form');
+        break;
+      case 'course-quick':
+        remountIfOpen(isCourseModalOpen, () => setCourseSession((session) => session + 1));
+        handleOpenNewCourse('monday', '09:00', 'quick');
+        break;
+      case 'export':
+        remountIfOpen(isExportOpen, () => setExportSession((session) => session + 1));
+        handleOpenExport('text');
+        break;
+      case 'share':
+        remountIfOpen(isExportOpen, () => setExportSession((session) => session + 1));
+        handleOpenExport('share');
+        break;
+      case 'import':
+        handleOpenImport('excel');
+        break;
+      case 'help':
+        remountIfOpen(isHelpOpen, () => setHelpSession((session) => session + 1));
+        handleOpenHelp('workflow');
+        break;
+      case 'shortcuts':
+        remountIfOpen(isHelpOpen, () => setHelpSession((session) => session + 1));
+        handleOpenHelp('shortcuts');
+        break;
+      case 'pool':
+        setReplaceAppear(false);
+        setShortcutSurface(null);
+        setIsPoolCollapsed(false);
+        break;
+      default: {
+        const exhaustive: never = surface;
+        return exhaustive;
+      }
     }
-
-    setReplaceAppear(true);
-    setIsPoolCollapsed(true);
-
-    if (surface === 'course-form' || surface === 'course-quick') {
-      setEditingCourseId(null);
-      setEditingCoursePlanId(null);
-      setModalInitialDay('monday');
-      setModalInitialStartTime('09:00');
-      setModalInitialMode(surface === 'course-quick' ? 'quick' : 'form');
-      setIsCourseModalOpen(true);
-      return;
-    }
-
-    if (surface === 'export' || surface === 'share') {
-      setExportInitialTab(surface === 'share' ? 'share' : 'text');
-      setIsExportOpen(true);
-      return;
-    }
-
-    if (surface === 'import') {
-      setImportInitialTab('excel');
-      setIsImportOpen(true);
-      return;
-    }
-
-    setHelpInitialTab(surface === 'shortcuts' ? 'shortcuts' : 'workflow');
-    setIsHelpOpen(true);
   }, [
-    exportInitialTab,
-    helpInitialTab,
+    editingCourseId,
+    handleOpenExport,
+    handleOpenHelp,
+    handleOpenImport,
+    handleOpenNewCourse,
     isAnyModalOpen,
     isCourseModalOpen,
     isExportOpen,
     isHelpOpen,
     isImportOpen,
     isPoolCollapsed,
-    modalInitialMode,
+    shortcutSurface,
   ]);
 
   const handleShortcutToggleTheme = useCallback(() => {
@@ -459,8 +590,9 @@ export default function App() {
         onCloseMoreMenu={closeMoreMenu}
       />
 
+      <SuppressFocusRestoreContext.Provider value={suppressFocusRestoreRef}>
       <DialogReplaceAppearContext.Provider value={replaceAppear}>
-      <DeferredDialog open={isCourseModalOpen} onClose={handleCloseCourseModal} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`course-${courseSession}`} open={isCourseModalOpen} onClose={handleCloseCourseModal} instantDismiss={instantDismiss}>
         <CourseModal
           isOpen={isCourseModalOpen}
           onClose={handleCloseCourseModal}
@@ -469,14 +601,16 @@ export default function App() {
           initialDay={modalInitialDay}
           initialStartTime={modalInitialStartTime}
           initialMode={modalInitialMode}
+          onModeChange={handleCourseModeChange}
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isExportOpen} onClose={handleCloseExport} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`export-${exportSession}`} open={isExportOpen} onClose={handleCloseExport} instantDismiss={instantDismiss}>
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
           onClose={handleCloseExport}
+          onTabChange={handleExportTabChange}
         />
       </DeferredDialog>
 
@@ -488,7 +622,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isHelpOpen} onClose={handleCloseHelp} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`help-${helpSession}`} open={isHelpOpen} onClose={handleCloseHelp} instantDismiss={instantDismiss}>
         <HelpModal
           isOpen={isHelpOpen}
           initialTab={helpInitialTab}
@@ -497,6 +631,7 @@ export default function App() {
           onOpenExport={() => handleOpenExport('text')}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShortcuts={handleOpenShortcuts}
+          onTabChange={handleHelpTabChange}
         />
       </DeferredDialog>
 
@@ -511,6 +646,7 @@ export default function App() {
         />
       </DeferredDialog>
       </DialogReplaceAppearContext.Provider>
+      </SuppressFocusRestoreContext.Provider>
 
       <Suspense fallback={null}>
         <PWAReloadPrompt />

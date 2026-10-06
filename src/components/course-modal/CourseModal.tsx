@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../../types/schedule';
@@ -8,7 +8,7 @@ import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useDialogReplaceAppear, useSkipContentEnter } from '../app/DeferredDialog';
+import { SuppressFocusRestoreContext, useDialogReplaceAppear, useSkipContentEnter } from '../app/DeferredDialog';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -33,6 +33,7 @@ interface CourseModalProps {
   initialDay?: DayOfWeek;
   initialStartTime?: string;
   initialMode?: 'form' | 'quick';
+  onModeChange?: (mode: 'form' | 'quick', editing: boolean) => void;
 }
 
 const CLOSE_MS = 150;
@@ -61,7 +62,11 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   initialDay = 'monday',
   initialStartTime = '09:00',
   initialMode = 'form',
+  onModeChange,
 }) => {
+  const suppressFocusRestoreRef = useContext(SuppressFocusRestoreContext);
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
   const {
     plans,
     activePlanId,
@@ -149,10 +154,11 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
+      if (suppressFocusRestoreRef?.current) return;
       const restore = returnFocusRef.current;
       if (restore && document.contains(restore)) restore.focus();
     };
-  }, []);
+  }, [suppressFocusRestoreRef]);
 
   useEffect(() => {
     if (!rawText.trim()) {
@@ -280,6 +286,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       setDetailsOpen(false);
     }
     setError(null);
+    onModeChangeRef.current?.(existingCourse ? 'form' : initialMode, Boolean(existingCourse));
   }, [editingCourseId, isOpen, initialDay, initialStartTime, initialMode, effectivePlanId]);
 
   const replayShake = (field: 'code' | 'name' | 'times') => {
@@ -290,6 +297,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   const switchMode = (next: 'form' | 'quick') => {
     if (next === mode) return;
     setMode(next);
+    onModeChange?.(next, Boolean(editingCourseId));
     setError(null);
     if (clipRef.current) {
       clipRef.current.scrollTop = 0;
