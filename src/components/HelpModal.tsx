@@ -171,7 +171,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.975, y: 4 }}
             transition={{ duration: 0.24, ease: EASE_SMOOTH }}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-auto max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col overflow-hidden will-change-transform"
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-[min(620px,82dvh)] sm:h-[min(720px,85vh)] max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -237,7 +237,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             {/* Tab Content Body with smooth cross-fade */}
             <div
               ref={contentRef}
-              className="flex-none min-h-[240px] max-h-[calc(100dvh-8rem)] overflow-y-auto overflow-x-hidden py-5 space-y-5 text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 sm:py-5 pb-8 space-y-4 sm:space-y-5 text-xs sm:text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
             >
               <motion.div
                 key={activeTab}
@@ -250,7 +250,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                 className="w-full will-change-[opacity] transform-gpu"
               >
                   {activeTab === 'shortcuts' && (
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-slate-600 dark:text-slate-300">
                           Alt shortcuts help avoid browser and system conflicts.
@@ -267,7 +267,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                         )}
                       </div>
 
-                      <div className="space-y-5">
+                      <div className="space-y-4 sm:space-y-5">
                         {shortcutCategories.map((category) => {
                           const shortcuts = SHORTCUT_DEFINITIONS.filter((s) => s.category === category);
                           if (shortcuts.length === 0) return null;
@@ -287,7 +287,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                                   const keyChips = formatShortcutKeys(currentBinding, isMac);
 
                                   return (
-                                    <div key={s.id} className="flex items-center justify-between gap-3 py-3">
+                                    <div key={s.id} className="flex items-center justify-between gap-3 py-2.5 sm:py-3">
                                       <div className="min-w-0 flex-1">
                                         <span className="font-semibold text-slate-900 dark:text-white">{s.name}</span>
                                         <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 leading-relaxed">
@@ -336,7 +336,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                   )}
                   {activeTab === 'workflow' && (
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Plan your week</h3>
@@ -354,7 +354,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                           { number: '3', title: 'Compare', description: <>Overlay another plan and edit either schedule on the calendar.</> },
                           { number: '4', title: 'Share', description: <>Copy a link, text, calendar file, or image.</> },
                         ].map(({ number, title, description }) => (
-                          <div key={number} className="flex gap-3 py-4">
+                          <div key={number} className="flex gap-3 py-3 sm:py-4">
                             <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">
                               {number}
                             </span>
