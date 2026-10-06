@@ -43,6 +43,33 @@ interface HelpModalProps {
   onTabChange?: (tab: HelpTabType) => void;
 }
 
+/** Matches the tablist: 2 columns, 3 from 400px, 5 from the `sm` breakpoint. */
+function helpTabColumnCount(): number {
+  if (typeof window === 'undefined') return 5;
+  if (window.matchMedia('(min-width: 640px)').matches) return 5;
+  if (window.matchMedia('(min-width: 400px)').matches) return 3;
+  return 2;
+}
+
+function nextTabInColumn(
+  currentIndex: number,
+  direction: 1 | -1,
+  columnCount: number,
+  length: number,
+): number {
+  const column = currentIndex % columnCount;
+  const row = Math.floor(currentIndex / columnCount);
+  const rowCount = Math.ceil(length / columnCount);
+
+  for (let step = 1; step <= rowCount; step += 1) {
+    const nextRow = (((row + direction * step) % rowCount) + rowCount) % rowCount;
+    const nextIndex = nextRow * columnCount + column;
+    if (nextIndex < length) return nextIndex;
+  }
+
+  return currentIndex;
+}
+
 export const HelpModal: React.FC<HelpModalProps> = ({
   isOpen,
   initialTab = 'workflow',
@@ -132,20 +159,36 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     const currentIndex = helpTabs.findIndex((tab) => tab.id === activeTab);
+    if (currentIndex < 0) return;
+
+    const columnCount = helpTabColumnCount();
+    const wrapped = columnCount < helpTabs.length;
     let nextIndex = currentIndex;
 
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    if (event.key === 'ArrowRight') {
       nextIndex = (currentIndex + 1) % helpTabs.length;
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    } else if (event.key === 'ArrowLeft') {
       nextIndex = (currentIndex - 1 + helpTabs.length) % helpTabs.length;
-    } else if (event.key !== 'Home' && event.key !== 'End') {
-      return;
+    } else if (event.key === 'ArrowDown') {
+      nextIndex = wrapped
+        ? nextTabInColumn(currentIndex, 1, columnCount, helpTabs.length)
+        : (currentIndex + 1) % helpTabs.length;
+    } else if (event.key === 'ArrowUp') {
+      nextIndex = wrapped
+        ? nextTabInColumn(currentIndex, -1, columnCount, helpTabs.length)
+        : (currentIndex - 1 + helpTabs.length) % helpTabs.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = helpTabs.length - 1;
     } else {
-      nextIndex = event.key === 'Home' ? 0 : helpTabs.length - 1;
+      return;
     }
 
     event.preventDefault();
-    selectTab(helpTabs[nextIndex].id);
+    const nextId = helpTabs[nextIndex].id;
+    selectTab(nextId);
+    document.getElementById(`help-tab-${nextId}`)?.focus({ preventScroll: true });
   };
 
   if (typeof document === 'undefined') return null;
@@ -396,7 +439,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                       <ul className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Add quickly.</strong> Use + on a course to put it on the current plan.</li>
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Switch plans.</strong> The Pool is shared across your plans.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Choose “Import to Pool” and pick courses later.</li>
+                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Import the spreadsheet and leave “Also enroll in” or “Add to” unchecked, then pick courses later.</li>
                       </ul>
 
                       {onOpenCatalog && (

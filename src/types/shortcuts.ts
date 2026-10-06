@@ -113,7 +113,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutItem[] = [
   },
   {
     id: 'help',
-    name: 'Help & Guide',
+    name: 'Help',
     description: 'Open help walkthrough and workflow guide',
     category: 'general',
     defaultKey: 'Alt+H',
