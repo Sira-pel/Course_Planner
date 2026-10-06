@@ -438,8 +438,8 @@ export const Header = memo(function Header({
             id="btn-help"
             onClick={onOpenHelp}
             className="up-icon-btn up-chrome-btn"
-            title="Help & Quick Guide"
-            aria-label="Help & Quick Guide"
+            title="Help"
+            aria-label="Help"
           >
             <HelpCircle className="w-4 h-4" />
           </button>

@@ -204,7 +204,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
           className="up-settings-item up-chrome-btn"
         >
           <HelpCircle />
-          Help & Shortcuts
+          Help
         </button>
         {!isInstalled ? (
           <button
