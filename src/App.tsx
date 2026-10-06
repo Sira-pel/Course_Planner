@@ -13,7 +13,7 @@ import type { ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
-import { DeferredDialog } from './components/app/DeferredDialog';
+import { DeferredDialog, DialogReplaceAppearContext } from './components/app/DeferredDialog';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -76,6 +76,7 @@ export default function App() {
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [instantDismiss, setInstantDismiss] = useState(false);
+  const [replaceAppear, setReplaceAppear] = useState(false);
   const reduceMotion = useReducedMotion();
 
   const closeMoreMenu = useCallback(() => {
@@ -279,6 +280,10 @@ export default function App() {
     return () => cancelAnimationFrame(id);
   }, [instantDismiss]);
 
+  useEffect(() => {
+    if (!isAnyModalOpen && replaceAppear) setReplaceAppear(false);
+  }, [isAnyModalOpen, replaceAppear]);
+
   const handleModalShortcut = useCallback((surface: ShortcutSurface) => {
     const same =
       (surface === 'course-form' && isCourseModalOpen && modalInitialMode !== 'quick') ||
@@ -299,6 +304,7 @@ export default function App() {
     };
 
     if (same) {
+      setReplaceAppear(false);
       if (surface === 'pool') setIsPoolCollapsed(true);
       else closeDialogs();
       return;
@@ -308,10 +314,12 @@ export default function App() {
     closeDialogs();
 
     if (surface === 'pool') {
+      setReplaceAppear(false);
       setIsPoolCollapsed(false);
       return;
     }
 
+    setReplaceAppear(true);
     setIsPoolCollapsed(true);
 
     if (surface === 'course-form' || surface === 'course-quick') {
@@ -451,6 +459,7 @@ export default function App() {
         onCloseMoreMenu={closeMoreMenu}
       />
 
+      <DialogReplaceAppearContext.Provider value={replaceAppear}>
       <DeferredDialog open={isCourseModalOpen} onClose={handleCloseCourseModal} instantDismiss={instantDismiss}>
         <CourseModal
           isOpen={isCourseModalOpen}
@@ -501,6 +510,7 @@ export default function App() {
           initialManualPaste={initialManualPaste}
         />
       </DeferredDialog>
+      </DialogReplaceAppearContext.Provider>
 
       <Suspense fallback={null}>
         <PWAReloadPrompt />

@@ -1,5 +1,17 @@
 import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
 
+/** True while a shortcut is swapping one dialog for another. */
+export const DialogReplaceAppearContext = React.createContext(false);
+
+/** Latch the replace flag for this open so the backdrop does not fade in from transparent. */
+export function useDialogReplaceAppear(isOpen: boolean): boolean {
+  const replacing = React.useContext(DialogReplaceAppearContext);
+  const latched = useRef(false);
+  if (!isOpen) latched.current = false;
+  else if (replacing) latched.current = true;
+  return latched.current;
+}
+
 // Skip the content fade on the same open that already fades the backdrop.
 // Tab changes after the first frame still play their own fade.
 export function useSkipContentEnter(isOpen: boolean): boolean {
@@ -87,7 +99,9 @@ export function DeferredDialog({
   if (open && !mounted) setMounted(true);
   if (!open && instantDismiss && !heldClosed) setHeldClosed(true);
   if (open && heldClosed) setHeldClosed(false);
-  if (!mounted || heldClosed) return null;
+  // Keep an opening dialog in this same render. Waiting for `mounted` left one
+  // frame with no backdrop after the previous dialog was removed.
+  if (!open && (!mounted || instantDismiss || heldClosed)) return null;
 
   return (
     <DialogErrorBoundary open={open} onClose={onClose}>
