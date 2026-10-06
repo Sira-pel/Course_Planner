@@ -59,14 +59,16 @@
           // Fail-safe: ensure launch splash is never permanently stuck if app boot encounters errors
           setTimeout(function() {
             var splash = document.getElementById('app-launch-splash');
-            if (splash) {
-              splash.classList.add('is-hidden');
-              setTimeout(function() {
-                if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
-              }, 320);
+            if (!splash) return;
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var reveal = function() {
+              if (splash.parentNode) splash.parentNode.removeChild(splash);
               document.documentElement.classList.remove('up-preload');
               document.documentElement.classList.add('up-ready');
-            }
+            };
+            splash.classList.add('is-hidden');
+            if (reduce) reveal();
+            else setTimeout(reveal, 320);
           }, 5000);
         } catch (e) {}
       })();
@@ -83,7 +85,7 @@
         align-items: center;
         justify-content: center;
         background-color: #f7f8fb;
-        transition: opacity 260ms cubic-bezier(0.3, 0.55, 0.3, 1), transform 260ms cubic-bezier(0.3, 0.55, 0.3, 1), visibility 260ms;
+        transition: opacity 260ms cubic-bezier(0.3, 0.55, 0.3, 1), visibility 260ms;
         pointer-events: auto;
         user-select: none;
         -webkit-user-select: none;
@@ -98,6 +100,7 @@
         justify-content: center;
         gap: 14px;
         transform: translateZ(0);
+        transition: transform 240ms cubic-bezier(0.3, 0.55, 0.3, 1), opacity 240ms cubic-bezier(0.3, 0.55, 0.3, 1);
       }
       .splash-logo {
         width: 72px;
@@ -120,7 +123,16 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transform: scale(1.02);
+      }
+      #app-launch-splash.is-hidden .splash-body {
+        opacity: 0;
+        transform: scale(0.96);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-launch-splash,
+        .splash-body {
+          transition-duration: 0.001ms !important;
+        }
       }
     </style>
   </head>

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { encodePlanToShareUrl } from '../../utils/shareLink';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
+import { useModalBackdropHandoff, useSkipContentEnter } from '../app/DeferredDialog';
 import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
@@ -70,6 +71,8 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
     }))
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
+  const backdropHandoff = useModalBackdropHandoff(isOpen);
+  const skipContentEnter = useSkipContentEnter(isOpen);
 
   // Close modal when user presses Escape
   useEffect(() => {
@@ -282,7 +285,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         <motion.div
           key="export-modal-overlay"
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: backdropHandoff ? 1 : 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}
@@ -294,9 +297,9 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
             role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        initial={{ opacity: 0, scale: 0.97, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.975, y: 4 }}
+        initial={{ scale: 0.97, y: 8 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.975, y: 4 }}
         transition={{ duration: 0.24, ease: EASE_SMOOTH }}
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full min-w-0 p-3 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
       >
@@ -351,7 +354,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         >
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0.25 }}
+            initial={skipContentEnter ? false : { opacity: 0.25 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2, ease: EASE_SMOOTH }}
             className="w-full will-change-[opacity] transform-gpu"

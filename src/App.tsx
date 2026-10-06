@@ -13,6 +13,7 @@ import type { ImportTabType } from './components/import/ImportModal';
 import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
+import { DeferredDialog } from './components/app/DeferredDialog';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -27,21 +28,6 @@ const ImportModal = lazy(() => import('./components/import/ImportModal').then((m
 const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
 const ShareImportModal = lazy(() => import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
-
-// A lazy component starts downloading when it is rendered. Keep dialogs out of
-// the first render, then leave them mounted so their close animation can finish.
-function useMountWhenOpened(open: boolean): boolean {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    if (open) setMounted(true);
-  }, [open]);
-  return mounted;
-}
-
-function DeferredDialog({ mounted, children }: { mounted: boolean; children: React.ReactNode }) {
-  if (!mounted) return null;
-  return <Suspense fallback={null}>{children}</Suspense>;
-}
 
 export default function App() {
   const activePlanId = useScheduleStore((state) => state.activePlanId);
@@ -74,11 +60,6 @@ export default function App() {
   const [helpInitialTab, setHelpInitialTab] = useState<HelpTabType>('workflow');
 
   const [isShareImportOpen, setIsShareImportOpen] = useState(false);
-  const courseModalMounted = useMountWhenOpened(isCourseModalOpen);
-  const exportModalMounted = useMountWhenOpened(isExportOpen);
-  const importModalMounted = useMountWhenOpened(isImportOpen);
-  const helpModalMounted = useMountWhenOpened(isHelpOpen);
-  const shareImportMounted = useMountWhenOpened(isShareImportOpen);
   const [sharedPlan, setSharedPlan] = useState<SchedulePlan | null>(null);
   const [initialManualPaste, setInitialManualPaste] = useState(false);
 
@@ -100,15 +81,21 @@ export default function App() {
   useEffect(() => {
     // Seamless native-style splash dismiss once the first frame has painted on GPU
     const dismissSplash = () => {
+      const revealApp = () => {
+        document.documentElement.classList.remove('up-preload');
+        document.documentElement.classList.add('up-ready');
+      };
       const splash = document.getElementById('app-launch-splash');
-      if (splash) {
-        splash.classList.add('is-hidden');
-        setTimeout(() => {
-          splash.remove();
-        }, 320);
+      if (!splash) {
+        revealApp();
+        return;
       }
-      document.documentElement.classList.remove('up-preload');
-      document.documentElement.classList.add('up-ready');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      splash.classList.add('is-hidden');
+      window.setTimeout(() => {
+        splash.remove();
+        revealApp();
+      }, reduce ? 0 : 320);
     };
 
     // Double requestAnimationFrame ensures React has committed DOM and browser has completed first composite
@@ -382,7 +369,7 @@ export default function App() {
         onCloseMoreMenu={closeMoreMenu}
       />
 
-      <DeferredDialog mounted={courseModalMounted}>
+      <DeferredDialog open={isCourseModalOpen} onClose={handleCloseCourseModal}>
         <CourseModal
           isOpen={isCourseModalOpen}
           onClose={handleCloseCourseModal}
@@ -394,7 +381,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog mounted={exportModalMounted}>
+      <DeferredDialog open={isExportOpen} onClose={handleCloseExport}>
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
@@ -402,7 +389,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog mounted={importModalMounted}>
+      <DeferredDialog open={isImportOpen} onClose={handleCloseImport}>
         <ImportModal
           isOpen={isImportOpen}
           initialTab={importInitialTab}
@@ -410,7 +397,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog mounted={helpModalMounted}>
+      <DeferredDialog open={isHelpOpen} onClose={handleCloseHelp}>
         <HelpModal
           isOpen={isHelpOpen}
           initialTab={helpInitialTab}
@@ -422,7 +409,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog mounted={shareImportMounted}>
+      <DeferredDialog open={isShareImportOpen} onClose={() => setIsShareImportOpen(false)}>
         <ShareImportModal
           isOpen={isShareImportOpen}
           onClose={() => setIsShareImportOpen(false)}

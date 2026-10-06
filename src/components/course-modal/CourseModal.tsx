@@ -8,6 +8,7 @@ import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
+import { useModalBackdropHandoff, useSkipContentEnter } from '../app/DeferredDialog';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -86,6 +87,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       getNextColor: state.getNextColor,
     }))
   );
+  const backdropHandoff = useModalBackdropHandoff(isOpen);
+  const skipContentEnter = useSkipContentEnter(isOpen);
 
   const effectivePlanId = targetPlanId || activePlanId;
   const currentPlan = useMemo(
@@ -530,7 +533,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     <motion.div
       key="course-modal-overlay"
       className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={{ opacity: 0 }}
+      initial={{ opacity: backdropHandoff ? 1 : 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22, ease: EASE_SMOOTH }}
@@ -576,9 +579,9 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         aria-modal="true"
         aria-labelledby="course-modal-title"
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden will-change-transform"
-        initial={{ opacity: 0, scale: 0.97, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.975, y: 4 }}
+        initial={{ scale: 0.97, y: 8 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.975, y: 4 }}
         transition={{ duration: 0.24, ease: EASE_SMOOTH }}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -674,7 +677,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         >
           <motion.div
             key={mode}
-            initial={{ opacity: 0.2 }}
+            initial={skipContentEnter ? false : { opacity: 0.2 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.22, ease: EASE_OUT }}
             className="w-full will-change-[opacity] transform-gpu"

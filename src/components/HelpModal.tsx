@@ -24,6 +24,7 @@ import {
 import { useScheduleStore } from '../store/useScheduleStore';
 import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
 import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
+import { useModalBackdropHandoff, useSkipContentEnter } from './app/DeferredDialog';
 
 export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
 
@@ -52,6 +53,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<HelpTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
+  const backdropHandoff = useModalBackdropHandoff(isOpen);
+  const skipContentEnter = useSkipContentEnter(isOpen);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
   useEffect(() => {
@@ -122,7 +125,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: backdropHandoff ? 1 : 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}
@@ -134,9 +137,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.975, y: 4 }}
+            initial={{ scale: 0.97, y: 8 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.975, y: 4 }}
             transition={{ duration: 0.24, ease: EASE_SMOOTH }}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
             onClick={(e) => e.stopPropagation()}
@@ -198,7 +201,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             >
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0.25 }}
+                initial={skipContentEnter ? false : { opacity: 0.25 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2, ease: EASE_SMOOTH }}
                 className="w-full will-change-[opacity] transform-gpu"
