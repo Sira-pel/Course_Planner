@@ -73,15 +73,21 @@ class DialogErrorBoundary extends Component<
 export function DeferredDialog({
   open,
   onClose,
+  instantDismiss = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Drop a closing dialog immediately so a shortcut replace cannot leave it stacked. */
+  instantDismiss?: boolean;
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [heldClosed, setHeldClosed] = useState(false);
   if (open && !mounted) setMounted(true);
-  if (!mounted) return null;
+  if (!open && instantDismiss && !heldClosed) setHeldClosed(true);
+  if (open && heldClosed) setHeldClosed(false);
+  if (!mounted || heldClosed) return null;
 
   return (
     <DialogErrorBoundary open={open} onClose={onClose}>

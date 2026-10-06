@@ -15,7 +15,7 @@ import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { DeferredDialog } from './components/app/DeferredDialog';
 import { MobileDock } from './components/app/MobileDock';
-import { useAppShortcuts } from './components/app/useAppShortcuts';
+import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme, persistTheme } from './utils/theme';
@@ -75,6 +75,7 @@ export default function App() {
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [instantDismiss, setInstantDismiss] = useState(false);
   const reduceMotion = useReducedMotion();
 
   const closeMoreMenu = useCallback(() => {
@@ -272,6 +273,83 @@ export default function App() {
   const isAnyModalOpen =
     isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen;
 
+  useEffect(() => {
+    if (!instantDismiss) return;
+    const id = requestAnimationFrame(() => setInstantDismiss(false));
+    return () => cancelAnimationFrame(id);
+  }, [instantDismiss]);
+
+  const handleModalShortcut = useCallback((surface: ShortcutSurface) => {
+    const same =
+      (surface === 'course-form' && isCourseModalOpen && modalInitialMode !== 'quick') ||
+      (surface === 'course-quick' && isCourseModalOpen && modalInitialMode === 'quick') ||
+      (surface === 'export' && isExportOpen && exportInitialTab !== 'share') ||
+      (surface === 'share' && isExportOpen && exportInitialTab === 'share') ||
+      (surface === 'import' && isImportOpen) ||
+      (surface === 'help' && isHelpOpen && helpInitialTab !== 'shortcuts') ||
+      (surface === 'shortcuts' && isHelpOpen && helpInitialTab === 'shortcuts') ||
+      (surface === 'pool' && !isPoolCollapsed && !isAnyModalOpen);
+
+    const closeDialogs = () => {
+      setIsCourseModalOpen(false);
+      setIsExportOpen(false);
+      setIsImportOpen(false);
+      setIsHelpOpen(false);
+      setIsShareImportOpen(false);
+    };
+
+    if (same) {
+      if (surface === 'pool') setIsPoolCollapsed(true);
+      else closeDialogs();
+      return;
+    }
+
+    setInstantDismiss(true);
+    closeDialogs();
+
+    if (surface === 'pool') {
+      setIsPoolCollapsed(false);
+      return;
+    }
+
+    setIsPoolCollapsed(true);
+
+    if (surface === 'course-form' || surface === 'course-quick') {
+      setEditingCourseId(null);
+      setEditingCoursePlanId(null);
+      setModalInitialDay('monday');
+      setModalInitialStartTime('09:00');
+      setModalInitialMode(surface === 'course-quick' ? 'quick' : 'form');
+      setIsCourseModalOpen(true);
+      return;
+    }
+
+    if (surface === 'export' || surface === 'share') {
+      setExportInitialTab(surface === 'share' ? 'share' : 'text');
+      setIsExportOpen(true);
+      return;
+    }
+
+    if (surface === 'import') {
+      setImportInitialTab('excel');
+      setIsImportOpen(true);
+      return;
+    }
+
+    setHelpInitialTab(surface === 'shortcuts' ? 'shortcuts' : 'workflow');
+    setIsHelpOpen(true);
+  }, [
+    exportInitialTab,
+    helpInitialTab,
+    isAnyModalOpen,
+    isCourseModalOpen,
+    isExportOpen,
+    isHelpOpen,
+    isImportOpen,
+    isPoolCollapsed,
+    modalInitialMode,
+  ]);
+
   const handleShortcutToggleTheme = useCallback(() => {
     if (isThemeRevealing()) return;
     const currentTheme = useScheduleStore.getState().theme;
@@ -302,14 +380,8 @@ export default function App() {
     isMoreOpen,
     isConfirmingClear,
     isAnyModalOpen,
-    onOpenNewCourse: handleOpenNewCourse,
-    onOpenExport: () => handleOpenExport('text'),
-    onOpenImport: () => handleOpenImport('excel'),
-    onOpenShare: handleOpenShareModal,
-    onTogglePool: () => setIsPoolCollapsed((prev) => !prev),
+    onModalShortcut: handleModalShortcut,
     onToggleTheme: handleShortcutToggleTheme,
-    onOpenHelp: handleOpenHelp,
-    onOpenShortcuts: handleOpenShortcuts,
     onDuplicatePlan: duplicatePlan,
     onUndo: undo,
     onRedo: redo,
@@ -379,7 +451,7 @@ export default function App() {
         onCloseMoreMenu={closeMoreMenu}
       />
 
-      <DeferredDialog open={isCourseModalOpen} onClose={handleCloseCourseModal}>
+      <DeferredDialog open={isCourseModalOpen} onClose={handleCloseCourseModal} instantDismiss={instantDismiss}>
         <CourseModal
           isOpen={isCourseModalOpen}
           onClose={handleCloseCourseModal}
@@ -391,7 +463,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isExportOpen} onClose={handleCloseExport}>
+      <DeferredDialog open={isExportOpen} onClose={handleCloseExport} instantDismiss={instantDismiss}>
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
@@ -399,7 +471,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isImportOpen} onClose={handleCloseImport}>
+      <DeferredDialog open={isImportOpen} onClose={handleCloseImport} instantDismiss={instantDismiss}>
         <ImportModal
           isOpen={isImportOpen}
           initialTab={importInitialTab}
@@ -407,7 +479,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isHelpOpen} onClose={handleCloseHelp}>
+      <DeferredDialog open={isHelpOpen} onClose={handleCloseHelp} instantDismiss={instantDismiss}>
         <HelpModal
           isOpen={isHelpOpen}
           initialTab={helpInitialTab}
@@ -419,7 +491,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isShareImportOpen} onClose={() => setIsShareImportOpen(false)}>
+      <DeferredDialog open={isShareImportOpen} onClose={() => setIsShareImportOpen(false)} instantDismiss={instantDismiss}>
         <ShareImportModal
           isOpen={isShareImportOpen}
           onClose={() => setIsShareImportOpen(false)}

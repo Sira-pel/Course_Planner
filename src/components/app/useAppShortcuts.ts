@@ -4,8 +4,18 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { DayOfWeek, SchedulePlan } from '../../types/schedule';
+import type { SchedulePlan } from '../../types/schedule';
 import { useScheduleStore } from '../../store/useScheduleStore';
+
+export type ShortcutSurface =
+  | 'course-form'
+  | 'course-quick'
+  | 'export'
+  | 'share'
+  | 'import'
+  | 'help'
+  | 'shortcuts'
+  | 'pool';
 
 export interface UseAppShortcutsArgs {
   plans?: SchedulePlan[];
@@ -13,14 +23,8 @@ export interface UseAppShortcutsArgs {
   isMoreOpen: boolean;
   isConfirmingClear: boolean;
   isAnyModalOpen?: boolean;
-  onOpenNewCourse: (day?: DayOfWeek, startTime?: string, mode?: 'form' | 'quick') => void;
-  onOpenExport: () => void;
-  onOpenImport?: () => void;
-  onOpenShare?: () => void;
-  onTogglePool?: () => void;
+  onModalShortcut: (surface: ShortcutSurface) => void;
   onToggleTheme?: () => void;
-  onOpenHelp?: (initialTab?: 'workflow' | 'shortcuts') => void;
-  onOpenShortcuts?: () => void;
   onDuplicatePlan: (planId: string) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -84,14 +88,8 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         isMoreOpen,
         isConfirmingClear,
         isAnyModalOpen,
-        onOpenNewCourse,
-        onOpenExport,
-        onOpenImport,
-        onOpenShare,
-        onTogglePool,
+        onModalShortcut,
         onToggleTheme,
-        onOpenHelp,
-        onOpenShortcuts,
         onDuplicatePlan,
         onUndo,
         onRedo,
@@ -138,52 +136,52 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         return;
       }
 
+      const runModalShortcut = (surface: ShortcutSurface) => {
+        if (e.repeat) return;
+        e.preventDefault();
+        onModalShortcut(surface);
+      };
+
       // Check customizable shortcuts with Alt modifier
       // 1. Add Course
       const addCourseKey = getBinding('add_course', 'Alt+N');
       if (isKeyMatch(e, addCourseKey)) {
-        e.preventDefault();
-        onOpenNewCourse('monday', '09:00', 'form');
+        runModalShortcut('course-form');
         return;
       }
 
       // 2. Quick Add Course
       const quickAddKey = getBinding('quick_add', 'Alt+K');
       if (isKeyMatch(e, quickAddKey)) {
-        e.preventDefault();
-        onOpenNewCourse('monday', '09:00', 'quick');
+        runModalShortcut('course-quick');
         return;
       }
 
       // 3. Export
       const exportKey = getBinding('export', 'Alt+E');
       if (isKeyMatch(e, exportKey)) {
-        e.preventDefault();
-        onOpenExport();
+        runModalShortcut('export');
         return;
       }
 
       // 4. Import
       const importKey = getBinding('import', 'Alt+I');
       if (isKeyMatch(e, importKey)) {
-        e.preventDefault();
-        onOpenImport?.();
+        runModalShortcut('import');
         return;
       }
 
       // 5. Share
       const shareKey = getBinding('share', 'Alt+S');
       if (isKeyMatch(e, shareKey)) {
-        e.preventDefault();
-        onOpenShare?.();
+        runModalShortcut('share');
         return;
       }
 
       // 6. Course Pool
       const poolKey = getBinding('pool', 'Alt+P');
       if (isKeyMatch(e, poolKey)) {
-        e.preventDefault();
-        onTogglePool?.();
+        runModalShortcut('pool');
         return;
       }
 
@@ -206,18 +204,14 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
       // 9. Help & Guide
       const helpKey = getBinding('help', 'Alt+H');
       if (isKeyMatch(e, helpKey)) {
-        e.preventDefault();
-        if (onOpenHelp) onOpenHelp('workflow');
-        else onOpenShortcuts?.();
+        runModalShortcut('help');
         return;
       }
 
       // 10. Help Cheatsheet / Shortcuts: '?'
       if (e.key === '?') {
         if (!isInputFocused) {
-          e.preventDefault();
-          if (onOpenHelp) onOpenHelp('shortcuts');
-          else onOpenShortcuts?.();
+          runModalShortcut('shortcuts');
           return;
         }
       }
