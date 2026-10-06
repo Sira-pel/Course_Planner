@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { encodePlanToShareUrl } from '../../utils/shareLink';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useSkipContentEnter } from '../app/DeferredDialog';
+import { useDialogReplaceAppear, useSkipContentEnter } from '../app/DeferredDialog';
 import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
@@ -32,16 +32,23 @@ interface ExportModalProps {
   isOpen: boolean;
   initialTab?: ExportTabType;
   onClose: () => void;
+  onTabChange?: (tab: ExportTabType) => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose }) => {
-  return <ExportModalBody isOpen={isOpen} initialTab={initialTab} onClose={onClose} />;
+export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose, onTabChange }) => {
+  return <ExportModalBody isOpen={isOpen} initialTab={initialTab} onClose={onClose} onTabChange={onTabChange} />;
 };
 
-const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; onClose: () => void }> = ({
+const ExportModalBody: React.FC<{
+  isOpen: boolean;
+  initialTab?: ExportTabType;
+  onClose: () => void;
+  onTabChange?: (tab: ExportTabType) => void;
+}> = ({
   isOpen,
   initialTab = 'text',
   onClose,
+  onTabChange,
 }) => {
   const {
     plans,
@@ -72,6 +79,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const skipContentEnter = useSkipContentEnter(isOpen);
+  const replaceAppear = useDialogReplaceAppear(isOpen);
 
   // Close modal when user presses Escape
   useEffect(() => {
@@ -89,10 +97,15 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
   const [activeTab, setActiveTab] = useState<ExportTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Reset tab & state when opened
+  const selectTab = (tab: ExportTabType) => {
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  };
+
+  // Reset tab & state when the launcher changes the tab. In-dialog clicks do not.
   useEffect(() => {
     if (isOpen) {
-      setActiveTab(initialTab);
+      selectTab(initialTab);
       setCopiedShareUrl(false);
       setCopiedText(false);
       setImportJson('');
@@ -284,7 +297,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
         <motion.div
           key="export-modal-overlay"
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: 0 }}
+          initial={replaceAppear ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE_SMOOTH }}
@@ -296,7 +309,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
             role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        initial={{ scale: 0.97, y: 8 }}
+        initial={replaceAppear ? false : { scale: 0.97, y: 8 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.975, y: 4 }}
         transition={{ duration: 0.24, ease: EASE_SMOOTH }}
@@ -330,7 +343,7 @@ const ExportModalBody: React.FC<{ isOpen: boolean; initialTab?: ExportTabType; o
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => selectTab(tab.id)}
                 title={tab.label}
                 className={`relative py-1.5 px-1 sm:px-2 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 text-center min-w-0 transition-all duration-200 ease-out z-10 ${
                   isActive

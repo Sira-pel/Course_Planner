@@ -1,5 +1,20 @@
 import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
 
+/** True only on the open that replaces a dialog already on screen. Cleared on the next frame. */
+export const DialogReplaceAppearContext = React.createContext(false);
+
+/** Set while a shortcut replaces the course dialog, so its unmount does not focus the opener. */
+export const SuppressFocusRestoreContext = React.createContext<React.MutableRefObject<boolean> | null>(null);
+
+/** Latch the replace flag for this open so the backdrop does not fade in from transparent. */
+export function useDialogReplaceAppear(isOpen: boolean): boolean {
+  const replacing = React.useContext(DialogReplaceAppearContext);
+  const latched = useRef(false);
+  if (!isOpen) latched.current = false;
+  else if (replacing) latched.current = true;
+  return latched.current;
+}
+
 // Skip the content fade on the same open that already fades the backdrop.
 // Tab changes after the first frame still play their own fade.
 export function useSkipContentEnter(isOpen: boolean): boolean {
@@ -73,15 +88,23 @@ class DialogErrorBoundary extends Component<
 export function DeferredDialog({
   open,
   onClose,
+  instantDismiss = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Drop a closing dialog immediately so a shortcut replace cannot leave it stacked. */
+  instantDismiss?: boolean;
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [heldClosed, setHeldClosed] = useState(false);
   if (open && !mounted) setMounted(true);
-  if (!mounted) return null;
+  if (!open && instantDismiss && !heldClosed) setHeldClosed(true);
+  if (open && heldClosed) setHeldClosed(false);
+  // Keep an opening dialog in this same render. Waiting for `mounted` left one
+  // frame with no backdrop after the previous dialog was removed.
+  if (!open && (!mounted || instantDismiss || heldClosed)) return null;
 
   return (
     <DialogErrorBoundary open={open} onClose={onClose}>

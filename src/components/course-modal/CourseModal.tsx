@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../../types/schedule';
@@ -8,7 +8,7 @@ import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
 import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { useSkipContentEnter } from '../app/DeferredDialog';
+import { SuppressFocusRestoreContext, useDialogReplaceAppear, useSkipContentEnter } from '../app/DeferredDialog';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -33,6 +33,7 @@ interface CourseModalProps {
   initialDay?: DayOfWeek;
   initialStartTime?: string;
   initialMode?: 'form' | 'quick';
+  onModeChange?: (mode: 'form' | 'quick', editing: boolean) => void;
 }
 
 const CLOSE_MS = 150;
@@ -61,7 +62,11 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   initialDay = 'monday',
   initialStartTime = '09:00',
   initialMode = 'form',
+  onModeChange,
 }) => {
+  const suppressFocusRestoreRef = useContext(SuppressFocusRestoreContext);
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
   const {
     plans,
     activePlanId,
@@ -88,6 +93,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     }))
   );
   const skipContentEnter = useSkipContentEnter(isOpen);
+  const replaceAppear = useDialogReplaceAppear(isOpen);
 
   const effectivePlanId = targetPlanId || activePlanId;
   const currentPlan = useMemo(
@@ -148,10 +154,11 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previous;
+      if (suppressFocusRestoreRef?.current) return;
       const restore = returnFocusRef.current;
       if (restore && document.contains(restore)) restore.focus();
     };
-  }, []);
+  }, [suppressFocusRestoreRef]);
 
   useEffect(() => {
     if (!rawText.trim()) {
@@ -279,6 +286,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       setDetailsOpen(false);
     }
     setError(null);
+    onModeChangeRef.current?.(existingCourse ? 'form' : initialMode, Boolean(existingCourse));
   }, [editingCourseId, isOpen, initialDay, initialStartTime, initialMode, effectivePlanId]);
 
   const replayShake = (field: 'code' | 'name' | 'times') => {
@@ -289,6 +297,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   const switchMode = (next: 'form' | 'quick') => {
     if (next === mode) return;
     setMode(next);
+    onModeChange?.(next, Boolean(editingCourseId));
     setError(null);
     if (clipRef.current) {
       clipRef.current.scrollTop = 0;
@@ -532,7 +541,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     <motion.div
       key="course-modal-overlay"
       className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={{ opacity: 0 }}
+      initial={replaceAppear ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22, ease: EASE_SMOOTH }}
@@ -578,7 +587,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         aria-modal="true"
         aria-labelledby="course-modal-title"
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden will-change-transform"
-        initial={{ scale: 0.97, y: 8 }}
+        initial={replaceAppear ? false : { scale: 0.97, y: 8 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.975, y: 4 }}
         transition={{ duration: 0.24, ease: EASE_SMOOTH }}
