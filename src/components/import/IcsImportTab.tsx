@@ -266,7 +266,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
           {/* Parsed courses list - Only this scrolls */}
           <div
             data-fill-scroll
-            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-0 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
+            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-36 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
           >
             {filteredCourses.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">

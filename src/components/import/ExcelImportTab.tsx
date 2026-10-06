@@ -141,6 +141,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [alsoAddToActivePlan, setAlsoAddToActivePlan] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [warningsDismissed, setWarningsDismissed] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -227,6 +228,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   // so every row looks unchecked and Import matches nothing.
   useEffect(() => {
     setSelectedCourseIds(new Set((parsedResult?.courses || []).map((c) => c.id)));
+    setWarningsDismissed(false);
   }, [parsedResult]);
 
   const parseWarnings = parsedResult?.warnings ?? [];
@@ -558,8 +560,16 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             </div>
           </div>
 
-          {parseWarnings.length > 0 && (
-            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] space-y-0.5 shrink-0">
+          {parseWarnings.length > 0 && !warningsDismissed && (
+            <div className="relative p-2.5 pr-8 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] space-y-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setWarningsDismissed(true)}
+                className="absolute top-1.5 right-1.5 p-0.5 rounded text-amber-700 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50"
+                aria-label="Dismiss warnings"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
               {parseWarnings.slice(0, 4).map((warning) => (
                 <p key={warning}>{warning}</p>
               ))}
@@ -572,7 +582,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           {/* Parsed Course List with interactive checkboxes - Only this scrolls */}
           <div
             data-fill-scroll
-            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-0 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
+            className="border border-slate-200 dark:border-slate-800 rounded-xl min-h-36 flex-1 overflow-x-hidden overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 up-scroll overscroll-contain"
           >
             {filteredCourses.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">

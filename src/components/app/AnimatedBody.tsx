@@ -57,9 +57,14 @@ export function AnimatedBody({
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(inner);
+    // Course rows can mount inside a collapsed scroller without changing the
+    // frame's border box, so also remeasure when those rows appear.
+    const mutations = new MutationObserver(measure);
+    mutations.observe(inner, { childList: true, subtree: true });
     window.addEventListener('resize', measure);
     return () => {
       observer.disconnect();
+      mutations.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, [activeKey, instant]);
