@@ -7,8 +7,8 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
-import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
-import { SuppressFocusRestoreContext, useDialogReplaceAppear, useSkipContentEnter } from '../app/DeferredDialog';
+import { TAB_PILL_TRANSITION, useModalMotion } from '../../utils/motion';
+import { SuppressFocusRestoreContext } from '../app/DeferredDialog';
 import { CourseForm } from './CourseForm';
 import { QuickAddPanel } from './QuickAddPanel';
 import {
@@ -92,8 +92,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       getNextColor: state.getNextColor,
     }))
   );
-  const skipContentEnter = useSkipContentEnter(isOpen);
-  const replaceAppear = useDialogReplaceAppear(isOpen);
+  const { backdropProps, panelProps, contentProps, instant } = useModalMotion(isOpen);
 
   const effectivePlanId = targetPlanId || activePlanId;
   const currentPlan = useMemo(
@@ -541,10 +540,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     <motion.div
       key="course-modal-overlay"
       className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      initial={replaceAppear ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.22, ease: EASE_SMOOTH }}
+      {...backdropProps}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -587,10 +583,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         aria-modal="true"
         aria-labelledby="course-modal-title"
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-5 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[min(88vh,calc(100dvh-1.5rem))] flex flex-col min-h-0 overflow-hidden will-change-transform"
-        initial={replaceAppear ? false : { scale: 0.97, y: 8 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.975, y: 4 }}
-        transition={{ duration: 0.24, ease: EASE_SMOOTH }}
+        {...panelProps}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 pb-3 shrink-0">
@@ -635,7 +628,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                 left: 4,
                 width: 'calc(50% - 4px)',
               }}
-              transition={{ duration: 0.22, ease: EASE_SMOOTH }}
+              transition={instant ? { duration: 0 } : TAB_PILL_TRANSITION}
             />
             <button
               type="button"
@@ -644,7 +637,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'form'}
               onClick={() => switchMode('form')}
-              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-150 ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                 mode === 'form'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -659,7 +652,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               role="tab"
               aria-selected={mode === 'quick'}
               onClick={() => switchMode('quick')}
-              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-150 ${
+              className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                 mode === 'quick'
                   ? 'text-indigo-600 dark:text-indigo-300'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
@@ -685,10 +678,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
         >
           <motion.div
             key={mode}
-            initial={skipContentEnter ? false : { opacity: 0.2 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
-            className="w-full will-change-[opacity] transform-gpu"
+            {...contentProps}
+            className="w-full will-change-[opacity]"
           >
               {mode === 'form' ? (
                 <CourseForm

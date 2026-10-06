@@ -5,7 +5,7 @@ import { SchedulePlan } from '../types/schedule';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { Layers, Check, X, Share2, AlertCircle, ArrowRight } from 'lucide-react';
-import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
+import { useModalMotion } from '../utils/motion';
 
 interface ShareImportModalProps {
   isOpen: boolean;
@@ -67,6 +67,8 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
     }
   };
 
+  const { backdropProps, panelProps } = useModalMotion(isOpen);
+
   const totalCredits = useMemo(
     () => parsedPlan?.courses.reduce((sum, c) => sum + (c.credits || 0), 0) || 0,
     [parsedPlan]
@@ -83,10 +85,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
+          {...backdropProps}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -95,10 +94,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-import-modal-title"
-            initial={{ scale: 0.97, y: 8 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.975, y: 4 }}
-            transition={{ duration: 0.24, ease: EASE_SMOOTH }}
+            {...panelProps}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full min-w-0 p-4 sm:p-6 my-auto max-h-[calc(100dvh-1.25rem)] sm:max-h-[90vh] flex flex-col overflow-hidden will-change-transform"
           >
             {/* Header */}

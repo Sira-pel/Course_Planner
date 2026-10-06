@@ -19,8 +19,9 @@ import {
 } from 'lucide-react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from '../types/shortcuts';
-import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
-import { useDialogReplaceAppear, useSkipContentEnter } from './app/DeferredDialog';
+import { useModalMotion } from '../utils/motion';
+import { AnimatedBody } from './app/AnimatedBody';
+import { ModalTabPill } from './app/ModalTabPill';
 
 export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
 
@@ -86,8 +87,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<HelpTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
-  const skipContentEnter = useSkipContentEnter(isOpen);
-  const replaceAppear = useDialogReplaceAppear(isOpen);
+  const { backdropProps, panelProps, contentProps } = useModalMotion(isOpen);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
   useEffect(() => {
@@ -198,10 +198,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          initial={replaceAppear ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: EASE_SMOOTH }}
+          {...backdropProps}
           role="dialog"
           aria-modal="true"
           aria-labelledby="help-modal-title"
@@ -210,11 +207,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           }}
         >
           <motion.div
-            initial={replaceAppear ? false : { scale: 0.97, y: 8 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.975, y: 4 }}
-            transition={{ duration: 0.24, ease: EASE_SMOOTH }}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-[min(620px,82dvh)] sm:h-[min(720px,85vh)] max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden will-change-transform"
+            {...panelProps}
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-auto max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -264,33 +258,36 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     aria-selected={isActive}
                     aria-controls={`help-panel-${tab.id}`}
                     tabIndex={isActive ? 0 : -1}
-                    className={`relative min-w-0 w-full py-2 px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center transition-all duration-150 z-10 ${
+                    className={`relative min-w-0 w-full py-2 px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center z-10 transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                       isActive
-                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                        ? 'text-indigo-600 dark:text-indigo-400'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {tab.icon}
-                    <span className="truncate">{tab.label}</span>
+                    {isActive && <ModalTabPill layoutId="help-modal-tab" />}
+                    <span className="relative z-10 flex min-w-0 items-center justify-center gap-1.5">
+                      {tab.icon}
+                      <span className="truncate">{tab.label}</span>
+                    </span>
                   </button>
                 );
               })}
             </div>
 
             {/* Tab Content Body with smooth cross-fade */}
-            <div
-              ref={contentRef}
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 sm:py-5 pb-8 space-y-4 sm:space-y-5 text-xs sm:text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+            <AnimatedBody
+              activeKey={activeTab}
+              scrollRef={contentRef}
+              className="flex-none min-h-[240px] max-h-[calc(100dvh-16rem)] sm:max-h-[calc(85vh-10rem)] overflow-y-auto overflow-x-hidden text-xs sm:text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+              contentClassName="py-4 sm:py-5 pb-8"
             >
               <motion.div
                 key={activeTab}
-                initial={skipContentEnter ? false : { opacity: 0.25 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2, ease: EASE_SMOOTH }}
+                {...contentProps}
                 id={`help-panel-${activeTab}`}
                 role="tabpanel"
                 aria-labelledby={`help-tab-${activeTab}`}
-                className="w-full will-change-[opacity] transform-gpu"
+                className="w-full will-change-[opacity]"
               >
                   {activeTab === 'shortcuts' && (
                     <div className="space-y-4 sm:space-y-5">
@@ -551,7 +548,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                   )}
                 </motion.div>
-            </div>
+            </AnimatedBody>
 
           </motion.div>
         </motion.div>

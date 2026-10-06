@@ -336,7 +336,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3"
+            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 text-center cursor-pointer up-modal-card flex flex-col items-center justify-center gap-3"
           >
             <input
               ref={fileInputRef}
@@ -520,7 +520,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search courses, professors, sections..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 transition-all"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 up-modal-card"
               />
               {searchQuery && (
                 <button
@@ -611,7 +611,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 type="button"
                 disabled={selectedCourseIds.size === 0 || isImporting}
                 onClick={handleImport}
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs up-modal-card flex items-center justify-center gap-1.5 shrink-0 ${
                   selectedCourseIds.size > 0 && !isImporting
                     ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 active:scale-95'
                     : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'
