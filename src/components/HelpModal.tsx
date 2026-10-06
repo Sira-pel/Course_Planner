@@ -171,7 +171,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.975, y: 4 }}
             transition={{ duration: 0.24, ease: EASE_SMOOTH }}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-[calc(100dvh-1.25rem)] sm:h-[min(760px,90vh)] flex flex-col overflow-hidden will-change-transform"
+            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl sm:max-w-3xl w-full min-w-0 p-4 sm:p-6 my-auto h-auto max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] flex flex-col overflow-hidden will-change-transform"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -237,7 +237,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             {/* Tab Content Body with smooth cross-fade */}
             <div
               ref={contentRef}
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-5 space-y-5 text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+              className="flex-none min-h-[240px] max-h-[calc(100dvh-8rem)] overflow-y-auto overflow-x-hidden py-5 space-y-5 text-[13px] up-scroll overscroll-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
             >
               <motion.div
                 key={activeTab}
@@ -510,16 +510,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                 </motion.div>
             </div>
 
-            {/* Footer */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-xs text-center up-chrome-btn active:scale-95"
-              >
-                Close
-              </button>
-            </div>
           </motion.div>
         </motion.div>
       )}
