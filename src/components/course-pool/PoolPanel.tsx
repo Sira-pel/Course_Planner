@@ -24,11 +24,6 @@ export interface PoolPanelProps {
   totalInPlan: number;
   filteredCourses: Course[];
   activePlanName: string | undefined;
-  activePlanId: string;
-  plans?: import('../../types/schedule').SchedulePlan[];
-  ghostPlanIds?: string[];
-  targetPlanId?: string;
-  onSelectTargetPlan?: (planId: string) => void;
   searchRef: React.Ref<HTMLInputElement>;
   tabsRef: React.Ref<HTMLDivElement>;
   pillRef: React.Ref<HTMLSpanElement>;
@@ -62,11 +57,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   totalInPlan,
   filteredCourses,
   activePlanName,
-  activePlanId,
-  plans,
-  ghostPlanIds,
-  targetPlanId,
-  onSelectTargetPlan,
   searchRef,
   tabsRef,
   pillRef,
@@ -138,41 +128,11 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       <div className="up-pool-readout flex items-center justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Adding to:</span>
-          {!plans || plans.length <= 1 || !onSelectTargetPlan ? (
-            <strong className="truncate text-xs text-slate-800 dark:text-slate-100">{activePlanName}</strong>
-          ) : (
-            <select
-              value={targetPlanId || activePlanId}
-              onChange={(e) => onSelectTargetPlan(e.target.value)}
-              aria-label="Adding to"
-              className="text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 max-w-[130px] sm:max-w-[160px] truncate text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-1 focus:ring-indigo-500 shadow-2xs"
-            >
-              <option value={activePlanId}>
-                {plans.find((p) => p.id === activePlanId)?.name} (Active)
-              </option>
-              {ghostPlanIds
-                ?.filter((gid) => gid !== activePlanId)
-                .map((gid) => {
-                  const p = plans.find((pl) => pl.id === gid);
-                  return p ? (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (Comparing)
-                    </option>
-                  ) : null;
-                })}
-              {plans
-                .filter((p) => p.id !== activePlanId && !ghostPlanIds?.includes(p.id))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
-          )}
+          <strong className="truncate text-xs text-slate-800 dark:text-slate-100">{activePlanName}</strong>
         </div>
         <span
           className={`up-pool-in-plan-badge shrink-0 ${totalInPlan > 0 ? 'is-active' : 'is-zero'}`}
-          title={`${totalInPlan} course section${totalInPlan === 1 ? '' : 's'} currently enrolled in ${activePlanName || 'target plan'}`}
+          title={`${totalInPlan} course section${totalInPlan === 1 ? '' : 's'} currently enrolled in ${activePlanName || 'the active plan'}`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80 shrink-0" aria-hidden="true" />
           <span>

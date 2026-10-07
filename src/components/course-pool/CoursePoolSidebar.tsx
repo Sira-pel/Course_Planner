@@ -29,7 +29,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   const {
     plans,
     activePlanId,
-    ghostPlanIds,
     catalogCourses,
     removeFromCatalog,
     addCourseFromPool,
@@ -39,7 +38,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     useShallow((state) => ({
       plans: state.plans,
       activePlanId: state.activePlanId,
-      ghostPlanIds: state.ghostPlanIds,
       catalogCourses: state.catalogCourses,
       removeFromCatalog: state.removeFromCatalog,
       addCourseFromPool: state.addCourseFromPool,
@@ -55,7 +53,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [confirmDeleteCourseId, setConfirmDeleteCourseId] = useState<string | null>(null);
-  const [targetPlanId, setTargetPlanId] = useState<string>(activePlanId);
 
   const tabsRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
@@ -65,43 +62,33 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   const wasOverlayOpenRef = useRef(false);
   const desktopRootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!plans.some((p) => p.id === targetPlanId)) {
-      setTargetPlanId(activePlanId);
-    }
-  }, [plans, activePlanId, targetPlanId]);
-
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
-  const targetPlan = useMemo(
-    () => plans.find((p) => p.id === targetPlanId) || activePlan,
-    [plans, targetPlanId, activePlan]
-  );
 
-  const targetCourseKeys = useMemo(() => {
-    if (!targetPlan) return new Set<string>();
-    return new Set(targetPlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
-  }, [targetPlan]);
+  const activeCourseKeys = useMemo(() => {
+    if (!activePlan) return new Set<string>();
+    return new Set(activePlan.courses.map((c) => courseIdentityKey(c.code, c.section)));
+  }, [activePlan]);
 
-  const targetPlanDirectIds = useMemo(() => {
-    if (!targetPlan) return new Set<string>();
-    return new Set(targetPlan.courses.map((c) => c.id));
-  }, [targetPlan]);
+  const activePlanDirectIds = useMemo(() => {
+    if (!activePlan) return new Set<string>();
+    return new Set(activePlan.courses.map((c) => c.id));
+  }, [activePlan]);
 
-  const isEnrolledInTargetPlan = useCallback(
+  const isEnrolledInActivePlan = useCallback(
     (catalogItem: Course): boolean => {
-      if (!targetPlan) return false;
-      if (targetCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
+      if (!activePlan) return false;
+      if (activeCourseKeys.has(courseIdentityKey(catalogItem.code, catalogItem.section))) {
         return true;
       }
-      return targetPlanDirectIds.has(catalogItem.id);
+      return activePlanDirectIds.has(catalogItem.id);
     },
-    [targetPlan, targetCourseKeys, targetPlanDirectIds]
+    [activePlan, activeCourseKeys, activePlanDirectIds]
   );
 
-  const targetSessionsByDay = useMemo(() => {
+  const activeSessionsByDay = useMemo(() => {
     const map = new Map<DayOfWeek, Array<{ start: number; end: number; course: Course }>>();
-    if (!targetPlan) return map;
-    for (const c of targetPlan.courses) {
+    if (!activePlan) return map;
+    for (const c of activePlan.courses) {
       for (const s of c.sessions) {
         const start = timeToMinutes(s.startTime);
         const end = timeToMinutes(s.endTime);
@@ -115,14 +102,14 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       }
     }
     return map;
-  }, [targetPlan]);
+  }, [activePlan]);
 
-  const findConflictInTargetPlan = useCallback(
+  const findConflictInActivePlan = useCallback(
     (catalogItem: Course): Course | null => {
-      if (!targetPlan || targetSessionsByDay.size === 0) return null;
+      if (!activePlan || activeSessionsByDay.size === 0) return null;
 
       for (const poolSession of catalogItem.sessions) {
-        const candidates = targetSessionsByDay.get(poolSession.day);
+        const candidates = activeSessionsByDay.get(poolSession.day);
         if (!candidates) continue;
         const sStart = timeToMinutes(poolSession.startTime);
         const sEnd = timeToMinutes(poolSession.endTime);
@@ -137,7 +124,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       }
       return null;
     },
-    [targetPlan, targetSessionsByDay]
+    [activePlan, activeSessionsByDay]
   );
 
   const filteredCourses = useMemo(() => {
@@ -152,16 +139,16 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
 
       if (!matchesSearch) return false;
 
-      const inPlan = isEnrolledInTargetPlan(c);
+      const inPlan = isEnrolledInActivePlan(c);
       if (filterMode === 'in_plan') return inPlan;
       if (filterMode === 'not_in_plan') return !inPlan;
       return true;
     });
-  }, [catalogCourses, deferredSearchQuery, filterMode, isEnrolledInTargetPlan]);
+  }, [catalogCourses, deferredSearchQuery, filterMode, isEnrolledInActivePlan]);
 
   const totalInPlan = useMemo(() => {
-    return targetPlan ? targetPlan.courses.length : 0;
-  }, [targetPlan]);
+    return activePlan ? activePlan.courses.length : 0;
+  }, [activePlan]);
 
   const usedInAnyPlanCount = useMemo(() => {
     const usedKeys = new Set<string>();
@@ -335,13 +322,19 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   }, []);
 
   const handleAddToPlan = useCallback(
-    (catalogId: string) => addCourseFromPool(catalogId, targetPlan.id),
-    [addCourseFromPool, targetPlan.id]
+    (catalogId: string) => {
+      if (!activePlan) return;
+      addCourseFromPool(catalogId, activePlan.id);
+    },
+    [addCourseFromPool, activePlan]
   );
 
   const handleRemoveFromPlan = useCallback(
-    (catalogId: string) => removeCourseFromPlanByCatalog(catalogId, targetPlan.id),
-    [removeCourseFromPlanByCatalog, targetPlan.id]
+    (catalogId: string) => {
+      if (!activePlan) return;
+      removeCourseFromPlanByCatalog(catalogId, activePlan.id);
+    },
+    [removeCourseFromPlanByCatalog, activePlan]
   );
 
   const countBadge = (
@@ -374,12 +367,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       catalogCount={catalogCourses.length}
       totalInPlan={totalInPlan}
       filteredCourses={filteredCourses}
-      activePlanName={targetPlan?.name}
-      activePlanId={activePlanId}
-      plans={plans}
-      ghostPlanIds={ghostPlanIds}
-      targetPlanId={targetPlanId}
-      onSelectTargetPlan={setTargetPlanId}
+      activePlanName={activePlan?.name}
       searchRef={searchRef}
       tabsRef={tabsRef}
       pillRef={pillRef}
@@ -395,8 +383,8 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}
       onCancelDelete={handleCancelDelete}
-      isEnrolled={isEnrolledInTargetPlan}
-      findConflict={findConflictInTargetPlan}
+      isEnrolled={isEnrolledInActivePlan}
+      findConflict={findConflictInActivePlan}
       onAddToPlan={handleAddToPlan}
       onRemoveFromPlan={handleRemoveFromPlan}
       unusedInAnyPlanCount={unusedInAnyPlanCount}
