@@ -339,19 +339,19 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   );
 
   return (
-    <div className="relative" ref={plansDropdownRef}>
+    <div className="up-plans-anchor relative" ref={plansDropdownRef}>
       <button
         type="button"
         id="btn-plans-dropdown"
         onClick={onToggleOpen}
         className={`up-text-trigger up-chrome-btn ${plansMenuOpen ? 'is-open' : ''}`}
-        title="View, switch, manage, and create plans"
+        title={isPhone && activePlan?.name ? activePlan.name : 'View, switch, manage, and create plans'}
         aria-haspopup="true"
         aria-expanded={plansMenuOpen}
       >
         <FolderKanban className="w-3.5 h-3.5 shrink-0" />
         <span className="hidden sm:inline">Plans</span>
-        <span className="sm:hidden truncate max-w-[46vw]">{activePlan?.name || 'Plans'}</span>
+        <span className="sm:hidden truncate">{activePlan?.name || 'Plans'}</span>
         <ChevronDown className={`up-chevron w-3 h-3 opacity-60 shrink-0 ${plansMenuOpen ? 'is-open' : ''}`} />
       </button>
 

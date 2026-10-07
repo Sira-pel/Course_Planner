@@ -78,6 +78,8 @@ export const Header = memo(function Header({
     setTimeRangeMode,
     setWeekStart,
     setThemePreference,
+    mobileCalendarView,
+    setMobileCalendarView,
     undo,
     redo,
     canUndo,
@@ -108,6 +110,8 @@ export const Header = memo(function Header({
       setTimeRangeMode: state.setTimeRangeMode,
       setWeekStart: state.setWeekStart,
       setThemePreference: state.setThemePreference,
+      mobileCalendarView: state.mobileCalendarView,
+      setMobileCalendarView: state.setMobileCalendarView,
       undo: state.undo,
       redo: state.redo,
       canUndo: state.past.length > 0,
@@ -532,6 +536,22 @@ export const Header = memo(function Header({
             </span>
           </div>
         </div>
+
+        {isPhone && (
+          <div className="up-cal-toggle up-header-view-toggle" role="group" aria-label="Calendar view">
+            {(['week', 'day'] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                className="up-cal-toggle-btn up-chrome-btn"
+                aria-pressed={mobileCalendarView === view}
+                onClick={() => setMobileCalendarView(view)}
+              >
+                {view === 'week' ? 'Week' : 'Day'}
+              </button>
+            ))}
+          </div>
+        )}
 
         <CompareMenu
           isPhone={isPhone}
