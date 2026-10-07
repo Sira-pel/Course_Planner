@@ -65,8 +65,7 @@ export const Header = memo(function Header({
     clearGhostPlans,
     setShowWeekends,
     setTimeRange,
-    setTheme,
-    commitTheme,
+    setThemePreference,
     undo,
     redo,
     canUndo,
@@ -91,8 +90,7 @@ export const Header = memo(function Header({
       clearGhostPlans: state.clearGhostPlans,
       setShowWeekends: state.setShowWeekends,
       setTimeRange: state.setTimeRange,
-      setTheme: state.setTheme,
-      commitTheme: state.commitTheme,
+      setThemePreference: state.setThemePreference,
       undo: state.undo,
       redo: state.redo,
       canUndo: state.past.length > 0,
@@ -265,7 +263,7 @@ export const Header = memo(function Header({
         persistTheme(next);
       },
       commit: () => {
-        commitTheme(next);
+        setThemePreference(next);
       },
     });
   };

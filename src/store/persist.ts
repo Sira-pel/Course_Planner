@@ -2,13 +2,23 @@ import { createJSONStorage, type PersistOptions, type PersistStorage, type Stora
 import type { Course, SchedulePlan } from '../types/schedule';
 import { courseIdentityKey } from '../utils/courseIdentity';
 import { prefixedId } from '../utils/id';
-import { applyDomTheme, isThemeName, persistTheme, readStoredTheme } from '../utils/theme';
+import {
+  applyDomTheme,
+  isThemeName,
+  isThemePreference,
+  persistTheme,
+  readStoredTheme,
+  readStoredThemePreference,
+  resolveTheme,
+  type ThemeName,
+  type ThemePreference,
+} from '../utils/theme';
 import { sanitizeCatalog, sanitizePlans } from './sanitize';
 import { clearStorageWriteFailure, reportStorageWriteFailure } from './storageWrite';
 import type { PersistedSchedule, ScheduleState } from './types';
 
 export const STORAGE_NAME = 'uniplan_schedule_storage_v2' as const;
-export const PERSIST_SCHEMA_VERSION = 1;
+export const PERSIST_SCHEMA_VERSION = 2;
 export const DEFAULT_SEMESTER_START = '2026-09-01';
 export const DEFAULT_SEMESTER_END = '2026-12-18';
 
@@ -54,10 +64,19 @@ export function migratePersistedSchedule(persistedState: unknown, version: unkno
   const from = resolvePersistedVersion(version);
   const next: Record<string, unknown> = { ...asRecord(persistedState) };
 
-  if (from < 1) {
-    // v0 -> v1: stamp inner schema version; persist semester window.
+  if (from < 2) {
+    // v0 and v1: stamp the semester window. Unversioned blobs resolve as v1
+    // once the schema is 2, so this block must also run for `from < 2`.
     if (!isIsoDate(next.semesterStart)) next.semesterStart = DEFAULT_SEMESTER_START;
     if (!isIsoDate(next.semesterEnd)) next.semesterEnd = DEFAULT_SEMESTER_END;
+
+    const start = next.startHour;
+    const end = next.endHour;
+    const hasHours = typeof start === 'number' && Number.isFinite(start) && typeof end === 'number' && Number.isFinite(end);
+    next.timeRangeMode = hasHours && !(start === 7 && end === 17) ? 'custom' : 'auto';
+    if (next.weekStart !== 'monday' && next.weekStart !== 'sunday') next.weekStart = 'monday';
+    next.mobileCalendarView = next.mobileCalendarView === 'day' ? 'day' : 'week';
+    next.themePreference = isThemeName(next.theme) ? next.theme : 'system';
   }
 
   next.version = PERSIST_SCHEMA_VERSION;
@@ -125,7 +144,11 @@ export function partialize(state: ScheduleState): PersistedSchedule {
     showWeekends: state.showWeekends,
     startHour: state.startHour,
     endHour: state.endHour,
+    timeRangeMode: state.timeRangeMode,
+    weekStart: state.weekStart,
+    mobileCalendarView: state.mobileCalendarView,
     theme: state.theme,
+    themePreference: state.themePreference,
     semesterStart: state.semesterStart,
     semesterEnd: state.semesterEnd,
     customShortcuts: state.customShortcuts || {},
@@ -223,9 +246,37 @@ export function reconcilePersistedState(
     endHour = 17;
   }
 
-  const preferredTheme =
-    readStoredTheme() ??
-    (isThemeName(raw.theme) ? raw.theme : currentState?.theme ?? 'light');
+  const timeRangeMode = raw.timeRangeMode === 'auto' || raw.timeRangeMode === 'custom'
+    ? raw.timeRangeMode
+    : currentState?.timeRangeMode ?? 'auto';
+
+  const weekStart = raw.weekStart === 'monday' || raw.weekStart === 'sunday'
+    ? raw.weekStart
+    : currentState?.weekStart ?? 'monday';
+
+  const mobileCalendarView = raw.mobileCalendarView === 'week' || raw.mobileCalendarView === 'day'
+    ? raw.mobileCalendarView
+    : currentState?.mobileCalendarView ?? 'week';
+
+  const storedPreference = isThemePreference(raw.themePreference) ? raw.themePreference : null;
+  const keyPreference = readStoredThemePreference();
+  let themePreference: ThemePreference;
+  if (keyPreference) {
+    themePreference = keyPreference;
+  } else if (storedPreference) {
+    themePreference = storedPreference;
+  } else if (isThemeName(raw.theme)) {
+    themePreference = raw.theme;
+  } else {
+    themePreference = currentState?.themePreference ?? 'system';
+  }
+
+  let theme: ThemeName;
+  if (themePreference === 'system') {
+    theme = resolveTheme('system');
+  } else {
+    theme = themePreference;
+  }
 
   const baseState = currentState || ({} as ScheduleState);
 
@@ -237,7 +288,11 @@ export function reconcilePersistedState(
     showWeekends,
     startHour,
     endHour,
-    theme: preferredTheme,
+    timeRangeMode,
+    weekStart,
+    mobileCalendarView,
+    theme,
+    themePreference,
     semesterStart,
     semesterEnd,
     customShortcuts,
@@ -247,10 +302,8 @@ export function reconcilePersistedState(
 export function rehydratePersistedState(state: ScheduleState): void {
   const reconciled = reconcilePersistedState(state, state);
   Object.assign(state, reconciled);
-  if (reconciled.theme) {
-    applyDomTheme(reconciled.theme);
-    persistTheme(reconciled.theme);
-  }
+  applyDomTheme(reconciled.theme);
+  persistTheme(reconciled.themePreference === 'system' ? 'system' : reconciled.theme);
 }
 
 export const persistOptions: PersistOptions<ScheduleState, PersistedSchedule> = {
@@ -262,7 +315,14 @@ export const persistOptions: PersistOptions<ScheduleState, PersistedSchedule> = 
   migrate: migratePersistedSchedule,
   onRehydrateStorage: () => (state) => {
     if (!state) return;
-    const preferred = readStoredTheme() ?? (isThemeName(state.theme) ? state.theme : null);
+    if (state.themePreference === 'system') {
+      applyDomTheme(resolveTheme('system'));
+      persistTheme('system');
+      return;
+    }
+    const preferred = isThemeName(state.themePreference)
+      ? state.themePreference
+      : readStoredTheme() ?? (isThemeName(state.theme) ? state.theme : null);
     if (preferred) {
       applyDomTheme(preferred);
       persistTheme(preferred);

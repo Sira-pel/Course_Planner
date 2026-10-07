@@ -1,9 +1,20 @@
 import { reportStorageWriteFailure } from '../store/storageWrite';
 
 export type ThemeName = 'light' | 'dark';
+export type ThemePreference = ThemeName | 'system';
 
 export function isThemeName(value: unknown): value is ThemeName {
   return value === 'light' || value === 'dark';
+}
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
+export function resolveTheme(preference: ThemePreference): ThemeName {
+  if (preference === 'light' || preference === 'dark') return preference;
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function applyDomTheme(theme: ThemeName): void {
@@ -19,7 +30,7 @@ export function applyDomTheme(theme: ThemeName): void {
   }
 }
 
-export function persistTheme(theme: ThemeName): void {
+export function persistTheme(theme: ThemePreference): void {
   try {
     localStorage.setItem('uniplan_theme', theme);
   } catch (error) {
@@ -28,9 +39,11 @@ export function persistTheme(theme: ThemeName): void {
   }
 }
 
+/** Explicit light/dark from storage. `system` returns null so callers follow the OS. */
 export function readStoredTheme(): ThemeName | null {
   try {
     const direct = localStorage.getItem('uniplan_theme');
+    if (direct === 'system') return null;
     if (isThemeName(direct)) return direct;
 
     const raw = localStorage.getItem('uniplan_schedule_storage_v2');
@@ -46,10 +59,22 @@ export function readStoredTheme(): ThemeName | null {
   }
 }
 
+export function readStoredThemePreference(): ThemePreference | null {
+  try {
+    const direct = localStorage.getItem('uniplan_theme');
+    return isThemePreference(direct) ? direct : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readInitialThemePreference(): ThemePreference {
+  const direct = readStoredThemePreference();
+  if (direct) return direct;
+  return readStoredTheme() ?? 'system';
+}
+
 export function resolveInitialTheme(): ThemeName {
   if (typeof window === 'undefined') return 'light';
-  return (
-    readStoredTheme() ??
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-  );
+  return resolveTheme(readInitialThemePreference());
 }
