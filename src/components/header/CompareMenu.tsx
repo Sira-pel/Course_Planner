@@ -240,6 +240,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
         id="btn-ghost-overlay"
         onClick={onToggleOpen}
         className={`${isPhone ? 'up-icon-btn' : 'up-text-trigger'} up-chrome-btn ${ghostMenuOpen ? 'is-open' : ''}`}
+        title="Compare plans"
         aria-label="Compare plans"
         aria-haspopup="true"
         aria-expanded={ghostMenuOpen}
@@ -313,6 +314,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                         type="button"
                         onClick={onToggleOpen}
                         className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 up-chrome-btn"
+                        title="Close compare"
                         aria-label="Close compare"
                       >
                         <X className="w-4 h-4" />

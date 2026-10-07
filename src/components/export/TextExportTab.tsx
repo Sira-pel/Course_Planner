@@ -70,7 +70,7 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
         {generatedText}
       </pre>
       <p className="text-[11px] text-slate-600 dark:text-slate-300">
-        Formatted without emojis for universal compatibility with chat apps, SMS, and advisors.
+        Plain text that pastes cleanly into chats, email or an advisor form.
       </p>
     </div>
   );

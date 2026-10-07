@@ -47,11 +47,11 @@ export const MF: DayOfWeek[] = ['monday', 'friday'];
 export const MT: DayOfWeek[] = ['monday', 'tuesday'];
 
 export const DAY_PRESETS = [
-  { label: 'MW', days: MW },
-  { label: 'TTh', days: TTH },
-  { label: 'MTh', days: MTH },
-  { label: 'TF', days: TF },
-  { label: 'MF', days: MF },
+  { label: 'MW', fullLabel: 'Monday & Wednesday', days: MW },
+  { label: 'TTh', fullLabel: 'Tuesday & Thursday', days: TTH },
+  { label: 'MTh', fullLabel: 'Monday & Thursday', days: MTH },
+  { label: 'TF', fullLabel: 'Tuesday & Friday', days: TF },
+  { label: 'MF', fullLabel: 'Monday & Friday', days: MF },
 ] as const;
 
 export const FALLBACK_DAYS: DayOfWeek[] = ['monday'];

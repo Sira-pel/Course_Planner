@@ -27,8 +27,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
     <div className="space-y-4">
       <div>
         <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-3">
-          Generates standard <code>.ics</code> calendar files (RFC 5545 & RFC 7986) compatible with
-          Google Calendar, Apple Calendar, and Outlook with weekly recurring class sessions.
+          Download a calendar file for Google Calendar, Apple Calendar or Outlook. Classes repeat weekly.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">

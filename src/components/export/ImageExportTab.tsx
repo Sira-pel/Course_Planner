@@ -73,7 +73,7 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
         )}
       </div>
       <p className="text-[11px] text-slate-600 dark:text-slate-300">
-        High-DPI rendering is perfectly sized for lockscreens, printing, or sending to classmates.
+        Sharp PNG, good for lock screens, printing or sharing.
       </p>
     </div>
   );

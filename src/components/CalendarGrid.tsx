@@ -259,6 +259,11 @@ export const CalendarGrid = memo(function CalendarGrid({
                   key={day.id}
                   id={`day-header-${day.id}`}
                   title={day.full}
+                  aria-label={
+                    sessionCount > 0
+                      ? `${day.full}, ${sessionCount} ${sessionCount === 1 ? 'class' : 'classes'}`
+                      : day.full
+                  }
                   className={`h-11 flex items-center select-none ${
                     colWidth < 68 ? 'justify-center px-1' : 'justify-between px-2 sm:px-3'
                   } ${
@@ -285,16 +290,18 @@ export const CalendarGrid = memo(function CalendarGrid({
                     </span>
                   </div>
 
-                  {/* Session count pill or mini dot */}
+                  {/* Session count: words when the column is wide, a labeled dot when it is narrow */}
                   {sessionCount > 0 && colWidth >= 85 && (
-                    <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full bg-slate-200/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300/60 dark:border-slate-700 shrink-0 shadow-2xs">
-                      {sessionCount}
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0 tabular-nums">
+                      {sessionCount} {sessionCount === 1 ? 'class' : 'classes'}
                     </span>
                   )}
                   {sessionCount > 0 && colWidth < 85 && colWidth >= 52 && (
                     <span
                       className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0 ml-0.5"
-                      title={`${sessionCount} class${sessionCount > 1 ? 'es' : ''}`}
+                      role="img"
+                      title={`${sessionCount} ${sessionCount === 1 ? 'class' : 'classes'}`}
+                      aria-label={`${sessionCount} ${sessionCount === 1 ? 'class' : 'classes'}`}
                     />
                   )}
                 </div>

@@ -144,6 +144,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   onClick={onSaveRename}
                   className="p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded up-chrome-btn"
                   title="Save"
+                  aria-label="Save plan name"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -152,6 +153,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   onClick={onCancelRename}
                   className="p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded up-chrome-btn"
                   title="Cancel"
+                  aria-label="Cancel rename"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -220,6 +222,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                     onClick={() => onSharePlan(plan)}
                     className="p-1 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
                     title={`Share ${plan.name}`}
+                    aria-label={`Share ${plan.name}`}
                   >
                     <Share2 className="w-3 h-3" />
                   </button>
@@ -229,6 +232,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   onClick={() => onStartRename(plan.id, plan.name)}
                   className="p-1 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
                   title="Rename plan"
+                  aria-label={`Rename ${plan.name}`}
                 >
                   <Edit2 className="w-3 h-3" />
                 </button>
@@ -238,6 +242,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                     onClick={() => onRequestDelete(plan.id)}
                     className="p-1 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
                     title="Delete plan"
+                    aria-label={`Delete ${plan.name}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

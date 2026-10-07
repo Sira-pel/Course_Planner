@@ -1771,12 +1771,18 @@ html.dark .up-mobile-sheet,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  gap: 4px;
+  width: auto;
+  min-width: 36px;
   height: 36px;
+  padding: 0 8px;
   border: 0;
   border-radius: 6px;
   background: var(--up-accent);
   color: var(--up-accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -1952,6 +1958,7 @@ html.dark .up-mobile-sheet,
   border-top: 1px solid var(--up-line);
   flex-shrink: 0;
   font-size: 10px;
+  line-height: 1.35;
   color: var(--up-muted);
 }
 
@@ -1972,8 +1979,10 @@ html.dark .up-mobile-sheet,
   }
 
   .up-pool-create {
-    width: 44px;
+    width: auto;
+    min-width: 44px;
     height: 44px;
+    padding: 0 10px;
   }
 
   .up-pool-icon-hit,

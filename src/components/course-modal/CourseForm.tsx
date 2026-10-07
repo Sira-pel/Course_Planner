@@ -161,6 +161,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                         <button
                           key={preset.label}
                           type="button"
+                          title={preset.fullLabel}
+                          aria-label={preset.fullLabel}
                           onClick={() => onApplyDayPreset(index, [...preset.days])}
                           className={`px-2 py-1 text-[11px] font-mono font-semibold rounded-md transition-colors duration-[var(--dur-chrome)] ${
                             daysEqual(pattern.days, preset.days)
@@ -177,6 +179,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                         type="button"
                         onClick={() => onRemovePattern(index)}
                         className="p-1 text-slate-400 hover:text-rose-500"
+                        title="Remove this meeting time"
                         aria-label="Remove this meeting time"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -193,6 +196,8 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           key={d.id}
                           type="button"
                           aria-pressed={on}
+                          title={d.full}
+                          aria-label={d.full}
                           onClick={() => onTogglePatternDay(index, d.id)}
                           className={`course-day flex-1 rounded-md text-[11px] font-semibold ${
                             on
