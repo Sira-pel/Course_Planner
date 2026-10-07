@@ -39,7 +39,7 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
       return newPlanId;
     },
 
-    duplicatePlan: (planId: string) => {
+    duplicatePlan: (planId: string, name?: string) => {
       const state = get();
       const sourcePlan = state.plans.find(p => p.id === planId);
       if (!sourcePlan) return planId;
@@ -60,7 +60,7 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
 
       const duplicatedPlan: SchedulePlan = {
         id: newPlanId,
-        name: `${sourcePlan.name} (Copy)`,
+        name: name?.trim() || `${sourcePlan.name} (Copy)`,
         courses: clonedCourses,
       };
 

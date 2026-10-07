@@ -13,11 +13,12 @@ import {
   Moon,
   Undo2,
   Redo2,
-  X,
   HelpCircle,
 } from 'lucide-react';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import type { SchedulePlan } from '../../types/schedule';
+import type { ToastType } from '../app/AppToast';
+import { toastSwitchedPlan } from '../app/toastPlanSwitch';
 import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
@@ -34,6 +35,7 @@ interface HeaderProps {
   onOpenCatalog: () => void;
   onOpenShare?: (plan?: SchedulePlan) => void;
   onOpenImportShare?: () => void;
+  showToast: (text: string, type?: ToastType) => void;
 }
 
 export const Header = memo(function Header({
@@ -45,6 +47,7 @@ export const Header = memo(function Header({
   onOpenCatalog,
   onOpenShare,
   onOpenImportShare,
+  showToast,
 }: HeaderProps) {
   const {
     plans,
@@ -107,7 +110,6 @@ export const Header = memo(function Header({
   const [editingName, setEditingName] = useState('');
   const [ghostMenuOpen, setGhostMenuOpen] = useState(false);
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
-  const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [conflictModalMounted, setConflictModalMounted] = useState(false);
 
@@ -117,18 +119,10 @@ export const Header = memo(function Header({
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
   const plansDropdownRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToastMessage({ text, type });
-    setTimeout(() => {
-      setToastMessage((prev) => (prev?.text === text ? null : prev));
-    }, 4000);
-  };
 
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const conflicts = useMemo(() => (activePlan ? detectPlanConflicts(activePlan.courses) : []), [activePlan?.courses]);
@@ -276,15 +270,28 @@ export const Header = memo(function Header({
     });
   };
 
-  const handleCreatePlan = (nameToUse?: string) => {
-    const finalName = (nameToUse || newPlanInputName).trim() || nextSuggestedName;
-    createPlan(finalName);
-    setNewPlanInputName('');
-    setPlansMenuOpen(false);
+  const announceOverlaySwitch = (sourceId: string | undefined, newPlanId: string) => {
+    const before = useScheduleStore.getState().ghostPlanIds;
+    toggleGhostPlan(newPlanId);
+    const after = useScheduleStore.getState().ghostPlanIds;
+    const overlayChanged =
+      before.length !== after.length || before.some((id, index) => after[index] !== id);
+    // Ghosting the plan that just became active does not overlay anything.
+    if (!overlayChanged) return;
+    toastSwitchedPlan(showToast, newPlanId, sourceId);
   };
 
-  const handleDuplicatePlan = (sourcePlanId: string) => {
-    duplicatePlan(sourcePlanId);
+  const handleNewPlan = ({ name, mode }: { name: string; mode: 'blank' | 'duplicate' }) => {
+    const typed = name.trim();
+    if (mode === 'duplicate') {
+      if (!activePlan) return;
+      const sourceId = activePlan.id;
+      const newId = duplicatePlan(sourceId, typed || undefined);
+      toastSwitchedPlan(showToast, newId, sourceId);
+    } else {
+      const newId = createPlan(typed || nextSuggestedName);
+      toastSwitchedPlan(showToast, newId, activePlanId);
+    }
     setPlansMenuOpen(false);
   };
 
@@ -519,12 +526,10 @@ export const Header = memo(function Header({
             plansMenuOpen={plansMenuOpen}
             editingPlanId={editingPlanId}
             editingName={editingName}
-            newPlanInputName={newPlanInputName}
             nextSuggestedName={nextSuggestedName}
             planIdConfirmDelete={planIdConfirmDelete}
             plansDropdownRef={plansDropdownRef}
             onToggleOpen={() => {
-              setNewPlanInputName('');
               setEditingPlanId(null);
               setIsSettingsOpen(false);
               setGhostMenuOpen(false);
@@ -535,14 +540,10 @@ export const Header = memo(function Header({
               setPlansMenuOpen(false);
             }}
             onEditingNameChange={setEditingName}
-            onNewPlanNameChange={setNewPlanInputName}
             onStartRename={handleStartRename}
             onSaveRename={handleSaveRename}
             onCancelRename={() => setEditingPlanId(null)}
-            onCreate={handleCreatePlan}
-            onDuplicateActive={() => {
-              if (activePlan) handleDuplicatePlan(activePlan.id);
-            }}
+            onNewPlan={handleNewPlan}
             onRequestDelete={setPlanIdConfirmDelete}
             onConfirmDelete={(planId) => {
               deletePlan(planId);
@@ -584,12 +585,11 @@ export const Header = memo(function Header({
           onClearGhosts={clearGhostPlans}
           onDuplicateAndOverlay={() => {
             if (!activePlanId) return;
-            const newPlanId = duplicatePlan(activePlanId);
-            toggleGhostPlan(newPlanId);
+            const sourceId = activePlanId;
+            announceOverlaySwitch(sourceId, duplicatePlan(sourceId));
           }}
           onCreateAndOverlay={() => {
-            const newPlanId = createPlan();
-            toggleGhostPlan(newPlanId);
+            announceOverlaySwitch(activePlanId, createPlan());
           }}
           onOpenShare={() => onOpenShare?.()}
           onImportFriendLink={() => onOpenImportShare?.()}
@@ -608,42 +608,6 @@ export const Header = memo(function Header({
         </Suspense>
       )}
 
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            key="header-toast"
-            className="fixed top-[7.25rem] right-5 z-50"
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={
-              reduceMotion
-                ? { opacity: 0, transition: { duration: 0 } }
-                : { opacity: 0, y: 12, transition: { duration: 0.15, ease: EASE_OUT } }
-            }
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: EASE_OUT }}
-          >
-            <div
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg shadow-lg border text-xs font-medium ${
-                toastMessage.type === 'success'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
-                  : toastMessage.type === 'error'
-                  ? 'bg-rose-50 dark:bg-rose-950/90 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800'
-                  : 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700'
-              }`}
-            >
-              <span>{toastMessage.text}</span>
-              <button
-                type="button"
-                onClick={() => setToastMessage(null)}
-                className="opacity-70 hover:opacity-100 p-0.5 up-chrome-btn"
-                aria-label="Dismiss notification"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 });

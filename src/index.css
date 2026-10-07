@@ -956,6 +956,11 @@ html.dark .up-settings-select option,
   z-index: 100 !important;
 }
 
+/* Above phone sheets (90) and course modals (100). Both are portaled to body. */
+.up-app-toast {
+  z-index: 110 !important;
+}
+
 /* Touch and low-end hardware optimizations:
    Multi-pass Gaussian blur on the entire viewport causes massive GPU fill-rate hitching
    during sheet translate animations. On touch/coarse screens and low-end devices, we replace
