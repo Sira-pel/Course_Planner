@@ -276,6 +276,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
             ) : (
               filteredCourses.map((c) => {
                 const isSelected = selectedCourseIds.has(c.id);
+                const visibleTitle = displayCourseTitle(c);
                 const sessionSummary =
                   c.sessions.length > 0
                     ? `${c.sessions
@@ -316,9 +317,9 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                           {c.code}
                           {c.section ? `-${c.section}` : ''}
                         </span>
-                        {displayCourseTitle(c) && (
+                        {visibleTitle && (
                           <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                            {displayCourseTitle(c)}
+                            {visibleTitle}
                           </span>
                         )}
                       </div>

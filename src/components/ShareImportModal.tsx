@@ -183,44 +183,47 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                       Enrolled Classes ({parsedPlan.courses.length})
                     </span>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {parsedPlan.courses.map((course) => (
-                        <div
-                          key={course.id}
-                          className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-start justify-between gap-2"
-                        >
-                          <div className="min-w-0 flex items-start gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
-                              style={{ backgroundColor: course.color }}
-                            />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
-                                  {course.code}
-                                </span>
-                                {course.section && (
-                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                                    Sec {course.section}
+                      {parsedPlan.courses.map((course) => {
+                        const visibleTitle = displayCourseTitle(course);
+                        return (
+                          <div
+                            key={course.id}
+                            className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-start justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex items-start gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
+                                style={{ backgroundColor: course.color }}
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                                    {course.code}
                                   </span>
+                                  {course.section && (
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                      Sec {course.section}
+                                    </span>
+                                  )}
+                                </div>
+                                {visibleTitle && (
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                                    {visibleTitle}
+                                  </p>
                                 )}
                               </div>
-                              {displayCourseTitle(course) && (
-                                <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                                  {displayCourseTitle(course)}
-                                </p>
-                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono text-right shrink-0">
+                              {course.sessions.map((s, idx) => (
+                                <div key={idx}>
+                                  <span className="capitalize">{s.day.slice(0, 3)}</span>{' '}
+                                  {minutesToTime(timeToMinutes(s.startTime))} - {minutesToTime(timeToMinutes(s.endTime))}
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono text-right shrink-0">
-                            {course.sessions.map((s, idx) => (
-                              <div key={idx}>
-                                <span className="capitalize">{s.day.slice(0, 3)}</span>{' '}
-                                {minutesToTime(timeToMinutes(s.startTime))} - {minutesToTime(timeToMinutes(s.endTime))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

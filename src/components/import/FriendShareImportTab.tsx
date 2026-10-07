@@ -123,44 +123,47 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
 
           {/* Course Preview */}
           <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 up-scroll overscroll-contain">
-            {parsedPlan.courses.map((course) => (
-              <div
-                key={course.id}
-                className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-start justify-between gap-2 text-xs"
-              >
-                <div className="min-w-0 flex items-start gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
-                    style={{ backgroundColor: course.color }}
-                  />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
-                        {course.code}
-                      </span>
-                      {course.section && (
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          ({course.section})
+            {parsedPlan.courses.map((course) => {
+              const visibleTitle = displayCourseTitle(course);
+              return (
+                <div
+                  key={course.id}
+                  className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-start justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0 flex items-start gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
+                      style={{ backgroundColor: course.color }}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                          {course.code}
                         </span>
-                      )}
-                      {displayCourseTitle(course) && (
-                        <span className="text-slate-600 dark:text-slate-300 truncate">
-                          {displayCourseTitle(course)}
-                        </span>
+                        {course.section && (
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            ({course.section})
+                          </span>
+                        )}
+                        {visibleTitle && (
+                          <span className="text-slate-600 dark:text-slate-300 truncate">
+                            {visibleTitle}
+                          </span>
+                        )}
+                      </div>
+                      {course.instructor && (
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {course.instructor}
+                        </p>
                       )}
                     </div>
-                    {course.instructor && (
-                      <p className="text-[11px] text-slate-400 truncate">
-                        {course.instructor}
-                      </p>
-                    )}
                   </div>
+                  <span className="font-mono text-slate-400 font-semibold shrink-0">
+                    {course.credits} cr
+                  </span>
                 </div>
-                <span className="font-mono text-slate-400 font-semibold shrink-0">
-                  {course.credits} cr
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Action buttons */}

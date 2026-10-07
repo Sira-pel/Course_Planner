@@ -124,8 +124,11 @@ export function generateIcsCalendar(
   const isSingleCourse = targetCourses.length === 1;
   const singleCourse = isSingleCourse ? targetCourses[0] : null;
 
+  const singleTitle = singleCourse ? displayCourseTitle(singleCourse) : '';
   const calendarName = singleCourse
-    ? `${singleCourse.code} - ${singleCourse.name}`
+    ? singleTitle
+      ? `${singleCourse.code} - ${singleTitle}`
+      : singleCourse.code
     : `${plan.name || 'Schedule'} - University Schedule`;
 
   const lines: string[] = [
