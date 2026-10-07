@@ -19,7 +19,7 @@ import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
-import { applyDomTheme, persistTheme } from './utils/theme';
+import { applyDomTheme, persistTheme, resolveTheme } from './utils/theme';
 import { isThemeRevealing, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
@@ -130,7 +130,7 @@ export default function App() {
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const duplicatePlan = useScheduleStore((state) => state.duplicatePlan);
   const importPlan = useScheduleStore((state) => state.importPlan);
-  const commitTheme = useScheduleStore((state) => state.commitTheme);
+  const setThemePreference = useScheduleStore((state) => state.setThemePreference);
   const undo = useScheduleStore((state) => state.undo);
   const redo = useScheduleStore((state) => state.redo);
   const resetToBlank = useScheduleStore((state) => state.resetToBlank);
@@ -218,8 +218,26 @@ export default function App() {
     const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
     });
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const syncSystemTheme = () => {
+      const state = useScheduleStore.getState();
+      if (state.themePreference !== 'system') return;
+      const resolved = resolveTheme('system');
+      applyDomTheme(resolved);
+      state.commitTheme(resolved);
+    };
+    media.addEventListener('change', syncSystemTheme);
+    const initial = useScheduleStore.getState();
+    if (initial.themePreference === 'system') {
+      persistTheme('system');
+      const resolved = resolveTheme('system');
+      if (initial.theme !== resolved) initial.commitTheme(resolved);
+    }
+
     return () => {
       unsub();
+      media.removeEventListener('change', syncSystemTheme);
     };
   }, []);
 
@@ -517,10 +535,10 @@ export default function App() {
         persistTheme(next);
       },
       commit: () => {
-        commitTheme(next);
+        setThemePreference(next);
       },
     });
-  }, [commitTheme]);
+  }, [setThemePreference]);
 
   useAppShortcuts({
     activePlanId,

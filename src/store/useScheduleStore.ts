@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SchedulePlan } from '../types/schedule';
-import { resolveInitialTheme } from '../utils/theme';
+import { readInitialThemePreference, resolveInitialTheme } from '../utils/theme';
 import { createCatalogSlice } from './catalogSlice';
 import { createCourseSlice } from './courseSlice';
 import { createHistorySlice } from './history';
@@ -28,7 +28,11 @@ export const useScheduleStore = create<ScheduleState>()(
       showWeekends: false,
       startHour: 7,
       endHour: 17,
+      timeRangeMode: 'auto',
+      weekStart: 'monday',
+      mobileCalendarView: 'week',
       theme: resolveInitialTheme(),
+      themePreference: readInitialThemePreference(),
       semesterStart: DEFAULT_SEMESTER_START,
       semesterEnd: DEFAULT_SEMESTER_END,
       customShortcuts: {},

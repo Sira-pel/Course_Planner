@@ -1,7 +1,7 @@
 import { SAMPLE_CATALOG, SAMPLE_PLANS } from '../data/sampleSemester';
 import type { Course } from '../types/schedule';
 import { courseIdentityKey } from '../utils/courseIdentity';
-import { applyDomTheme, isThemeName, persistTheme } from '../utils/theme';
+import { applyDomTheme, isThemeName, isThemePreference, persistTheme, resolveTheme, type ThemePreference } from '../utils/theme';
 import { commitWithHistory } from './history';
 import { isIsoDate, PERSIST_SCHEMA_VERSION, resolvePersistedVersion } from './persist';
 import { sanitizeCatalog, sanitizePlans, uniquePlanId } from './sanitize';
@@ -25,6 +25,9 @@ function migrateBackupPayload(raw: Record<string, unknown>): Record<string, unkn
   if (from < 1) {
     // v0 backups only had plans/catalog; prefs and semester dates are optional keys.
   }
+  if (from < 2) {
+    // v2 prefs are optional. Missing keys keep the current store values.
+  }
   next.version = PERSIST_SCHEMA_VERSION;
   return next;
 }
@@ -34,10 +37,14 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
   | 'setCustomShortcut'
   | 'resetCustomShortcuts'
   | 'setTheme'
+  | 'setThemePreference'
   | 'commitTheme'
   | 'toggleTheme'
   | 'setShowWeekends'
   | 'setTimeRange'
+  | 'setTimeRangeMode'
+  | 'setWeekStart'
+  | 'setMobileCalendarView'
   | 'setSemesterDates'
   | 'resetToBlank'
   | 'resetToSample'
@@ -63,8 +70,17 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
       if (!isThemeName(theme)) return;
       applyDomTheme(theme);
       persistTheme(theme);
-      if (get().theme === theme) return;
-      set({ theme });
+      if (get().theme === theme && get().themePreference === theme) return;
+      set({ theme, themePreference: theme });
+    },
+
+    setThemePreference: (preference: ThemePreference) => {
+      if (!isThemePreference(preference)) return;
+      const theme = resolveTheme(preference);
+      applyDomTheme(theme);
+      persistTheme(preference);
+      if (get().theme === theme && get().themePreference === preference) return;
+      set({ theme, themePreference: preference });
     },
 
     commitTheme: (theme: 'light' | 'dark') => {
@@ -83,6 +99,24 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
 
     setTimeRange: (startHour: number, endHour: number) => {
       set({ startHour: clampStartHour(startHour), endHour: clampEndHour(endHour) });
+    },
+
+    setTimeRangeMode: (mode: 'auto' | 'custom') => {
+      if (mode !== 'auto' && mode !== 'custom') return;
+      if (get().timeRangeMode === mode) return;
+      set({ timeRangeMode: mode });
+    },
+
+    setWeekStart: (weekStart: 'monday' | 'sunday') => {
+      if (weekStart !== 'monday' && weekStart !== 'sunday') return;
+      if (get().weekStart === weekStart) return;
+      set({ weekStart });
+    },
+
+    setMobileCalendarView: (view: 'week' | 'day') => {
+      if (view !== 'week' && view !== 'day') return;
+      if (get().mobileCalendarView === view) return;
+      set({ mobileCalendarView: view });
     },
 
     setSemesterDates: (start: string, end: string) => {
@@ -163,18 +197,38 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
         }
         const sanitizedCatalog = [...baseCatalog, ...missingFromCat];
 
-        const nextTheme = isThemeName(backup.theme) ? backup.theme : state.theme;
-        if (isThemeName(backup.theme)) {
+        let nextTheme = state.theme;
+        let nextPreference = state.themePreference;
+        if (isThemePreference(backup.themePreference)) {
+          nextPreference = backup.themePreference;
+          nextTheme = resolveTheme(backup.themePreference);
+          applyDomTheme(nextTheme);
+          persistTheme(nextPreference);
+        } else if (isThemeName(backup.theme)) {
+          nextTheme = backup.theme;
+          nextPreference = backup.theme;
           applyDomTheme(backup.theme);
           persistTheme(backup.theme);
         }
 
+        const hoursPresent = typeof backup.startHour === 'number' || typeof backup.endHour === 'number';
         const startHour = typeof backup.startHour === 'number' && Number.isFinite(backup.startHour)
           ? clampStartHour(backup.startHour)
           : state.startHour;
         const endHour = typeof backup.endHour === 'number' && Number.isFinite(backup.endHour)
           ? clampEndHour(backup.endHour)
           : state.endHour;
+        const timeRangeMode = backup.timeRangeMode === 'auto' || backup.timeRangeMode === 'custom'
+          ? backup.timeRangeMode
+          : hoursPresent
+            ? (startHour === 7 && endHour === 17 ? 'auto' : 'custom')
+            : state.timeRangeMode;
+        const weekStart = backup.weekStart === 'monday' || backup.weekStart === 'sunday'
+          ? backup.weekStart
+          : state.weekStart;
+        const mobileCalendarView = backup.mobileCalendarView === 'week' || backup.mobileCalendarView === 'day'
+          ? backup.mobileCalendarView
+          : state.mobileCalendarView;
 
         commitWithHistory(set, get, {
           plans: sanitizedPlans,
@@ -184,7 +238,11 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
           showWeekends: typeof backup.showWeekends === 'boolean' ? backup.showWeekends : state.showWeekends,
           startHour,
           endHour,
+          timeRangeMode,
+          weekStart,
+          mobileCalendarView,
           theme: nextTheme,
+          themePreference: nextPreference,
           semesterStart: isIsoDate(backup.semesterStart) ? backup.semesterStart : state.semesterStart,
           semesterEnd: isIsoDate(backup.semesterEnd) ? backup.semesterEnd : state.semesterEnd,
         });
