@@ -1,6 +1,7 @@
 import { SchedulePlan, Course } from '../types/schedule';
 import { clearAccessToken, getUsableAccessToken } from './authToken';
 import { displayCourseTitle } from './courseIdentity';
+import { displayCourseColor } from './courseColorDisplay';
 import {
   formatFloatingDateTime,
   formatGoogleCalendarUntil,
@@ -113,11 +114,14 @@ export function assignUniqueGoogleColorIds(courses: Course[]): Map<string, strin
     usageCount[gc.id] = 0;
   }
 
-  // Pre-rank Google colors for all courses based on their Uniplan course color
-  const courseRankings = courses.map((course) => ({
-    course,
-    rankings: rankGoogleColorsForHex(course.color),
-  }));
+  // Id order keeps the same plan mapping across re-syncs. Each course takes the
+  // nearest Google color still unused; a color repeats only after all 11 are used.
+  const courseRankings = [...courses]
+    .sort((a, b) => (a.id || '').localeCompare(b.id || ''))
+    .map((course) => ({
+      course,
+      rankings: rankGoogleColorsForHex(displayCourseColor(course.color || '').bg),
+    }));
 
   for (const item of courseRankings) {
     // Find highest ranked Google color with 0 usage so far
