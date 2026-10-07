@@ -253,23 +253,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   useEffect(() => {
     if (isCollapsed || layout !== 'desktop') return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      // Do not collapse if click was inside an open modal, dialog, or dropdown menu
-      if (
-        target.closest('[role="dialog"]') ||
-        target.closest('.course-modal-backdrop') ||
-        target.closest('.course-modal-sheet') ||
-        target.closest('.up-menu')
-      ) {
-        return;
-      }
-      if (desktopRootRef.current && !desktopRootRef.current.contains(target)) {
-        onToggleCollapse();
-      }
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
@@ -289,10 +272,8 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isCollapsed, layout, onToggleCollapse, searchQuery]);
@@ -418,7 +399,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   return (
     <>
       {layout === 'desktop' && (
-        <div ref={desktopRootRef} className="up-pool-desktop">
+        <div ref={desktopRootRef} className={`up-pool-desktop${isCollapsed ? '' : ' is-open'}`}>
           <button
             type="button"
             id="course-pool-collapsed"
@@ -431,10 +412,10 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
           >
             <span className="up-pool-rail-mark">
               <ShoppingBag className="w-4 h-4" />
+              {catalogCourses.length > 0 && (
+                <span className="up-pool-rail-count">{catalogCourses.length}</span>
+              )}
             </span>
-            {catalogCourses.length > 0 && (
-              <span className="up-pool-rail-count">{catalogCourses.length}</span>
-            )}
             <span className="up-pool-rail-label">Course pool</span>
           </button>
           <AnimatePresence presenceAffectsLayout={false}>
