@@ -47,11 +47,11 @@ export const MF: DayOfWeek[] = ['monday', 'friday'];
 export const MT: DayOfWeek[] = ['monday', 'tuesday'];
 
 export const DAY_PRESETS = [
-  { label: 'MW', fullLabel: 'Monday & Wednesday', days: MW },
-  { label: 'TTh', fullLabel: 'Tuesday & Thursday', days: TTH },
-  { label: 'MTh', fullLabel: 'Monday & Thursday', days: MTH },
-  { label: 'TF', fullLabel: 'Tuesday & Friday', days: TF },
-  { label: 'MF', fullLabel: 'Monday & Friday', days: MF },
+  { label: 'MW', days: MW },
+  { label: 'TTh', days: TTH },
+  { label: 'MTh', days: MTH },
+  { label: 'TF', days: TF },
+  { label: 'MF', days: MF },
 ] as const;
 
 export const FALLBACK_DAYS: DayOfWeek[] = ['monday'];
@@ -79,6 +79,12 @@ export function formatDaysShort(days: DayOfWeek[]): string {
   if (daysEqual(sorted, MF)) return 'MF';
   if (daysEqual(sorted, MT)) return 'MT';
   return sorted.map((d) => DAYS_LIST.find((x) => x.id === d)?.label ?? d).join(' ');
+}
+
+export function formatDaysFull(days: readonly DayOfWeek[]): string {
+  return sortDays([...days])
+    .map((day) => DAYS_LIST.find((entry) => entry.id === day)?.full ?? day)
+    .join(' & ');
 }
 
 export function toInputTime(value: string, fallback: string): string {

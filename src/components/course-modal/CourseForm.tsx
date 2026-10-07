@@ -9,6 +9,7 @@ import {
   type MeetingPattern,
   daysEqual,
   endAfterStart,
+  formatDaysFull,
   formatDaysShort,
 } from './meetingPatterns';
 
@@ -157,22 +158,25 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1">
-                      {DAY_PRESETS.map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          title={preset.fullLabel}
-                          aria-label={preset.fullLabel}
-                          onClick={() => onApplyDayPreset(index, [...preset.days])}
-                          className={`px-2 py-1 text-[11px] font-mono font-semibold rounded-md transition-colors duration-[var(--dur-chrome)] ${
-                            daysEqual(pattern.days, preset.days)
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
+                      {DAY_PRESETS.map((preset) => {
+                        const spoken = formatDaysFull(preset.days);
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            title={spoken}
+                            aria-label={`${preset.label}, ${spoken}`}
+                            onClick={() => onApplyDayPreset(index, [...preset.days])}
+                            className={`px-2 py-1 text-[11px] font-mono font-semibold rounded-md transition-colors duration-[var(--dur-chrome)] ${
+                              daysEqual(pattern.days, preset.days)
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
                     </div>
                     {patterns.length > 1 && (
                       <button

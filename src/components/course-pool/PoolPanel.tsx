@@ -182,8 +182,8 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-controls">
-        <div className="flex items-center gap-1.5">
-          <div className="up-pool-search-wrap flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="up-pool-search-wrap basis-full min-w-0">
             <Search className="w-3.5 h-3.5" />
             <input
               ref={searchRef}
@@ -226,8 +226,8 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               id="btn-pool-add-course"
               onClick={onOpenNewCourse}
               className="up-pool-create up-chrome-btn"
-              title="Create course"
-              aria-label="Create course"
+              title="New course"
+              aria-label="New course"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New</span>
@@ -425,7 +425,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-foot">
-        <span>Adding copies the course into your plan. Edits won&apos;t change the pool.</span>
+        <span>Adding copies the course into your plan. Saving it updates the pool.</span>
       </div>
     </div>
   );
