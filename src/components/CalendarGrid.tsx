@@ -7,6 +7,7 @@ import { checkSessionCollision, computeDayLayout, detectPlanConflicts, minutesTo
 import { calendarDayOrder, computeAutoFitRange, coursesForVisibleRange } from '../utils/calendarRange';
 import { collectDaySessions } from '../utils/collectDaySessions';
 import { Clock } from 'lucide-react';
+import { EmptyStateCard } from './calendar/EmptyStateCard';
 
 const DAY_INDEX_MAP: DayOfWeek[] = [
   'sunday',
@@ -42,12 +43,14 @@ interface CalendarGridProps {
   onEditCourse: (courseId: string, planId?: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
   onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
+  onLoadDemo?: () => void;
 }
 
 export const CalendarGrid = memo(function CalendarGrid({
   onEditCourse,
   onAddCourseAtTime,
   onOpenNewCourse,
+  onLoadDemo,
 }: CalendarGridProps) {
   const plans = useScheduleStore((state) => state.plans);
   const activePlanId = useScheduleStore((state) => state.activePlanId);
@@ -241,6 +244,12 @@ export const CalendarGrid = memo(function CalendarGrid({
       id="calendar-grid-container"
       className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
+      {(activePlan?.courses.length ?? 0) === 0 && (
+        <EmptyStateCard
+          onAddCourse={() => onOpenNewCourse?.('form')}
+          onLoadDemo={() => onLoadDemo?.()}
+        />
+      )}
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
       <div
         className={`up-scroll flex-1 overflow-y-auto ${
