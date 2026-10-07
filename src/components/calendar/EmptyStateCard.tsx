@@ -70,7 +70,7 @@ export function EmptyStateCard({ onClose, onQuickAdd, onImport, onLoadDemo }: Em
         <div className="up-welcome-options">
           <button
             type="button"
-            className="up-welcome-option up-welcome-option-quick up-chrome-btn"
+            className="up-welcome-option up-chrome-btn"
             onClick={() => choose(onQuickAdd)}
           >
             <span className="up-welcome-mark up-welcome-mark-quick" aria-hidden>
