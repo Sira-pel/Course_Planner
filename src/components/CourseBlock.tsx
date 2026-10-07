@@ -19,7 +19,7 @@ export const CourseBlock = memo(function CourseBlock({
   onEdit,
   onDelete,
 }: CourseBlockProps) {
-  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict, coveredByActive, coveredExtendsBelow } = layout;
+  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict, coveredByActive, coveredChipIndex = 0 } = layout;
 
   const startMin = timeToMinutes(session.startTime);
   const endMin = timeToMinutes(session.endTime);
@@ -49,6 +49,7 @@ export const CourseBlock = memo(function CourseBlock({
   if (isGhost) {
     const ghostStyle = GHOST_PLAN_COLORS[ghostIndex % GHOST_PLAN_COLORS.length];
     if (coveredByActive) {
+      const chipCode = course.section ? `${course.code}-${course.section}` : course.code;
       return (
         <>
           <div
@@ -57,11 +58,10 @@ export const CourseBlock = memo(function CourseBlock({
             onDoubleClick={(e) => e.stopPropagation()}
             className={`absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} cursor-pointer select-none z-10`}
             style={{
-              top: `${topPercent}%`,
-              height: `calc(${heightPercent}% - 2px)`,
-              left: '1px',
-              width: 'calc(100% - 2px)',
-              margin: '-3px',
+              top: `calc(${topPercent}% - 3px)`,
+              height: `calc(${heightPercent}% + 4px)`,
+              left: '-2px',
+              width: 'calc(100% + 4px)',
             }}
             title={`[Comparing: ${planName}] ${course.code}${visibleTitle ? ` - ${visibleTitle}` : ''}`}
           />
@@ -71,16 +71,17 @@ export const CourseBlock = memo(function CourseBlock({
               e.stopPropagation();
               onEdit(course.id, planId);
             }}
-            title={`Edit ${course.code} in ${planName}`}
-            aria-label={`Edit ${course.code} in ${planName}`}
-            className={`absolute z-[35] inline-flex max-w-[calc(100%-12px)] items-center truncate rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-xs border border-current/25 bg-white/95 dark:bg-slate-900/95 ${ghostStyle.text}`}
-            style={
-              coveredExtendsBelow
-                ? { top: `calc(${topPercent}% + ${heightPercent}% - 20px)`, left: '6px' }
-                : { top: `calc(${topPercent}% + 4px)`, right: '6px' }
-            }
+            onDoubleClick={(e) => e.stopPropagation()}
+            title={`Edit ${chipCode} in ${planName}`}
+            aria-label={`Edit ${chipCode} in ${planName}`}
+            className={`absolute z-[35] inline-flex items-center truncate rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-xs border border-current/25 bg-white/95 dark:bg-slate-900/95 ${ghostStyle.text}`}
+            style={{
+              top: `calc(${topPercent}% + ${heightPercent}% - 20px - ${coveredChipIndex * 20}px)`,
+              left: '6px',
+              maxWidth: 'calc(100% - 64px)',
+            }}
           >
-            <span className="truncate">{course.code} · {planName}</span>
+            <span className="truncate">{chipCode} · {planName}</span>
           </button>
         </>
       );
@@ -319,6 +320,7 @@ export const CourseBlock = memo(function CourseBlock({
   prev.layout.totalCols === next.layout.totalCols &&
   prev.layout.coveredByActive === next.layout.coveredByActive &&
   prev.layout.coveredExtendsBelow === next.layout.coveredExtendsBelow &&
+  prev.layout.coveredChipIndex === next.layout.coveredChipIndex &&
   prev.startHour === next.startHour &&
   prev.totalMinutes === next.totalMinutes
 );

@@ -2,9 +2,9 @@ import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { nextMeasuredWidth } from './calendarMeasure';
 import { CourseBlock } from './CourseBlock';
-import { Course, DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
+import { ClassSession, Course, DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
 import { checkSessionCollision, computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
-import { collectDaySessions } from '../utils/collectDaySessions';
+import { collectDaySessions, type DaySessionItem } from '../utils/collectDaySessions';
 import { Clock } from 'lucide-react';
 
 const DAY_INDEX_MAP: DayOfWeek[] = [
@@ -19,6 +19,54 @@ const DAY_INDEX_MAP: DayOfWeek[] = [
 
 function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
+}
+
+/** Match computeDayLayout's end repair so the cover test uses the box that will be drawn. */
+function sessionDrawnForOverlap(session: ClassSession): ClassSession {
+  const start = timeToMinutes(session.startTime);
+  const end = timeToMinutes(session.endTime);
+  if (end > start) return session;
+  return {
+    ...session,
+    endTime: minutesToTime(Math.min(1439, start + 30), false),
+  };
+}
+
+function layoutComparedDay(items: DaySessionItem[]): LayoutSession[] {
+  const activeLayout = computeDayLayout(items.filter((item) => !item.isGhost));
+  const uncoveredGhosts: DaySessionItem[] = [];
+  const coveredGhosts: LayoutSession[] = [];
+
+  for (const ghost of items) {
+    if (!ghost.isGhost) continue;
+    const session = sessionDrawnForOverlap(ghost.session);
+    const covering = activeLayout.filter((active) => checkSessionCollision(session, active.session));
+    if (covering.length === 0) {
+      uncoveredGhosts.push(session === ghost.session ? ghost : { ...ghost, session });
+      continue;
+    }
+    const ghostEnd = timeToMinutes(session.endTime);
+    const coverEnd = Math.max(...covering.map((active) => timeToMinutes(active.session.endTime)));
+    coveredGhosts.push({
+      ...ghost,
+      session,
+      colIndex: 0,
+      totalCols: 1,
+      coveredByActive: true,
+      coveredExtendsBelow: ghostEnd > coverEnd,
+    });
+  }
+
+  const freeGhostLayout = computeDayLayout(uncoveredGhosts);
+  const chipsAtPlacement = new Map<string, number>();
+  for (const covered of coveredGhosts) {
+    const placement = `${covered.coveredExtendsBelow ? 'below' : 'corner'}|${covered.session.startTime}|${covered.session.endTime}`;
+    const chipIndex = chipsAtPlacement.get(placement) ?? 0;
+    chipsAtPlacement.set(placement, chipIndex + 1);
+    covered.coveredChipIndex = chipIndex;
+  }
+
+  return activeLayout.concat(freeGhostLayout, coveredGhosts);
 }
 
 function getInitialCalendarWidth(): number {
@@ -174,19 +222,7 @@ export const CalendarGrid = memo(function CalendarGrid({
 
     days.forEach(dayObj => {
       const items = collectDaySessions(dayObj.id, activePlan, ghostPlans, conflictingCourseIds, planIndexMap);
-      const activeLayout = computeDayLayout(items.filter((item) => !item.isGhost));
-      const ghostLayout = computeDayLayout(items.filter((item) => item.isGhost)).map((ghost) => {
-        const covering = activeLayout.filter((active) => checkSessionCollision(ghost.session, active.session));
-        if (covering.length === 0) return ghost;
-        const ghostEnd = timeToMinutes(ghost.session.endTime);
-        const coverEnd = Math.max(...covering.map((active) => timeToMinutes(active.session.endTime)));
-        return {
-          ...ghost,
-          coveredByActive: true,
-          coveredExtendsBelow: ghostEnd > coverEnd,
-        };
-      });
-      map.set(dayObj.id, activeLayout.concat(ghostLayout));
+      map.set(dayObj.id, layoutComparedDay(items));
     });
 
     return map;
