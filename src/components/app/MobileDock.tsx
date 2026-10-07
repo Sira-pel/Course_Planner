@@ -6,7 +6,8 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
-import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2, Download } from 'lucide-react';
+import { ClearAllDialog } from '../header/ClearAllDialog';
 import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 
@@ -23,6 +24,7 @@ export interface MobileDockProps {
   onLoadDemo: () => void;
   onOpenShortcuts: () => void;
   onOpenHelp?: () => void;
+  onOpenExport?: () => void;
   onRequestClear: () => void;
   onConfirmClear: () => void;
   onCancelClear: () => void;
@@ -40,6 +42,7 @@ export const MobileDock = React.memo(function MobileDock({
   onLoadDemo,
   onOpenShortcuts,
   onOpenHelp,
+  onOpenExport,
   onRequestClear,
   onConfirmClear,
   onCancelClear,
@@ -162,26 +165,7 @@ export const MobileDock = React.memo(function MobileDock({
                 }
                 transition={menuOpenTransition}
               >
-                {isConfirmingClear ? (
-                  <div className="up-sheet-empty">
-                    <p>Clear all plans and pool?</p>
-                    <button
-                      type="button"
-                      className="up-sheet-btn up-sheet-btn-primary up-chrome-btn"
-                      onClick={onConfirmClear}
-                    >
-                      Yes, clear all
-                    </button>
-                    <button
-                      type="button"
-                      className="up-sheet-btn up-sheet-btn-secondary up-chrome-btn"
-                      onClick={onCancelClear}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <>
+                <>
                     {!isInstalled ? (
                       <button
                         type="button"
@@ -233,6 +217,20 @@ export const MobileDock = React.memo(function MobileDock({
                         Help
                       </button>
                     )}
+                    {onOpenExport && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="up-more-item up-chrome-btn"
+                        onClick={() => {
+                          onCloseMoreMenu();
+                          onOpenExport();
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                        Export…
+                      </button>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -242,13 +240,17 @@ export const MobileDock = React.memo(function MobileDock({
                       <RotateCcw className="w-4 h-4" />
                       Clear all
                     </button>
-                  </>
-                )}
+                </>
               </motion.div>
             )}
           </AnimatePresence>,
           document.body
         )}
+      <ClearAllDialog
+        open={isConfirmingClear}
+        onCancel={onCancelClear}
+        onConfirm={onConfirmClear}
+      />
       {typeof document !== 'undefined' &&
         createPortal(
           <Suspense fallback={null}>

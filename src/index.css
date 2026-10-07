@@ -1300,6 +1300,14 @@ body[data-up-pool-open] .up-fab-cluster {
   background: color-mix(in srgb, var(--up-ink) 6%, transparent);
 }
 
+@media (max-width: 639px) {
+  .up-ghost-chip {
+    max-width: 7.5rem;
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+}
+
 .up-more-item-danger {
   color: #c42b4a;
 }
