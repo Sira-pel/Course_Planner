@@ -380,18 +380,6 @@ export const Header = memo(function Header({
             <Redo2 className="w-4 h-4" />
           </button>
 
-          <button
-            type="button"
-            id="btn-add-course"
-            onClick={() => onOpenNewCourse('form')}
-            aria-label="Add course"
-            className="up-add-course up-chrome-btn"
-            title="Add course"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Add course</span>
-          </button>
-
           <ImportExportMenu
             menuEnter={menuEnter}
             menuShown={menuShown}
@@ -415,6 +403,18 @@ export const Header = memo(function Header({
               onOpenExport(tab, focus);
             }}
           />
+
+          <button
+            type="button"
+            id="btn-add-course"
+            onClick={() => onOpenNewCourse('form')}
+            aria-label="Add course"
+            className="up-add-course up-chrome-btn"
+            title="Add course"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Add course</span>
+          </button>
 
           <SettingsMenu
             isPhone={isPhone}

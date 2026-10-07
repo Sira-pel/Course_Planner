@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion, type TargetAndTransition, type Transition } from 'motion/react';
 import {
   AlignLeft,
+  ArrowUpDown,
   Calendar,
   ChevronDown,
   Clock,
@@ -86,9 +87,10 @@ export function ImportExportMenu({
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
       >
+        <ArrowUpDown className="up-import-export-icon" strokeWidth={1.75} aria-hidden />
         <span className="up-import-export-short">Import</span>
         <span className="up-import-export-full">Import / Export</span>
-        <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+        <ChevronDown className={`up-chevron w-3.5 h-3.5 opacity-60 ${open ? 'is-open' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
