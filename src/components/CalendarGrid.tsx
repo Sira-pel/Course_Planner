@@ -1,4 +1,5 @@
 import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { useIsPhone } from '../utils/usePoolLayout';
 import { nextMeasuredWidth } from './calendarMeasure';
@@ -111,12 +112,15 @@ export const CalendarGrid = memo(function CalendarGrid({
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
 
+  const orderedDays = useMemo(
+    () => calendarDayOrder(showWeekends, weekStart),
+    [showWeekends, weekStart]
+  );
   const days = useMemo(() => {
-    const ordered = calendarDayOrder(showWeekends, weekStart);
-    if (!isPhone || mobileCalendarView !== 'day') return ordered;
-    const selected = ordered.find((day) => day.id === selectedDay);
-    return selected ? [selected] : ordered.slice(0, 1);
-  }, [showWeekends, weekStart, isPhone, mobileCalendarView, selectedDay]);
+    if (!isPhone || mobileCalendarView !== 'day') return orderedDays;
+    const selected = orderedDays.find((day) => day.id === selectedDay);
+    return selected ? [selected] : orderedDays.slice(0, 1);
+  }, [orderedDays, isPhone, mobileCalendarView, selectedDay]);
 
   // Conflict set for active plan
   const conflicts = useMemo(() => {
@@ -261,6 +265,13 @@ export const CalendarGrid = memo(function CalendarGrid({
   const needsHorizontalScroll = Boolean(minGridWidth && containerWidth < minGridWidth);
   const phoneWeek = isPhone && mobileCalendarView === 'week';
 
+  const swipeLock = useRef(0);
+  const shiftDay = (direction: -1 | 1) => {
+    const index = orderedDays.findIndex((day) => day.id === selectedDay);
+    const next = orderedDays[index + direction];
+    if (next) setSelectedDay(next.id);
+  };
+
   const zoomToDay = (day: DayOfWeek) => {
     setSelectedDay(day);
     setMobileCalendarView('day');
@@ -296,6 +307,32 @@ export const CalendarGrid = memo(function CalendarGrid({
           {phoneWeek && showZoomHint && (
             <p className="up-zoom-hint">Tap a day to zoom in.</p>
           )}
+          {isPhone && mobileCalendarView === 'day' && (
+            <>
+              <div className="up-day-strip" role="tablist" aria-label="Day">
+                {orderedDays.map((day) => (
+                  <button
+                    key={day.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={day.id === days[0]?.id}
+                    className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
+                    onClick={() => setSelectedDay(day.id)}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+              <p className="up-day-context">
+                {days[0]?.full}
+                {' · '}
+                {(() => {
+                  const count = (dayLayoutMap.get(days[0]?.id) || []).filter((item) => !item.isGhost).length;
+                  return `${count} ${count === 1 ? 'class' : 'classes'}`;
+                })()}
+              </p>
+            </>
+          )}
         </div>
       )}
       {(activePlan?.courses.length ?? 0) === 0 && (
@@ -305,6 +342,27 @@ export const CalendarGrid = memo(function CalendarGrid({
         />
       )}
       {/* Scrollable Container with sticky header for 100% pixel-perfect column alignment */}
+      <motion.div
+        className="flex flex-1 min-h-0 flex-col"
+        data-day-swipe={isPhone && mobileCalendarView === 'day' ? 'true' : undefined}
+        style={{ touchAction: isPhone && mobileCalendarView === 'day' ? 'pan-y' : undefined }}
+        drag={isPhone && mobileCalendarView === 'day' ? 'x' : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        dragMomentum={false}
+        onPanEnd={isPhone && mobileCalendarView === 'day' ? (_, info) => {
+          const now = Date.now();
+          if (now - swipeLock.current < 400 || Math.abs(info.offset.x) < 48) return;
+          swipeLock.current = now;
+          shiftDay(info.offset.x < 0 ? 1 : -1);
+        } : undefined}
+        onDragEnd={isPhone && mobileCalendarView === 'day' ? (_, info) => {
+          const now = Date.now();
+          if (now - swipeLock.current < 400 || Math.abs(info.offset.x) < 48) return;
+          swipeLock.current = now;
+          shiftDay(info.offset.x < 0 ? 1 : -1);
+        } : undefined}
+      >
       <div
         className={`up-scroll flex-1 overflow-y-auto ${
           needsHorizontalScroll ? 'overflow-x-auto' : 'overflow-x-hidden'
@@ -523,6 +581,7 @@ export const CalendarGrid = memo(function CalendarGrid({
         </div>
         </div>
       </div>
+      </motion.div>
     </div>
   );
 });
