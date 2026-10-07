@@ -1539,7 +1539,93 @@ html.dark .up-more-install-dismiss {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 10px 0;
+  padding: 10px 12px 4px;
+}
+
+.up-cal-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.up-cal-switch-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--up-ink);
+}
+
+.up-cal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--up-ink) 7%, #e7e7ea);
+}
+
+.up-cal-toggle-btn {
+  min-height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--up-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.up-cal-toggle-btn[aria-pressed='true'] {
+  background: #fff;
+  color: var(--up-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+html.dark .up-cal-toggle {
+  background: #2c2c32;
+}
+
+html.dark .up-cal-toggle-btn[aria-pressed='true'] {
+  background: #1a1a1f;
+  color: #f4f4f5;
+  box-shadow: none;
+}
+
+.up-phone-week-head {
+  background: transparent;
+  border-bottom: 1px solid var(--up-line);
+}
+
+.up-phone-gutter {
+  background: transparent;
+  border-right: 0;
+}
+
+.up-phone-day-cell {
+  padding: 0;
+}
+
+.up-phone-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--up-muted);
+}
+
+.up-phone-day.is-today {
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
 }
 
 .up-day-strip {
@@ -1561,8 +1647,8 @@ html.dark .up-more-install-dismiss {
 }
 
 .up-day-strip-btn.is-selected {
-  background: var(--up-ink);
-  color: var(--up-raised);
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
 }
 
 .up-day-context {
