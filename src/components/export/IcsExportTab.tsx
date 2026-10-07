@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 
 const GoogleCalendarSync = lazy(() => import('../GoogleCalendarSync'));
@@ -97,7 +98,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: course.color }}
+                      style={{ backgroundColor: displayCourseColor(course.color).bg }}
                     />
                     <div className="min-w-0">
                       <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mr-1">

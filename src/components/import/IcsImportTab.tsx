@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import { parseIcsContent } from '../../utils/icsImport';
 
@@ -307,7 +308,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
 
                     <div
                       className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: c.color }}
+                      style={{ backgroundColor: displayCourseColor(c.color).bg }}
                     />
 
                     <div className="min-w-0 flex-1">
