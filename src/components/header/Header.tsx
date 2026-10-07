@@ -36,6 +36,8 @@ interface HeaderProps {
   showToast: (text: string, type?: ToastType) => void;
   importExportOpen: boolean;
   onImportExportOpenChange: (open: boolean) => void;
+  compareOpen: boolean;
+  onCompareOpenChange: (open: boolean) => void;
 }
 
 export const Header = memo(function Header({
@@ -50,6 +52,8 @@ export const Header = memo(function Header({
   showToast,
   importExportOpen,
   onImportExportOpenChange,
+  compareOpen,
+  onCompareOpenChange,
 }: HeaderProps) {
   const {
     plans,
@@ -118,7 +122,6 @@ export const Header = memo(function Header({
   const creditsMounted = useRef(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [ghostMenuOpen, setGhostMenuOpen] = useState(false);
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
   const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
@@ -181,14 +184,21 @@ export const Header = memo(function Header({
       ? { y: '100%', transition: menuCloseTransition }
       : { opacity: 0, scale: 0.975, y: -3, transition: menuCloseTransition };
 
+  useEffect(() => {
+    if (!compareOpen) return;
+    setPlansMenuOpen(false);
+    setIsSettingsOpen(false);
+    onImportExportOpenChange(false);
+  }, [compareOpen, onImportExportOpenChange]);
+
   const closeAllMenus = () => {
-    setGhostMenuOpen(false);
+    onCompareOpenChange(false);
     setPlansMenuOpen(false);
     setIsSettingsOpen(false);
     onImportExportOpenChange(false);
   };
 
-  const anyMenuOpen = isSettingsOpen || plansMenuOpen || ghostMenuOpen;
+  const anyMenuOpen = isSettingsOpen || plansMenuOpen || compareOpen;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -197,7 +207,7 @@ export const Header = memo(function Header({
       if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor')) return;
       if (document.documentElement.classList.contains('is-theme-revealing')) return;
       if (ghostDropdownRef.current && !ghostDropdownRef.current.contains(e.target as Node)) {
-        setGhostMenuOpen(false);
+        onCompareOpenChange(false);
       }
       if (plansDropdownRef.current && !plansDropdownRef.current.contains(e.target as Node)) {
         setPlansMenuOpen(false);
@@ -221,7 +231,7 @@ export const Header = memo(function Header({
         setConflictModalOpen(false);
         return;
       }
-      setGhostMenuOpen(false);
+      onCompareOpenChange(false);
       setPlansMenuOpen(false);
       setIsSettingsOpen(false);
       onImportExportOpenChange(false);
@@ -393,7 +403,7 @@ export const Header = memo(function Header({
             onOpenChange={(open) => {
               if (open) {
                 setPlansMenuOpen(false);
-                setGhostMenuOpen(false);
+                onCompareOpenChange(false);
                 setIsSettingsOpen(false);
               }
               onImportExportOpenChange(open);
@@ -436,7 +446,7 @@ export const Header = memo(function Header({
             themePreference={themePreference}
             onToggleOpen={() => {
               setPlansMenuOpen(false);
-              setGhostMenuOpen(false);
+              onCompareOpenChange(false);
               onImportExportOpenChange(false);
               setIsSettingsOpen((open) => !open);
             }}
@@ -490,7 +500,7 @@ export const Header = memo(function Header({
               setNewPlanInputName('');
               setEditingPlanId(null);
               setIsSettingsOpen(false);
-              setGhostMenuOpen(false);
+              onCompareOpenChange(false);
               setPlansMenuOpen((open) => !open);
             }}
             onSelectPlan={(planId) => {
@@ -533,12 +543,13 @@ export const Header = memo(function Header({
           plans={plans}
           activePlanId={activePlanId}
           ghostPlanIds={ghostPlanIds}
-          ghostMenuOpen={ghostMenuOpen}
+          ghostMenuOpen={compareOpen}
           ghostDropdownRef={ghostDropdownRef}
           onToggleOpen={() => {
             setIsSettingsOpen(false);
             setPlansMenuOpen(false);
-            setGhostMenuOpen((open) => !open);
+            onImportExportOpenChange(false);
+            onCompareOpenChange(!compareOpen);
           }}
           onToggleGhost={toggleGhostPlan}
           onClearGhosts={clearGhostPlans}
