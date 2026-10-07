@@ -71,13 +71,6 @@ export const CalendarGrid = memo(function CalendarGrid({
   const isPhone = useIsPhone();
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek);
   const [welcomeHiddenFor, setWelcomeHiddenFor] = useState<string | null>(null);
-  const [showZoomHint, setShowZoomHint] = useState(() => {
-    try {
-      return localStorage.getItem('uniplan_hint_week_zoom') !== '1';
-    } catch {
-      return false;
-    }
-  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(getInitialCalendarWidth);
@@ -274,12 +267,6 @@ export const CalendarGrid = memo(function CalendarGrid({
   const zoomToDay = (day: DayOfWeek) => {
     setSelectedDay(day);
     setMobileCalendarView('day');
-    setShowZoomHint(false);
-    try {
-      localStorage.setItem('uniplan_hint_week_zoom', '1');
-    } catch {
-      // The hint can show again if storage is blocked.
-    }
   };
 
   return (
@@ -290,47 +277,40 @@ export const CalendarGrid = memo(function CalendarGrid({
     >
       {isPhone && (
         <div className="up-cal-switch-bar">
-          <div className="up-segment up-segment-2" role="group" aria-label="Calendar view">
-            {(['week', 'day'] as const).map((view) => (
-              <button
-                key={view}
-                type="button"
-                className="up-segment-btn up-chrome-btn"
-                aria-pressed={mobileCalendarView === view}
-                onClick={() => setMobileCalendarView(view)}
-              >
-                {view === 'week' ? 'Week' : 'Day'}
-              </button>
-            ))}
+          <div className="up-cal-switch-row">
+            <p className="up-cal-switch-title">
+              {mobileCalendarView === 'week' ? 'This week' : days[0]?.full}
+            </p>
+            <div className="up-cal-toggle" role="group" aria-label="Calendar view">
+              {(['week', 'day'] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  className="up-cal-toggle-btn up-chrome-btn"
+                  aria-pressed={mobileCalendarView === view}
+                  onClick={() => setMobileCalendarView(view)}
+                >
+                  {view === 'week' ? 'Week' : 'Day'}
+                </button>
+              ))}
+            </div>
           </div>
-          {phoneWeek && showZoomHint && (
-            <p className="up-zoom-hint">Tap a day to zoom in.</p>
-          )}
-          {isPhone && mobileCalendarView === 'day' && (
-            <>
-              <div className="up-day-strip" role="tablist" aria-label="Day">
-                {orderedDays.map((day) => (
-                  <button
-                    key={day.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={day.id === days[0]?.id}
-                    className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
-                    onClick={() => setSelectedDay(day.id)}
-                  >
-                    {day.label}
-                  </button>
-                ))}
-              </div>
-              <p className="up-day-context">
-                {days[0]?.full}
-                {' · '}
-                {(() => {
-                  const count = (dayLayoutMap.get(days[0]?.id) || []).filter((item) => !item.isGhost).length;
-                  return `${count} ${count === 1 ? 'class' : 'classes'}`;
-                })()}
-              </p>
-            </>
+          {mobileCalendarView === 'day' && (
+            <div className="up-day-strip" role="tablist" aria-label="Day">
+              {orderedDays.map((day) => (
+                <button
+                  key={day.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={day.id === days[0]?.id}
+                  aria-label={day.full}
+                  className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
+                  onClick={() => setSelectedDay(day.id)}
+                >
+                  {day.short.charAt(0)}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -374,18 +354,26 @@ export const CalendarGrid = memo(function CalendarGrid({
           style={{ minWidth: minGridWidth ? `${minGridWidth}px` : '100%' }}
         >
           {/* Day Headers (Sticky at top of scroll area) */}
-          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky top-0 z-30 shadow-2xs w-full max-w-full">
+          <div className={`flex sticky top-0 z-30 w-full max-w-full ${
+            phoneWeek
+              ? 'up-phone-week-head'
+              : 'border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shadow-2xs'
+          }`}>
           {/* Top-left corner time label */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="h-11 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 select-none bg-slate-100 dark:bg-slate-950 sticky left-0 z-40"
+            className={`h-11 shrink-0 flex items-center justify-center select-none sticky left-0 z-40 ${
+              phoneWeek
+                ? 'up-phone-gutter'
+                : 'border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950'
+            }`}
           >
-            <Clock className="w-3.5 h-3.5" />
+            {!phoneWeek && <Clock className="w-3.5 h-3.5" />}
           </div>
 
           {/* Days header columns */}
           <div
-            className="flex-1 grid divide-x divide-slate-200 dark:divide-slate-800 min-w-0"
+            className={`flex-1 grid min-w-0 ${phoneWeek ? '' : 'divide-x divide-slate-200 dark:divide-slate-800'}`}
             style={{
               gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
             }}
@@ -414,11 +402,18 @@ export const CalendarGrid = memo(function CalendarGrid({
                       : day.full
                   }
                   className={`h-11 flex items-center select-none ${
-                    colWidth < 68 ? 'justify-center px-1' : 'justify-between px-2 sm:px-3'
+                    phoneWeek
+                      ? 'up-phone-day-cell justify-center'
+                      : colWidth < 68
+                      ? 'justify-center px-1'
+                      : 'justify-between px-2 sm:px-3'
                   } ${
-                    isToday ? 'bg-indigo-50/90 dark:bg-slate-900 border-b-2 border-indigo-600 dark:border-slate-200' : ''
+                    !phoneWeek && isToday ? 'bg-indigo-50/90 dark:bg-slate-900 border-b-2 border-indigo-600 dark:border-slate-200' : ''
                   }`}
                 >
+                  {phoneWeek ? (
+                    <span className={`up-phone-day${isToday ? ' is-today' : ''}`}>{day.short.charAt(0)}</span>
+                  ) : (
                   <div className="flex items-center gap-1 min-w-0">
                     <span
                       className={`font-bold tracking-tight truncate ${
@@ -438,14 +433,15 @@ export const CalendarGrid = memo(function CalendarGrid({
                       {responsiveDayFormat === 'full' && day.full}
                     </span>
                   </div>
+                  )}
 
                   {/* Session count: words when the column is wide, a labeled dot when it is narrow */}
-                  {sessionCount > 0 && colWidth >= 85 && (
+                  {!phoneWeek && sessionCount > 0 && colWidth >= 85 && (
                     <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 shrink-0 tabular-nums">
                       {sessionCount} {sessionCount === 1 ? 'class' : 'classes'}
                     </span>
                   )}
-                  {sessionCount > 0 && colWidth < 85 && colWidth >= 52 && (
+                  {!phoneWeek && sessionCount > 0 && colWidth < 85 && colWidth >= 52 && (
                     <span
                       className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0 ml-0.5"
                       role="img"
@@ -538,7 +534,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   key={day.id}
                   id={`day-column-${day.id}`}
                   className={`relative h-full overflow-x-clip group/col ${
-                    isToday ? 'bg-indigo-500/[0.02] dark:bg-white/[0.035]' : ''
+                    isToday && !phoneWeek ? 'bg-indigo-500/[0.02] dark:bg-white/[0.035]' : ''
                   }`}
                   onDoubleClick={(e) => {
                     if (!onAddCourseAtTime) return;
