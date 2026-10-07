@@ -34,6 +34,8 @@ interface HeaderProps {
   onOpenShare?: (plan?: SchedulePlan) => void;
   onOpenImportShare?: () => void;
   showToast: (text: string, type?: ToastType) => void;
+  importExportOpen: boolean;
+  onImportExportOpenChange: (open: boolean) => void;
 }
 
 export const Header = memo(function Header({
@@ -46,6 +48,8 @@ export const Header = memo(function Header({
   onOpenShare,
   onOpenImportShare,
   showToast,
+  importExportOpen,
+  onImportExportOpenChange,
 }: HeaderProps) {
   const {
     plans,
@@ -125,7 +129,6 @@ export const Header = memo(function Header({
   }, [conflictModalOpen]);
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [importMenuOpen, setImportMenuOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
   const plansDropdownRef = useRef<HTMLDivElement>(null);
@@ -182,7 +185,7 @@ export const Header = memo(function Header({
     setGhostMenuOpen(false);
     setPlansMenuOpen(false);
     setIsSettingsOpen(false);
-    setImportMenuOpen(false);
+    onImportExportOpenChange(false);
   };
 
   const anyMenuOpen = isSettingsOpen || plansMenuOpen || ghostMenuOpen;
@@ -221,7 +224,7 @@ export const Header = memo(function Header({
       setGhostMenuOpen(false);
       setPlansMenuOpen(false);
       setIsSettingsOpen(false);
-      setImportMenuOpen(false);
+      onImportExportOpenChange(false);
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -381,18 +384,19 @@ export const Header = memo(function Header({
           </button>
 
           <ImportExportMenu
+            isPhone={isPhone}
             menuEnter={menuEnter}
             menuShown={menuShown}
             menuLeave={menuLeave}
             menuOpenTransition={menuOpenTransition}
-            open={importMenuOpen}
+            open={importExportOpen}
             onOpenChange={(open) => {
               if (open) {
                 setPlansMenuOpen(false);
                 setGhostMenuOpen(false);
                 setIsSettingsOpen(false);
               }
-              setImportMenuOpen(open);
+              onImportExportOpenChange(open);
             }}
             onOpenImport={(tab) => {
               setIsSettingsOpen(false);
@@ -433,7 +437,7 @@ export const Header = memo(function Header({
             onToggleOpen={() => {
               setPlansMenuOpen(false);
               setGhostMenuOpen(false);
-              setImportMenuOpen(false);
+              onImportExportOpenChange(false);
               setIsSettingsOpen((open) => !open);
             }}
             onSetTimeRange={setTimeRange}

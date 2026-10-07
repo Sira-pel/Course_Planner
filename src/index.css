@@ -499,11 +499,10 @@ html.dark body {
 }
 
 @media (max-width: 639px) {
-  /* Add course lives on the floating pill. Undo/redo and Import / Export stay on tablet and up. */
+  /* Add course lives on the floating pill. Undo and redo stay on tablet and up. */
   #btn-add-course,
   #btn-undo,
-  #btn-redo,
-  #btn-import-export {
+  #btn-redo {
     display: none;
   }
 
@@ -514,7 +513,8 @@ html.dark body {
   }
 
   #btn-settings,
-  #btn-ghost-overlay {
+  #btn-ghost-overlay,
+  #btn-import-export {
     width: 44px;
     height: 44px;
     border: 1px solid var(--up-line);
@@ -2123,6 +2123,10 @@ html.dark .up-mobile-sheet,
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: 0 16px 16px;
+}
+
+.up-import-sheet .up-import-row {
+  min-height: 44px;
 }
 
 .up-pool-handle-hit {
