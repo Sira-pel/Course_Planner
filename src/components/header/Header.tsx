@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { applyDomTheme, persistTheme } from '../../utils/theme';
 import { isPointerClick, isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
-import { detectPlanConflicts } from '../../utils/timeUtils';
+import { countConflictPairs, detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
   AlertTriangle,
@@ -132,6 +132,7 @@ export const Header = memo(function Header({
 
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const conflicts = useMemo(() => (activePlan ? detectPlanConflicts(activePlan.courses) : []), [activePlan?.courses]);
+  const conflictCount = useMemo(() => countConflictPairs(conflicts), [conflicts]);
   const totalCredits = useMemo(
     () => activePlan?.courses.reduce((sum, c) => sum + (c.credits || 0), 0) || 0,
     [activePlan?.courses]
@@ -344,15 +345,15 @@ export const Header = memo(function Header({
           </div>
 
           <AnimatePresence initial={false}>
-            {conflicts.length > 0 && (
+            {conflictCount > 0 && (
               <motion.button
                 type="button"
                 id="conflict-alert-btn"
                 key="conflict-mark"
                 onClick={() => setConflictModalOpen(true)}
                 className="up-conflict up-chrome-btn"
-                title={`${conflicts.length} schedule ${conflicts.length === 1 ? 'collision' : 'collisions'} detected`}
-                aria-label={`${conflicts.length} ${conflicts.length === 1 ? 'collision' : 'collisions'}`}
+                title={`${conflictCount} schedule ${conflictCount === 1 ? 'conflict' : 'conflicts'}`}
+                aria-label={`${conflictCount} ${conflictCount === 1 ? 'conflict' : 'conflicts'}`}
                 initial={reduceMotion ? { opacity: 0 } : { y: 6, scale: 0.94, opacity: 0 }}
                 animate={{ y: 0, scale: 1, opacity: 1 }}
                 exit={
@@ -364,9 +365,9 @@ export const Header = memo(function Header({
               >
                 <AlertTriangle className="up-conflict-icon w-3.5 h-3.5 shrink-0" />
                 <span className="inline-flex items-baseline gap-1 leading-none tabular-nums font-semibold">
-                  <span>{conflicts.length}</span>
+                  <span>{conflictCount}</span>
                   <span className="hidden lg:inline font-normal">
-                    {conflicts.length === 1 ? 'collision' : 'collisions'}
+                    {conflictCount === 1 ? 'conflict' : 'conflicts'}
                   </span>
                 </span>
               </motion.button>
