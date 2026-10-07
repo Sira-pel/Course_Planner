@@ -592,6 +592,7 @@ export default function App() {
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={handleAddCourseAtTime}
               onOpenNewCourse={handleOpenCalendarCourse}
+              onOpenImport={() => handleOpenImport('excel')}
               onLoadDemo={() => {
                 resetToSample();
                 showToast('Loaded the demo semester.', 'success');
