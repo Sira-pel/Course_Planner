@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 
 const GoogleCalendarSync = lazy(() => import('../GoogleCalendarSync'));
 
@@ -84,30 +85,35 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto up-scroll overscroll-contain">
-              {activePlan.courses.map((course) => (
-                <button
-                  key={course.id}
-                  type="button"
-                  onClick={() => onDownloadCourseIcs(course)}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors text-left group"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: course.color }}
-                    />
-                    <div className="min-w-0">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mr-1">
-                        {course.code}
-                      </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {course.name}
-                      </span>
+              {activePlan.courses.map((course) => {
+                const visibleTitle = displayCourseTitle(course);
+                return (
+                  <button
+                    key={course.id}
+                    type="button"
+                    onClick={() => onDownloadCourseIcs(course)}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: course.color }}
+                      />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mr-1">
+                          {course.code}
+                        </span>
+                        {visibleTitle && (
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {visibleTitle}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <Download className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0 ml-1.5" />
-                </button>
-              ))}
+                    <Download className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0 ml-1.5" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

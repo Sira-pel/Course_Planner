@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { LayoutSession, GHOST_PLAN_COLORS } from '../types/schedule';
+import { displayCourseTitle } from '../utils/courseIdentity';
 import { getContrastTextColor, minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { AlertTriangle, Edit2, Trash2, MapPin, User } from 'lucide-react';
 
@@ -42,6 +43,7 @@ export const CourseBlock = memo(function CourseBlock({
   const durationMin = Math.max(15, endMin - startMin);
   const isShortBlock = durationMin < 50;
   const isMediumBlock = durationMin >= 50 && durationMin < 80;
+  const visibleTitle = displayCourseTitle(course);
 
   // Ghost block styling
   if (isGhost) {
@@ -63,7 +65,7 @@ export const CourseBlock = memo(function CourseBlock({
           width: `calc(${widthPercent}% - 2px)`,
           contain: 'layout style',
         }}
-        title={`[Comparing: ${planName}] ${course.code} - ${course.name} (Click to edit in ${planName})`}
+        title={`[Comparing: ${planName}] ${course.code}${visibleTitle ? ` - ${visibleTitle}` : ''} (Click to edit in ${planName})`}
       >
         {/* Top row: Code + Section and Quick Actions / Plan Badge */}
         <div className="flex items-start justify-between gap-1 leading-none">
@@ -122,9 +124,9 @@ export const CourseBlock = memo(function CourseBlock({
         </div>
 
         {/* Course Name */}
-        {!isShortBlock && (
+        {!isShortBlock && visibleTitle && (
           <div className="text-xs font-semibold truncate mt-1 leading-tight text-slate-700 dark:text-slate-200">
-            {course.name}
+            {visibleTitle}
           </div>
         )}
 
@@ -232,9 +234,9 @@ export const CourseBlock = memo(function CourseBlock({
       </div>
 
       {/* Course Name */}
-      {!isShortBlock && (
+      {!isShortBlock && visibleTitle && (
         <div className={`text-xs font-semibold truncate mt-1 leading-tight ${subtitleColor}`}>
-          {course.name}
+          {visibleTitle}
         </div>
       )}
 

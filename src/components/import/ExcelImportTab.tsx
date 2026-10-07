@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 import {
   loadXlsx,
   readExcelFile,
@@ -43,7 +44,7 @@ const PRIMARY_FIELDS: FieldDef[] = [
   { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, CS 101' },
   { field: 'subject', label: 'Subject / Dept (Optional)', required: false, hint: 'e.g. CS, MATH, BIO' },
   { field: 'courseNum', label: 'Course # (Optional)', required: false, hint: 'e.g. 101, 2040, 380' },
-  { field: 'name', label: 'Course Name / Title', required: true, hint: 'e.g. Mobile App Dev' },
+  { field: 'name', label: 'Course Name / Title', required: false, hint: 'e.g. Mobile App Dev' },
   { field: 'schedule', label: 'Schedule (Days & Times)', required: false, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
   { field: 'days', label: 'Days (Separate)', required: false, hint: 'e.g. MWF, TTH, Mon/Wed' },
   { field: 'time', label: 'Time Range (Separate)', required: false, hint: 'e.g. 08:30AM - 10:00AM' },
@@ -60,6 +61,7 @@ interface CourseRowProps {
 }
 
 const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, onToggle }) => {
+  const visibleTitle = displayCourseTitle(c);
   const sessionSummary =
     c.sessions.length > 0
       ? `${c.sessions
@@ -99,9 +101,11 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, onToggle 
             {c.code}
             {c.section ? `-${c.section}` : ''}
           </span>
-          <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-            {c.name}
-          </span>
+          {visibleTitle && (
+            <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
+              {visibleTitle}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
           <span className="font-semibold text-indigo-600 dark:text-indigo-400">

@@ -9,6 +9,7 @@ import {
   parseLocalDate,
   sessionTimesAreValid,
 } from './calendarDates';
+import { displayCourseTitle } from './courseIdentity';
 import { randomId } from './id';
 
 /**
@@ -123,8 +124,11 @@ export function generateIcsCalendar(
   const isSingleCourse = targetCourses.length === 1;
   const singleCourse = isSingleCourse ? targetCourses[0] : null;
 
+  const singleTitle = singleCourse ? displayCourseTitle(singleCourse) : '';
   const calendarName = singleCourse
-    ? `${singleCourse.code} - ${singleCourse.name}`
+    ? singleTitle
+      ? `${singleCourse.code} - ${singleTitle}`
+      : singleCourse.code
     : `${plan.name || 'Schedule'} - University Schedule`;
 
   const lines: string[] = [
@@ -224,7 +228,8 @@ export function generateIcsCalendar(
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
       const colorPrefix = includeColorEmoji && course.color ? `${getColorEmoji(course.color)} ` : '';
-      const summary = escapeIcsText(`${colorPrefix}${codeSec} ${course.name}`.trim());
+      const visibleTitle = displayCourseTitle(course);
+      const summary = escapeIcsText(`${colorPrefix}${codeSec}${visibleTitle ? ` ${visibleTitle}` : ''}`.trim());
 
       const descParts: string[] = [];
       if (course.instructor) descParts.push(`Instructor: ${course.instructor}`);

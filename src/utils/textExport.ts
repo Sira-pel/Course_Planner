@@ -1,4 +1,5 @@
 import { Course, SchedulePlan, DAYS_LIST, DayOfWeek } from '../types/schedule';
+import { displayCourseTitle } from './courseIdentity';
 import { minutesToTime, timeToMinutes } from './timeUtils';
 
 export type TextExportFormat = 'standard' | 'compact' | 'by-day';
@@ -65,7 +66,8 @@ export function generateScheduleText(
       const codeSec = c.section ? `${c.code}-${c.section}` : c.code;
       const sessionsStr = formatSessionSummary(c);
       const roomStr = c.sessions[0]?.room ? ` [${c.sessions[0].room}]` : '';
-      lines.push(`${codeSec}: ${c.name} | ${sessionsStr}${roomStr}`);
+      const title = displayCourseTitle(c);
+      lines.push(`${title ? `${codeSec}: ${title}` : codeSec} | ${sessionsStr}${roomStr}`);
     });
 
     lines.push(divider);
@@ -103,7 +105,8 @@ export function generateScheduleText(
           const timeFormatted = `${minutesToTime(timeToMinutes(ds.startTime))} - ${minutesToTime(timeToMinutes(ds.endTime))}`;
           const room = ds.room ? ` (${ds.room})` : '';
           const instructor = ds.course.instructor ? ` - ${ds.course.instructor}` : '';
-          lines.push(`  ${timeFormatted} | ${codeSec}: ${ds.course.name}${room}${instructor}`);
+          const title = displayCourseTitle(ds.course);
+          lines.push(`  ${timeFormatted} | ${title ? `${codeSec}: ${title}` : codeSec}${room}${instructor}`);
         });
       }
     });
@@ -121,7 +124,8 @@ export function generateScheduleText(
 
   courses.forEach(c => {
     const codeSec = c.section ? `${c.code} (Section ${c.section})` : c.code;
-    lines.push(`Course: ${codeSec} - ${c.name}`);
+    const title = displayCourseTitle(c);
+    lines.push(title ? `Course: ${codeSec} - ${title}` : `Course: ${codeSec}`);
     lines.push(`Time: ${formatSessionSummary(c)}`);
     if (c.instructor) {
       lines.push(`Instructor: ${c.instructor}`);

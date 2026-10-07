@@ -1,4 +1,5 @@
 import { SchedulePlan, DayOfWeek, DAYS_LIST } from '../types/schedule';
+import { displayCourseTitle } from './courseIdentity';
 import { minutesToTime, timeToMinutes, getContrastTextColor, computeDayLayout } from './timeUtils';
 
 export interface ImageExportOptions {
@@ -267,11 +268,12 @@ export async function exportScheduleToImage(
       ctx.font = 'bold 12px "Plus Jakarta Sans", system-ui, sans-serif';
       ctx.fillText(codeSec, bX + 6, bY + 16);
 
-      // Course Name if height permits
-      if (bH > 42) {
+      // Course Name if height permits and the course actually has one
+      const visibleTitle = displayCourseTitle(course);
+      if (bH > 42 && visibleTitle) {
         ctx.fillStyle = textColSub;
         ctx.font = '500 11px "Plus Jakarta Sans", system-ui, sans-serif';
-        const truncatedName = course.name.length > 20 ? course.name.substring(0, 18) + '...' : course.name;
+        const truncatedName = visibleTitle.length > 20 ? visibleTitle.substring(0, 18) + '...' : visibleTitle;
         ctx.fillText(truncatedName, bX + 6, bY + 31);
       }
 

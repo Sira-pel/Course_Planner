@@ -124,8 +124,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                   startTimeInputRef.current?.focus();
                 }
               }}
-              placeholder="Intro to CS"
-              required
+              placeholder="Add a title (optional)"
               className={`${inputClass} course-field ${shakeField === 'name' ? 'is-error is-shaking' : ''}`}
             />
           </div>
