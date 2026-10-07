@@ -1,6 +1,7 @@
 import React, { type Ref } from 'react';
 import { AlertTriangle, ClipboardPaste, Pencil, Trash2 } from 'lucide-react';
 import { Course, DAYS_LIST, DayOfWeek } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 import { timeToMinutes } from '../../utils/timeUtils';
 import {
   DURATION_CHIPS,
@@ -115,6 +116,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
               };
               const currentDays = c.sessions.map((s) => s.day);
               const duration = timeToMinutes(session0.endTime) - timeToMinutes(session0.startTime);
+              const visibleTitle = displayCourseTitle(c);
 
               return (
                 <div
@@ -142,7 +144,11 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                           <span className="font-mono font-semibold text-xs text-slate-900 dark:text-white">
                             {c.code}
                           </span>
-                          <span className="text-xs text-slate-600 dark:text-slate-300 truncate">{c.name}</span>
+                          {visibleTitle ? (
+                            <span className="text-xs text-slate-600 dark:text-slate-300 truncate">{visibleTitle}</span>
+                          ) : (
+                            <span className="text-xs text-slate-400 dark:text-slate-500 truncate">Add a title (optional)</span>
+                          )}
                         </span>
                         <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                           {formatDaysShort(currentDays)} {session0.startTime}-{session0.endTime}
@@ -194,6 +200,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                             <input
                               type="text"
                               value={c.name}
+                              placeholder="Add a title (optional)"
                               onChange={(e) => onUpdateItemCourse(item.id, { name: e.target.value })}
                               className={inputClass}
                             />

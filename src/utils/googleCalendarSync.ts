@@ -1,5 +1,6 @@
 import { SchedulePlan, Course } from '../types/schedule';
 import { clearAccessToken, getUsableAccessToken } from './authToken';
+import { displayCourseTitle } from './courseIdentity';
 import {
   formatFloatingDateTime,
   formatGoogleCalendarUntil,
@@ -262,6 +263,7 @@ export function prepareCalendarEvents(
       }
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
+      const visibleTitle = displayCourseTitle(course);
       const descParts: string[] = [];
       if (course.instructor) descParts.push(`Instructor: ${course.instructor}`);
       if (course.credits) descParts.push(`Credits: ${course.credits}`);
@@ -269,7 +271,7 @@ export function prepareCalendarEvents(
       const byDayStr = sortedDays.map((d) => d.dayCode).join(',');
 
       events.push({
-        summary: `${codeSec} ${course.name}`.trim(),
+        summary: `${codeSec}${visibleTitle ? ` ${visibleTitle}` : ''}`.trim(),
         location: bundle.room,
         description: descParts.join('\n'),
         colorId: uniqueColorMap.get(course.id) || getClosestGoogleColorId(course.color),

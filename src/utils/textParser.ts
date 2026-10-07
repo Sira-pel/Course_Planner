@@ -805,7 +805,7 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
 
   if (code || scheduleCol || name) {
     const finalCode = code || generateCodeFromTitle(name || 'Course');
-    const finalName = name || `${finalCode} Lecture`;
+    const finalName = name || '';
     const courseId = prefixedId('c');
 
     const parsedSessionsList: { days: DayOfWeek[]; startTime: string; endTime: string }[] = [];
@@ -1221,16 +1221,9 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       }
     }
 
-    if (!name) {
-      if (code) {
-        name = `${code} Lecture`;
-      } else {
-        name = 'Course';
-      }
-    }
-
     if (!code) {
-      code = generateCodeFromTitle(name);
+      // generateCodeFromTitle needs some input when the line has neither a code nor a title.
+      code = generateCodeFromTitle(name || 'Course');
     }
 
     // Default sessions if none detected

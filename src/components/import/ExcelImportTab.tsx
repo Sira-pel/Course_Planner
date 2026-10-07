@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 import {
   loadXlsx,
   readExcelFile,
@@ -99,9 +100,11 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, onToggle 
             {c.code}
             {c.section ? `-${c.section}` : ''}
           </span>
-          <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-            {c.name}
-          </span>
+          {displayCourseTitle(c) && (
+            <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
+              {displayCourseTitle(c)}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
           <span className="font-semibold text-indigo-600 dark:text-indigo-400">
