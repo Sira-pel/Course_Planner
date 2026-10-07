@@ -278,9 +278,6 @@ export const CalendarGrid = memo(function CalendarGrid({
       {isPhone && (
         <div className="up-cal-switch-bar">
           <div className="up-cal-switch-row">
-            <p className="up-cal-switch-title">
-              {mobileCalendarView === 'week' ? 'This week' : days[0]?.full}
-            </p>
             <div className="up-cal-toggle" role="group" aria-label="Calendar view">
               {(['week', 'day'] as const).map((view) => (
                 <button
@@ -307,7 +304,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
                   onClick={() => setSelectedDay(day.id)}
                 >
-                  {day.short.charAt(0)}
+                  {day.label}
                 </button>
               ))}
             </div>
@@ -412,7 +409,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   }`}
                 >
                   {phoneWeek ? (
-                    <span className={`up-phone-day${isToday ? ' is-today' : ''}`}>{day.short.charAt(0)}</span>
+                    <span className={`up-phone-day-name${isToday ? ' is-today' : ''}`}>{day.label}</span>
                   ) : (
                   <div className="flex items-center gap-1 min-w-0">
                     <span

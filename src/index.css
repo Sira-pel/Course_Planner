@@ -1545,17 +1545,9 @@ html.dark .up-more-install-dismiss {
 .up-cal-switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   min-height: 32px;
-}
-
-.up-cal-switch-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--up-ink);
 }
 
 .up-cal-toggle {
@@ -1586,12 +1578,12 @@ html.dark .up-more-install-dismiss {
 }
 
 html.dark .up-cal-toggle {
-  background: #2c2c32;
+  background: #34343c;
 }
 
 html.dark .up-cal-toggle-btn[aria-pressed='true'] {
-  background: #1a1a1f;
-  color: #f4f4f5;
+  background: #101014;
+  color: #ffffff;
   box-shadow: none;
 }
 
@@ -1609,23 +1601,18 @@ html.dark .up-cal-toggle-btn[aria-pressed='true'] {
   padding: 0;
 }
 
-.up-phone-day {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  border-radius: 999px;
+.up-phone-day-name {
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: 1.2;
   color: var(--up-muted);
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
 }
 
-.up-phone-day.is-today {
-  background: var(--up-accent);
-  color: var(--up-accent-ink);
+.up-phone-day-name.is-today {
+  color: var(--up-accent);
+  border-bottom-color: var(--up-accent);
 }
 
 .up-day-strip {
@@ -1647,8 +1634,10 @@ html.dark .up-cal-toggle-btn[aria-pressed='true'] {
 }
 
 .up-day-strip-btn.is-selected {
-  background: var(--up-accent);
-  color: var(--up-accent-ink);
+  background: transparent;
+  color: var(--up-accent);
+  box-shadow: inset 0 -2px 0 var(--up-accent);
+  border-radius: 0;
 }
 
 .up-day-context {
