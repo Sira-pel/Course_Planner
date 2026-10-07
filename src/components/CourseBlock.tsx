@@ -22,7 +22,7 @@ export const CourseBlock = memo(function CourseBlock({
   onEdit,
   onDelete,
 }: CourseBlockProps) {
-  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict, coveredByActive, coveredExtendsBelow } = layout;
+  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict, coveredByActive, coveredExtendsBelow, cascadeIndex = 0 } = layout;
 
   const startMin = timeToMinutes(session.startTime);
   const endMin = timeToMinutes(session.endTime);
@@ -222,9 +222,9 @@ export const CourseBlock = memo(function CourseBlock({
         backgroundColor: colors.bg,
         top: `${topPercent}%`,
         height: `calc(${heightPercent}% - 2px)`,
-        left: `calc(${leftPercent}% + 1px)`,
-        width: `calc(${widthPercent}% - 2px)`,
-        zIndex: 20 + colIndex,
+        left: cascadeIndex > 0 ? `${4 + cascadeIndex * 12}px` : `calc(${leftPercent}% + 1px)`,
+        width: cascadeIndex > 0 ? `calc(100% - ${8 + cascadeIndex * 12}px)` : `calc(${widthPercent}% - 2px)`,
+        zIndex: 20 + colIndex + cascadeIndex,
         contain: 'layout style',
       }}
     >
@@ -325,6 +325,7 @@ export const CourseBlock = memo(function CourseBlock({
   prev.layout.totalCols === next.layout.totalCols &&
   prev.layout.coveredByActive === next.layout.coveredByActive &&
   prev.layout.coveredExtendsBelow === next.layout.coveredExtendsBelow &&
+  prev.layout.cascadeIndex === next.layout.cascadeIndex &&
   prev.startHour === next.startHour &&
   prev.totalMinutes === next.totalMinutes &&
   prev.theme === next.theme
