@@ -181,31 +181,45 @@ export interface ConflictPairDay {
   day: DayOfWeek;
   overlapStart: string;
   overlapEnd: string;
+  /** Self-overlap only: the detector's later-session label, e.g. "CS101 (Session 2)". */
+  sessionLabel?: string;
 }
 
 export interface ConflictPairGroup {
   key: string;
   courseCode1: string;
   courseCode2: string;
+  sameCourse: boolean;
   days: ConflictPairDay[];
 }
 
 const DAY_ORDER = DAYS_LIST.map((d) => d.id);
 
+function compareConflictPairDays(a: ConflictPairDay, b: ConflictPairDay): number {
+  const dayDiff = DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day);
+  if (dayDiff !== 0) return dayDiff;
+  const startDiff = timeToMinutes(a.overlapStart) - timeToMinutes(b.overlapStart);
+  if (startDiff !== 0) return startDiff;
+  return timeToMinutes(a.overlapEnd) - timeToMinutes(b.overlapEnd);
+}
+
 /**
- * One row per overlapping pair, with that pair's days in week order.
- * `detectPlanConflicts` stays per-day; this only groups for the pill and modal.
+ * One row per overlapping pair. A course that overlaps itself stays one pair.
+ * Each day keeps that row's session label. `detectPlanConflicts` stays per-day.
  */
 export function groupConflictsByPair(conflicts: Conflict[]): ConflictPairGroup[] {
   const groups = new Map<string, ConflictPairGroup>();
   for (const conflict of conflicts) {
     const key = conflictPairKey(conflict);
+    const sameCourse = conflict.courseId1 === conflict.courseId2;
+    const sessionLabel = sameCourse ? conflict.courseCode2 : undefined;
     let group = groups.get(key);
     if (!group) {
       group = {
         key,
         courseCode1: conflict.courseCode1,
         courseCode2: conflict.courseCode2,
+        sameCourse,
         days: [],
       };
       groups.set(key, group);
@@ -214,38 +228,53 @@ export function groupConflictsByPair(conflicts: Conflict[]): ConflictPairGroup[]
       (day) =>
         day.day === conflict.day &&
         day.overlapStart === conflict.overlapStart &&
-        day.overlapEnd === conflict.overlapEnd
+        day.overlapEnd === conflict.overlapEnd &&
+        day.sessionLabel === sessionLabel
     );
     if (!already) {
       group.days.push({
         day: conflict.day,
         overlapStart: conflict.overlapStart,
         overlapEnd: conflict.overlapEnd,
+        sessionLabel,
       });
     }
   }
 
   for (const group of groups.values()) {
-    group.days.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+    group.days.sort(compareConflictPairDays);
   }
   return [...groups.values()];
 }
 
 const DAY_LABEL = new Map(DAYS_LIST.map((day) => [day.id, day.label]));
 
-/** "Mon, Wed · 10:30–11:15", or one window per day when they differ. */
+/** Course code for a self-overlap; "CS101 vs MATH 201" for two courses. */
+export function formatConflictPairTitle(group: ConflictPairGroup): string {
+  if (group.sameCourse) return group.courseCode1;
+  return `${group.courseCode1} vs ${group.courseCode2}`;
+}
+
+function formatConflictPairWindow(day: ConflictPairDay): string {
+  const window = `${day.overlapStart}–${day.overlapEnd}`;
+  return day.sessionLabel ? `${day.sessionLabel} · ${window}` : window;
+}
+
+/** "Mon, Wed · 10:30–11:15", or one clause per day when the window or session differs. */
 export function formatConflictPairWhen(group: ConflictPairGroup): string {
   if (group.days.length === 0) return '';
   const [first] = group.days;
   const sameWindow = group.days.every(
     (day) => day.overlapStart === first.overlapStart && day.overlapEnd === first.overlapEnd
   );
+  const sameSession = group.days.every((day) => day.sessionLabel === first.sessionLabel);
   const label = (day: DayOfWeek) => DAY_LABEL.get(day) ?? day;
-  if (sameWindow) {
-    return `${group.days.map((day) => label(day.day)).join(', ')} · ${first.overlapStart}–${first.overlapEnd}`;
+  if (sameWindow && sameSession) {
+    const days = group.days.map((day) => label(day.day)).join(', ');
+    return `${days} · ${formatConflictPairWindow(first)}`;
   }
   return group.days
-    .map((day) => `${label(day.day)} · ${day.overlapStart}–${day.overlapEnd}`)
+    .map((day) => `${label(day.day)} · ${formatConflictPairWindow(day)}`)
     .join(' · ');
 }
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Conflict } from '../../types/schedule';
-import { countConflictPairs, formatConflictPairWhen, groupConflictsByPair } from '../../utils/timeUtils';
+import { formatConflictPairTitle, formatConflictPairWhen, groupConflictsByPair } from '../../utils/timeUtils';
 import { EASE_SMOOTH } from '../../utils/motion';
 
 interface ConflictModalProps {
@@ -23,9 +23,12 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
 }) => {
   if (typeof document === 'undefined') return null;
 
-  const pairCount = countConflictPairs(conflicts);
   const groups = groupConflictsByPair(conflicts);
-  const pairLabel = `${pairCount} ${pairCount === 1 ? 'conflict' : 'conflicts'}`;
+  const pairCount = groups.length;
+  const pairLabel =
+    pairCount === 0
+      ? 'Schedule collision detected'
+      : `${pairCount} ${pairCount === 1 ? 'conflict' : 'conflicts'}`;
 
   return createPortal(
     <AnimatePresence>
@@ -80,7 +83,7 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
                     className="p-3 rounded-md border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-xs"
                   >
                     <div className="font-bold text-rose-800 dark:text-rose-300">
-                      {group.courseCode1} vs {group.courseCode2}
+                      {formatConflictPairTitle(group)}
                     </div>
                     <p className="text-slate-600 dark:text-slate-300 mt-1 font-mono text-[11px]">
                       {formatConflictPairWhen(group)}
