@@ -27,7 +27,7 @@ export interface ScheduleState {
   // Plan actions
   setActivePlan: (planId: string) => void;
   createPlan: (name?: string) => string;
-  duplicatePlan: (planId: string) => string;
+  duplicatePlan: (planId: string, name?: string) => string;
   renamePlan: (planId: string, newName: string) => void;
   deletePlan: (planId: string) => void;
   toggleGhostPlan: (planId: string) => void;

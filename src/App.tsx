@@ -14,6 +14,7 @@ import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { DeferredDialog, DialogReplaceAppearContext, SuppressFocusRestoreContext } from './components/app/DeferredDialog';
+import { AppToast, type ToastMessage } from './components/app/AppToast';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -167,6 +168,13 @@ export default function App() {
   const [helpSession, setHelpSession] = useState(0);
   const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
+  const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
+  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info') => {
+    setToastMessage({ text, type });
+    window.setTimeout(() => {
+      setToastMessage((prev) => (prev?.text === text ? null : prev));
+    }, 4000);
+  }, []);
 
   const closeMoreMenu = useCallback(() => {
     setIsMoreOpen(false);
@@ -521,7 +529,11 @@ export default function App() {
     isAnyModalOpen,
     onModalShortcut: handleModalShortcut,
     onToggleTheme: handleShortcutToggleTheme,
-    onDuplicatePlan: duplicatePlan,
+    onDuplicatePlan: (planId) => {
+      const newId = duplicatePlan(planId);
+      const created = useScheduleStore.getState().plans.find((plan) => plan.id === newId);
+      if (created && created.id !== planId) showToast(`Switched to "${created.name}"`, 'info');
+    },
     onUndo: undo,
     onRedo: redo,
     onSetActivePlan: setActivePlan,
@@ -549,6 +561,7 @@ export default function App() {
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShare={handleOpenShareModal}
           onOpenImportShare={handleOpenImportShare}
+          showToast={showToast}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -653,6 +666,7 @@ export default function App() {
       </Suspense>
 
       <OfflineIndicator />
+      <AppToast message={toastMessage} onDismiss={() => setToastMessage(null)} />
     </div>
   );
 }
