@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useLayoutEffect, useSyncExternalStore } from 'react';
 import {
   layoutFromMatchMedia,
   stabilizePoolLayout,
@@ -47,6 +47,10 @@ function initListeners() {
 
   phone.addEventListener('change', onChange);
   tablet.addEventListener('change', onChange);
+  // matchMedia only fires when a query flips. After hysteresis keeps the
+  // previous layout, further resizing inside that same query would otherwise
+  // leave the desktop rail (or phone sheet) stuck across the whole range.
+  window.addEventListener('resize', onChange);
 }
 
 function subscribe(listener: () => void): () => void {
@@ -58,7 +62,11 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function usePoolLayout(): PoolLayout {
-  return useSyncExternalStore(subscribe, () => currentLayout, () => 'desktop');
+  const layout = useSyncExternalStore(subscribe, () => currentLayout, (): PoolLayout => 'desktop');
+  useLayoutEffect(() => {
+    document.documentElement.dataset.upLayout = layout;
+  }, [layout]);
+  return layout;
 }
 
 export function useIsPhone(): boolean {

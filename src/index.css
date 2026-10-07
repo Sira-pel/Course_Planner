@@ -1004,6 +1004,19 @@ html[data-lite-motion] .course-modal-backdrop {
   overflow: hidden;
 }
 
+/* Pool chrome follows the stabilized layout, not the raw 640/1024 media
+   queries. Otherwise the desktop rail is painted into the stacked column
+   (and the phone dock into the side-by-side row) inside the hysteresis band. */
+@media (min-width: 1024px) {
+  html:not([data-up-layout]) .up-workspace-body {
+    flex-direction: row;
+  }
+}
+
+html[data-up-layout='desktop'] .up-workspace-body {
+  flex-direction: row;
+}
+
 .up-calendar-slot {
   flex: 1;
   min-height: 0;
@@ -1037,9 +1050,18 @@ html[data-lite-motion] .course-modal-backdrop {
 }
 
 @media (max-width: 639px) {
-  .up-fab-cluster {
+  html:not([data-up-layout]) .up-fab-cluster {
     display: flex;
   }
+}
+
+html[data-up-layout='phone'] .up-fab-cluster {
+  display: flex;
+}
+
+html[data-up-layout='tablet'] .up-fab-cluster,
+html[data-up-layout='desktop'] .up-fab-cluster {
+  display: none;
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {
@@ -1359,14 +1381,17 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-pool-rail-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  white-space: nowrap;
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.14em;
   color: var(--up-ink);
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 .up-pool-panel {
