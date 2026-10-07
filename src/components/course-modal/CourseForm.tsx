@@ -402,7 +402,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                       <input
                         type="color"
                         tabIndex={-1}
-                        value={displayCourseColor(color).bg}
+                        value={displayCourseColor(color).bg.toLowerCase()}
                         onChange={(e) => onColorChange(e.target.value)}
                         className="sr-only"
                         id="custom-course-color-mixer"
