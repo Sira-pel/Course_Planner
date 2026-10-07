@@ -1,5 +1,6 @@
 import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
+import { useIsPhone } from '../utils/usePoolLayout';
 import { nextMeasuredWidth } from './calendarMeasure';
 import { CourseBlock } from './CourseBlock';
 import { Course, DayOfWeek, LayoutSession } from '../types/schedule';
@@ -61,7 +62,18 @@ export const CalendarGrid = memo(function CalendarGrid({
   const startHour = useScheduleStore((state) => state.startHour);
   const endHour = useScheduleStore((state) => state.endHour);
   const theme = useScheduleStore((state) => state.theme);
+  const mobileCalendarView = useScheduleStore((state) => state.mobileCalendarView);
+  const setMobileCalendarView = useScheduleStore((state) => state.setMobileCalendarView);
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
+  const isPhone = useIsPhone();
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek);
+  const [showZoomHint, setShowZoomHint] = useState(() => {
+    try {
+      return localStorage.getItem('uniplan_hint_week_zoom') !== '1';
+    } catch {
+      return false;
+    }
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(getInitialCalendarWidth);
@@ -99,10 +111,12 @@ export const CalendarGrid = memo(function CalendarGrid({
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
 
-  const days = useMemo(
-    () => calendarDayOrder(showWeekends, weekStart),
-    [showWeekends, weekStart]
-  );
+  const days = useMemo(() => {
+    const ordered = calendarDayOrder(showWeekends, weekStart);
+    if (!isPhone || mobileCalendarView !== 'day') return ordered;
+    const selected = ordered.find((day) => day.id === selectedDay);
+    return selected ? [selected] : ordered.slice(0, 1);
+  }, [showWeekends, weekStart, isPhone, mobileCalendarView, selectedDay]);
 
   // Conflict set for active plan
   const conflicts = useMemo(() => {
@@ -159,7 +173,7 @@ export const CalendarGrid = memo(function CalendarGrid({
   // Total grid minutes and dimensions
   const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);
   
-  const HOUR_MIN_PX = 55;
+  const HOUR_MIN_PX = isPhone && mobileCalendarView === 'week' ? 40 : 55;
   const totalMinutes = numHours * 60;
   const hourPct = 100 / numHours;
 
@@ -197,11 +211,19 @@ export const CalendarGrid = memo(function CalendarGrid({
           coveredExtendsBelow: ghostEnd > coverEnd,
         };
       });
-      map.set(dayObj.id, activeLayout.concat(ghostLayout));
+      const phoneWeek = isPhone && mobileCalendarView === 'week';
+      const cascaded = phoneWeek
+        ? activeLayout.map((item) =>
+            item.totalCols > 1
+              ? { ...item, cascadeIndex: item.colIndex, colIndex: 0, totalCols: 1 }
+              : item
+          )
+        : activeLayout;
+      map.set(dayObj.id, cascaded.concat(ghostLayout));
     });
 
     return map;
-  }, [days, activePlan, ghostPlans, conflictingCourseIds, planIndexMap]);
+  }, [days, activePlan, ghostPlans, conflictingCourseIds, planIndexMap, isPhone, mobileCalendarView]);
 
   // Day highlight: updates when midnight passes or tab becomes visible again
   const [currentDayOfWeek, setCurrentDayOfWeek] = useState<DayOfWeek>(getTodayDayOfWeek);
@@ -237,6 +259,18 @@ export const CalendarGrid = memo(function CalendarGrid({
     colWidth < 68 ? 'short' : colWidth < 135 ? 'label' : 'full';
 
   const needsHorizontalScroll = Boolean(minGridWidth && containerWidth < minGridWidth);
+  const phoneWeek = isPhone && mobileCalendarView === 'week';
+
+  const zoomToDay = (day: DayOfWeek) => {
+    setSelectedDay(day);
+    setMobileCalendarView('day');
+    setShowZoomHint(false);
+    try {
+      localStorage.setItem('uniplan_hint_week_zoom', '1');
+    } catch {
+      // The hint can show again if storage is blocked.
+    }
+  };
 
   return (
     <div
@@ -244,6 +278,26 @@ export const CalendarGrid = memo(function CalendarGrid({
       id="calendar-grid-container"
       className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
+      {isPhone && (
+        <div className="up-cal-switch-bar">
+          <div className="up-segment up-segment-2" role="group" aria-label="Calendar view">
+            {(['week', 'day'] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                className="up-segment-btn up-chrome-btn"
+                aria-pressed={mobileCalendarView === view}
+                onClick={() => setMobileCalendarView(view)}
+              >
+                {view === 'week' ? 'Week' : 'Day'}
+              </button>
+            ))}
+          </div>
+          {phoneWeek && showZoomHint && (
+            <p className="up-zoom-hint">Tap a day to zoom in.</p>
+          )}
+        </div>
+      )}
       {(activePlan?.courses.length ?? 0) === 0 && (
         <EmptyStateCard
           onAddCourse={() => onOpenNewCourse?.('form')}
@@ -285,6 +339,15 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={day.id}
                   id={`day-header-${day.id}`}
+                  role={phoneWeek ? 'button' : undefined}
+                  tabIndex={phoneWeek ? 0 : undefined}
+                  onClick={phoneWeek ? () => zoomToDay(day.id) : undefined}
+                  onKeyDown={phoneWeek ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      zoomToDay(day.id);
+                    }
+                  } : undefined}
                   title={day.full}
                   aria-label={
                     sessionCount > 0

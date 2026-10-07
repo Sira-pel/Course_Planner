@@ -56,6 +56,8 @@ export interface LayoutSession {
   coveredByActive?: boolean;
   /** The ghost continues after the real block that covers it, so its label sits on the bottom edge. */
   coveredExtendsBelow?: boolean;
+  /** Phone week overlaps stay full width and step sideways instead of sharing lanes. */
+  cascadeIndex?: number;
 }
 
 // 12 uniquely distinct, visually pleasing, non-overlapping course colors across separate color families.
