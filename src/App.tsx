@@ -161,6 +161,7 @@ export default function App() {
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [importExportOpen, setImportExportOpen] = useState(false);
   const [instantDismiss, setInstantDismiss] = useState(false);
   const [replaceAppear, setReplaceAppear] = useState(false);
   const [shortcutSurface, setShortcutSurface] = useState<ShortcutSurface | null>(null);
@@ -582,6 +583,8 @@ export default function App() {
           onOpenShare={handleOpenShareModal}
           onOpenImportShare={handleOpenImportShare}
           showToast={showToast}
+          importExportOpen={importExportOpen}
+          onImportExportOpenChange={setImportExportOpen}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -622,7 +625,7 @@ export default function App() {
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
         onOpenHelp={() => handleOpenHelp('workflow')}
-        onOpenExport={() => handleOpenExport('text')}
+        onOpenExport={() => setImportExportOpen(true)}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}
