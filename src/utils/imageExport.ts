@@ -45,12 +45,12 @@ export async function exportScheduleToImage(
   const baseHeight = height / scale;
 
   // Background Colors
-  const bgColor = isDark ? '#0d0d0d' : '#f8fafc';
+  const bgColor = isDark ? '#070707' : '#f8fafc';
   const headerBg = isDark ? '#181818' : '#ffffff';
   const gridLineColor = isDark ? '#292929' : '#e2e8f0';
   const hourLineColor = isDark ? '#404040' : '#cbd5e1';
   const textPrimary = isDark ? '#fafafa' : '#0f172a';
-  const textSecondary = isDark ? '#a2a2a2' : '#64748b';
+  const textSecondary = isDark ? '#9f9f9f' : '#64748b';
   const timeGutterBg = isDark ? '#181818' : '#f1f5f9';
 
   ctx.fillStyle = bgColor;
@@ -111,7 +111,7 @@ export async function exportScheduleToImage(
   ctx.restore();
 
   // Draw Day Headers
-  ctx.fillStyle = isDark ? '#1d1d1d' : '#f1f5f9';
+  ctx.fillStyle = isDark ? '#181818' : '#f1f5f9';
   ctx.fillRect(timeGutterWidth, calendarTop, gridWidth, dayHeaderHeight);
 
   // Horizontal border line under day & gutter header
@@ -257,8 +257,8 @@ export async function exportScheduleToImage(
 
       // Text inside block
       ctx.clip();
-      const textCol = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#181818' : '#ffffff';
-      const textColSub = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#404040' : 'rgba(255,255,255,0.85)';
+      const textCol = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? (isDark ? '#181818' : '#0f172a') : '#ffffff';
+      const textColSub = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? (isDark ? '#404040' : '#334155') : 'rgba(255,255,255,0.85)';
       ctx.fillStyle = textCol;
       ctx.textAlign = 'left';
 

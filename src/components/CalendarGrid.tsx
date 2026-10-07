@@ -262,7 +262,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   className={`h-11 flex items-center select-none ${
                     colWidth < 68 ? 'justify-center px-1' : 'justify-between px-2 sm:px-3'
                   } ${
-                    isToday ? 'bg-indigo-50/90 dark:bg-slate-800 border-b-2 border-indigo-600 dark:border-slate-200' : ''
+                    isToday ? 'bg-indigo-50/90 dark:bg-slate-900 border-b-2 border-indigo-600 dark:border-slate-200' : ''
                   }`}
                 >
                   <div className="flex items-center gap-1 min-w-0">
