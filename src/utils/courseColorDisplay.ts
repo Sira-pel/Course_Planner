@@ -127,11 +127,13 @@ const TEXT_RGB: Record<CourseColorDisplay['text'], Rgb> = {
 };
 
 function pickText(bg: Rgb): CourseColorDisplay['text'] {
+  const darkTime = timeContrast(bg, DARK_TEXT);
+  const lightTime = timeContrast(bg, LIGHT_TEXT);
+  if (darkTime >= 4.5 || lightTime >= 4.5) {
+    return darkTime >= lightTime ? DARK_TEXT : LIGHT_TEXT;
+  }
   const dark = contrastRatio(TEXT_RGB[DARK_TEXT], bg);
   const light = contrastRatio(TEXT_RGB[LIGHT_TEXT], bg);
-  if (dark >= 4.5 && light >= 4.5) return dark >= light ? DARK_TEXT : LIGHT_TEXT;
-  if (dark >= 4.5) return DARK_TEXT;
-  if (light >= 4.5) return LIGHT_TEXT;
   return dark >= light ? DARK_TEXT : LIGHT_TEXT;
 }
 
@@ -142,30 +144,6 @@ function timeContrast(bg: Rgb, text: CourseColorDisplay['text']): number {
   return contrastRatio(composite(TEXT_RGB[text], bg, TIME_TEXT_ALPHA), bg);
 }
 
-function balancedDarkRgb(source: Rgb): Rgb {
-  const oklch = rgbToOklch(source);
-  // Cap vivid colors so the set shares one chroma band. Leave already-quiet
-  // colors (the slate swatch) alone so they do not pick up a false hue.
-  const chroma = Math.min(0.13, oklch.c);
-  let best: Rgb = source;
-  let bestScore = -1;
-  for (let lightness = 0.5; lightness <= 0.72; lightness += 0.01) {
-    const rgb = inGamutOklch({ l: lightness, c: chroma, h: oklch.h });
-    if (!rgb) continue;
-    const text = pickText(rgb);
-    const score = timeContrast(rgb, text);
-    const nearTarget = 1 - Math.abs(lightness - 0.62);
-    const ranked = score + nearTarget * 0.05;
-    if (score >= 4.5 && ranked > bestScore) {
-      best = rgb;
-      bestScore = ranked;
-    }
-  }
-  if (bestScore >= 0) return best;
-  const fallback = inGamutOklch({ l: 0.62, c: chroma, h: oklch.h });
-  return fallback ?? source;
-}
-
 function displayFromRgb(bg: Rgb, border: Rgb): CourseColorDisplay {
   return {
     bg: toHex(bg),
@@ -174,30 +152,48 @@ function displayFromRgb(bg: Rgb, border: Rgb): CourseColorDisplay {
   };
 }
 
-const DARK_PALETTE = new Map<string, CourseColorDisplay>();
-for (const hex of COURSE_COLORS) {
-  const rgb = parseHex(hex);
-  if (!rgb) continue;
-  const bg = balancedDarkRgb(rgb);
-  const border = inGamutOklch({ ...rgbToOklch(bg), l: Math.max(0.42, rgbToOklch(bg).l - 0.08) }) ?? bg;
-  DARK_PALETTE.set(hex.toLowerCase(), displayFromRgb(bg, border));
-}
-
-function balancedDisplay(source: Rgb): CourseColorDisplay {
-  const bg = balancedDarkRgb(source);
+function paint(bg: Rgb): CourseColorDisplay {
   const oklch = rgbToOklch(bg);
-  const border = inGamutOklch({ ...oklch, l: Math.max(0.42, oklch.l - 0.08) }) ?? bg;
+  const border = inGamutOklch({ ...oklch, l: Math.max(0.2, oklch.l - 0.08) }) ?? bg;
   return displayFromRgb(bg, border);
 }
 
 /**
- * Light and dark paint the same block color: the even, darker palette.
- * Stored hexes stay as palette keys and are not rewritten.
+ * Softened preset paints, keyed by the stored COURSE_COLORS hex.
+ * Hues are spaced apart, and a few swatches sit darker so neighbors stay distinct.
+ * None of these match the indigo accent or the conflict / Clear all reds.
+ * The same hex is used in light and dark. Stored course colors are not rewritten.
+ */
+const PRESET_DISPLAY: Record<string, string> = {
+  '#3b82f6': '#32A5D4',
+  '#10b981': '#5AA75E',
+  '#f97316': '#DE9046',
+  '#8b5cf6': '#644395',
+  '#ef4444': '#DAA0A0',
+  '#f59e0b': '#D5B455',
+  '#14b8a6': '#046850',
+  '#ec4899': '#853867',
+  '#84cc16': '#AABC56',
+  '#f43f5e': '#D291CC',
+  '#64748b': '#4E5359',
+  '#c07d3e': '#885538',
+};
+
+const PRESET_PAINT = new Map<string, CourseColorDisplay>();
+for (const hex of COURSE_COLORS) {
+  const displayHex = PRESET_DISPLAY[hex.toLowerCase()];
+  const rgb = displayHex ? parseHex(displayHex) : null;
+  if (rgb) PRESET_PAINT.set(hex.toLowerCase(), paint(rgb));
+}
+
+/**
+ * Preset swatches use the softened palette. Any other hex, including a custom
+ * color from the picker, is painted exactly as stored in both themes.
  */
 export function displayCourseColor(hex: string, _theme?: 'light' | 'dark'): CourseColorDisplay {
   const parsed = parseHex(hex || '');
-  if (!parsed) return DARK_PALETTE.get('#3b82f6') ?? balancedDisplay({ r: 59, g: 130, b: 246 });
-  const known = DARK_PALETTE.get(toHex(parsed).toLowerCase());
-  if (known) return known;
-  return balancedDisplay(parsed);
+  if (!parsed) return PRESET_PAINT.get('#3b82f6') ?? paint({ r: 50, g: 165, b: 212 });
+  const preset = PRESET_PAINT.get(toHex(parsed).toLowerCase());
+  if (preset) return preset;
+  return paint(parsed);
 }
