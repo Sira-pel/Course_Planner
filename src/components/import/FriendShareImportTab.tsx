@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { SchedulePlan } from '../../types/schedule';
+import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
@@ -131,7 +132,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
                 <div className="min-w-0 flex items-start gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
-                    style={{ backgroundColor: course.color }}
+                    style={{ backgroundColor: displayCourseColor(course.color).bg }}
                   />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">

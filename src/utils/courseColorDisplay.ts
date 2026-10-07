@@ -1,5 +1,4 @@
 import { COURSE_COLORS } from '../types/schedule';
-import { getContrastTextColor } from './timeUtils';
 
 export interface CourseColorDisplay {
   bg: string;
@@ -184,24 +183,21 @@ for (const hex of COURSE_COLORS) {
   DARK_PALETTE.set(hex.toLowerCase(), displayFromRgb(bg, border));
 }
 
-function lightDisplay(hex: string): CourseColorDisplay {
-  const text = getContrastTextColor(hex) === 'text-slate-900' ? DARK_TEXT : LIGHT_TEXT;
-  return { bg: hex, text, border: hex };
-}
-
-/**
- * Light mode keeps the stored hex. Dark mode maps it onto one lightness band
- * so block text stays at least 4.5:1. Stored colors are not rewritten.
- */
-export function displayCourseColor(hex: string, theme: 'light' | 'dark'): CourseColorDisplay {
-  const parsed = parseHex(hex || '');
-  if (!parsed) return lightDisplay('#3B82F6');
-  const canonical = toHex(parsed);
-  if (theme !== 'dark') return lightDisplay(canonical);
-  const known = DARK_PALETTE.get(canonical.toLowerCase());
-  if (known) return known;
-  const bg = balancedDarkRgb(parsed);
+function balancedDisplay(source: Rgb): CourseColorDisplay {
+  const bg = balancedDarkRgb(source);
   const oklch = rgbToOklch(bg);
   const border = inGamutOklch({ ...oklch, l: Math.max(0.42, oklch.l - 0.08) }) ?? bg;
   return displayFromRgb(bg, border);
+}
+
+/**
+ * Light and dark paint the same block color: the even, darker palette.
+ * Stored hexes stay as palette keys and are not rewritten.
+ */
+export function displayCourseColor(hex: string, _theme?: 'light' | 'dark'): CourseColorDisplay {
+  const parsed = parseHex(hex || '');
+  if (!parsed) return DARK_PALETTE.get('#3b82f6') ?? balancedDisplay({ r: 59, g: 130, b: 246 });
+  const known = DARK_PALETTE.get(toHex(parsed).toLowerCase());
+  if (known) return known;
+  return balancedDisplay(parsed);
 }
