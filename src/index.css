@@ -1339,6 +1339,111 @@ body[data-up-pool-open] .up-fab-cluster {
   background: color-mix(in srgb, var(--up-ink) 6%, transparent);
 }
 
+.up-more-install {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 10px 6px 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--up-accent) 12%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--up-accent) 24%, transparent);
+}
+
+html.dark .up-more-install {
+  background: color-mix(in srgb, var(--up-accent) 38%, #12121c);
+  border-color: color-mix(in srgb, var(--up-accent) 46%, transparent);
+}
+
+.up-more-install-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--up-accent);
+}
+
+html.dark .up-more-install-icon {
+  color: #c9ceff;
+}
+
+.up-more-install-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 1px;
+}
+
+.up-more-install-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--up-ink);
+  line-height: 1.2;
+}
+
+.up-more-install-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--up-muted);
+  line-height: 1.2;
+}
+
+html.dark .up-more-install-sub {
+  color: #b7b6d6;
+}
+
+.up-more-install-btn {
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 14px;
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.up-more-install-btn:hover,
+.up-more-install-btn:focus-visible {
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
+}
+
+.up-more-install-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--up-muted);
+}
+
+html.dark .up-more-install-dismiss {
+  color: #c9ceff;
+}
+
+.up-more-install-dismiss:hover,
+.up-more-install-dismiss:focus-visible {
+  background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+}
+
+.up-more-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.up-more-rule {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--up-line);
+}
+
 .up-more-item-danger {
   color: #c42b4a;
 }
