@@ -242,7 +242,7 @@ export const CalendarGrid = memo(function CalendarGrid({
     };
   }, [currentDayOfWeek]);
 
-  const gutterWidth = containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
+  const gutterWidth = isPhone ? 44 : containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
   const minGridWidth = days.length > 5 ? gutterWidth + days.length * 64 : undefined;
   const effectiveGridWidth = minGridWidth ? Math.max(containerWidth, minGridWidth) : containerWidth;
   const colWidth = days.length > 0 ? (effectiveGridWidth - gutterWidth) / days.length : 120;
@@ -275,40 +275,23 @@ export const CalendarGrid = memo(function CalendarGrid({
       id="calendar-grid-container"
       className="flex-1 flex flex-col min-w-0 w-full max-w-full bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 isolate"
     >
-      {isPhone && (
+      {isPhone && mobileCalendarView === 'day' && (
         <div className="up-cal-switch-bar">
-          <div className="up-cal-switch-row">
-            <div className="up-cal-toggle" role="group" aria-label="Calendar view">
-              {(['week', 'day'] as const).map((view) => (
-                <button
-                  key={view}
-                  type="button"
-                  className="up-cal-toggle-btn up-chrome-btn"
-                  aria-pressed={mobileCalendarView === view}
-                  onClick={() => setMobileCalendarView(view)}
-                >
-                  {view === 'week' ? 'Week' : 'Day'}
-                </button>
-              ))}
-            </div>
+          <div className="up-day-strip" role="tablist" aria-label="Day">
+            {orderedDays.map((day) => (
+              <button
+                key={day.id}
+                type="button"
+                role="tab"
+                aria-selected={day.id === days[0]?.id}
+                aria-label={day.full}
+                className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
+                onClick={() => setSelectedDay(day.id)}
+              >
+                {day.label}
+              </button>
+            ))}
           </div>
-          {mobileCalendarView === 'day' && (
-            <div className="up-day-strip" role="tablist" aria-label="Day">
-              {orderedDays.map((day) => (
-                <button
-                  key={day.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={day.id === days[0]?.id}
-                  aria-label={day.full}
-                  className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
-                  onClick={() => setSelectedDay(day.id)}
-                >
-                  {day.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
       {activeCourseCount === 0 && welcomeHiddenFor !== activePlan?.id && (
@@ -484,7 +467,11 @@ export const CalendarGrid = memo(function CalendarGrid({
           {/* Time Gutter (Left Column) */}
           <div
             style={{ width: `${gutterWidth}px` }}
-            className="shrink-0 self-stretch select-none border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 sticky left-0 z-20"
+            className={`shrink-0 self-stretch select-none sticky left-0 z-20 ${
+              isPhone
+                ? 'up-phone-time-gutter'
+                : 'border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950'
+            }`}
           >
             {hourMarks.map((hour, idx) => {
               const timeStr = containerWidth < 380
