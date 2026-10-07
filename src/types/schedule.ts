@@ -52,10 +52,6 @@ export interface LayoutSession {
   colIndex: number;
   totalCols: number;
   hasConflict: boolean;
-  /** Ghost sits behind a real block, so it keeps the full column instead of sharing a lane. */
-  coveredByActive?: boolean;
-  /** The ghost continues after the real block that covers it, so its label sits on the bottom edge. */
-  coveredExtendsBelow?: boolean;
   /** Phone week overlaps stay full width and step sideways instead of sharing lanes. */
   cascadeIndex?: number;
 }
