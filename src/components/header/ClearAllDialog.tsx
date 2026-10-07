@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { createPortal } from 'react-dom';
 import { useModalMotion } from '../../utils/motion';
@@ -10,6 +11,19 @@ interface ClearAllDialogProps {
 
 export function ClearAllDialog({ open, onCancel, onConfirm }: ClearAllDialogProps) {
   const { backdropProps, panelProps } = useModalMotion(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onCancel();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, onCancel]);
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -17,11 +31,11 @@ export function ClearAllDialog({ open, onCancel, onConfirm }: ClearAllDialogProp
       {open && (
         <>
           <motion.div
-            className="up-sheet-backdrop"
+            className="up-sheet-backdrop up-confirm-backdrop"
             {...backdropProps}
             onClick={onCancel}
           />
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 pointer-events-none">
+          <div className="up-confirm-dialog fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               role="dialog"
               aria-modal="true"
