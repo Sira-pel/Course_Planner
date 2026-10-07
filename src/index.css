@@ -336,6 +336,26 @@ html.dark body {
 .up-header-view-toggle {
   margin-left: auto;
   flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 639px) {
+  .up-plans-anchor {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .up-plans-anchor > .up-text-trigger {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .up-plans-anchor > .up-text-trigger > span {
+    min-width: 0;
+  }
 }
 
 .up-header-row-secondary .up-header-compare {
@@ -347,6 +367,16 @@ html.dark body {
   padding-top: 0;
   padding-bottom: 0;
   border-top: 1px solid var(--up-line);
+}
+
+@media (max-width: 639px) {
+  .up-header-row-secondary {
+    gap: 6px;
+  }
+
+  .up-header-view-toggle .up-cal-toggle-btn {
+    padding: 0 8px;
+  }
 }
 
 .up-grid-mark {
