@@ -988,8 +988,8 @@ export function parseExcelRowsToCourses(
     const colorIdx = (startColorIndex + courses.length) % COURSE_COLORS.length;
     const color = COURSE_COLORS[colorIdx];
 
-    const finalCode = code || name.slice(0, 10).toUpperCase();
-    const finalName = name || finalCode;
+    const finalCode = code || (name ? name.slice(0, 10).toUpperCase() : 'COURSE');
+    const finalName = name || '';
 
     const course: Course = {
       id: courseId,

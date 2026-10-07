@@ -189,7 +189,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
           const fallbackCourse: Course = {
             id: prevItem?.course?.id || `c_fail_${idx}`,
             code: 'COURSE 101',
-            name: res.rawText.slice(0, 40) || 'Custom Course',
+            name: res.rawText.trim().slice(0, 40),
             credits: 3,
             color: COURSE_COLORS[idx % COURSE_COLORS.length],
             sessions: [
@@ -455,13 +455,6 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       codeInputRef.current?.focus();
       return;
     }
-    if (!trimmedName) {
-      setError('Course title is required.');
-      replayShake('name');
-      nameInputRef.current?.focus();
-      return;
-    }
-
     const sessions = patternsToSessions(patterns);
     if (sessions.length === 0) {
       setError('Pick at least one meeting day.');

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { SchedulePlan } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
 import { Share2, Layers, Check, AlertCircle, ArrowRight } from 'lucide-react';
@@ -142,9 +143,11 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
                           ({course.section})
                         </span>
                       )}
-                      <span className="text-slate-600 dark:text-slate-300 truncate">
-                        {course.name}
-                      </span>
+                      {displayCourseTitle(course) && (
+                        <span className="text-slate-600 dark:text-slate-300 truncate">
+                          {displayCourseTitle(course)}
+                        </span>
+                      )}
                     </div>
                     {course.instructor && (
                       <p className="text-[11px] text-slate-400 truncate">

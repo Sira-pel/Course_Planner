@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Course } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
 import { Check, Trash2, Edit2, AlertTriangle, X, Plus } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export const PoolRow = React.memo(function PoolRow({
   onAddToPlan,
   onRemoveFromPlan,
 }: PoolRowProps) {
+  const visibleTitle = displayCourseTitle(item);
   return (
     <div className="up-pool-row group">
       <div className="flex items-start justify-between gap-1.5">
@@ -90,9 +92,11 @@ export const PoolRow = React.memo(function PoolRow({
         </div>
       </div>
 
-      <h3 className="text-xs mt-0.5 leading-snug line-clamp-1" style={{ color: 'var(--up-ink)' }}>
-        {item.name}
-      </h3>
+      {visibleTitle && (
+        <h3 className="text-xs mt-0.5 leading-snug line-clamp-1" style={{ color: 'var(--up-ink)' }}>
+          {visibleTitle}
+        </h3>
+      )}
 
       <div className="mt-1.5 space-y-0.5 font-mono up-pool-meta">
         {item.sessions.map((s, idx) => (

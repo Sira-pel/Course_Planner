@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
+import { displayCourseTitle } from '../../utils/courseIdentity';
 
 const GoogleCalendarSync = lazy(() => import('../GoogleCalendarSync'));
 
@@ -100,9 +101,11 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
                       <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mr-1">
                         {course.code}
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {course.name}
-                      </span>
+                      {displayCourseTitle(course) && (
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {displayCourseTitle(course)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <Download className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0 ml-1.5" />
