@@ -45,6 +45,7 @@ interface CalendarGridProps {
   onEditCourse: (courseId: string, planId?: string) => void;
   onAddCourseAtTime?: (day: DayOfWeek, time: string) => void;
   onOpenNewCourse?: (mode?: 'form' | 'quick') => void;
+  onOpenImport?: () => void;
   onLoadDemo?: () => void;
 }
 
@@ -52,6 +53,7 @@ export const CalendarGrid = memo(function CalendarGrid({
   onEditCourse,
   onAddCourseAtTime,
   onOpenNewCourse,
+  onOpenImport,
   onLoadDemo,
 }: CalendarGridProps) {
   const plans = useScheduleStore((state) => state.plans);
@@ -68,6 +70,7 @@ export const CalendarGrid = memo(function CalendarGrid({
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
   const isPhone = useIsPhone();
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek);
+  const [welcomeHiddenFor, setWelcomeHiddenFor] = useState<string | null>(null);
   const [showZoomHint, setShowZoomHint] = useState(() => {
     try {
       return localStorage.getItem('uniplan_hint_week_zoom') !== '1';
@@ -108,6 +111,10 @@ export const CalendarGrid = memo(function CalendarGrid({
   }, []);
 
   const activePlan = useMemo(() => plans.find(p => p.id === activePlanId) || plans[0], [plans, activePlanId]);
+  const activeCourseCount = activePlan?.courses.length ?? 0;
+  useEffect(() => {
+    if (activeCourseCount > 0) setWelcomeHiddenFor(null);
+  }, [activeCourseCount]);
   const ghostPlans = useMemo(() => {
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
@@ -327,9 +334,11 @@ export const CalendarGrid = memo(function CalendarGrid({
           )}
         </div>
       )}
-      {(activePlan?.courses.length ?? 0) === 0 && (
+      {activeCourseCount === 0 && welcomeHiddenFor !== activePlan?.id && (
         <EmptyStateCard
-          onAddCourse={() => onOpenNewCourse?.('form')}
+          onClose={() => setWelcomeHiddenFor(activePlan?.id ?? 'plan')}
+          onQuickAdd={() => onOpenNewCourse?.('quick')}
+          onImport={() => onOpenImport?.()}
           onLoadDemo={() => onLoadDemo?.()}
         />
       )}
