@@ -162,6 +162,7 @@ export default function App() {
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [instantDismiss, setInstantDismiss] = useState(false);
   const [replaceAppear, setReplaceAppear] = useState(false);
   const [shortcutSurface, setShortcutSurface] = useState<ShortcutSurface | null>(null);
@@ -550,6 +551,7 @@ export default function App() {
     isAnyModalOpen,
     onModalShortcut: handleModalShortcut,
     onToggleTheme: handleShortcutToggleTheme,
+    onToggleCompare: () => setCompareOpen((open) => !open),
     onDuplicatePlan: (planId) => {
       const newId = duplicatePlan(planId);
       const created = useScheduleStore.getState().plans.find((plan) => plan.id === newId);
@@ -585,6 +587,8 @@ export default function App() {
           showToast={showToast}
           importExportOpen={importExportOpen}
           onImportExportOpenChange={setImportExportOpen}
+          compareOpen={compareOpen}
+          onCompareOpenChange={setCompareOpen}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}

@@ -25,6 +25,7 @@ export interface UseAppShortcutsArgs {
   isAnyModalOpen?: boolean;
   onModalShortcut: (surface: ShortcutSurface) => void;
   onToggleTheme?: () => void;
+  onToggleCompare?: () => void;
   onDuplicatePlan: (planId: string) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -90,6 +91,7 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         isAnyModalOpen,
         onModalShortcut,
         onToggleTheme,
+        onToggleCompare,
         onDuplicatePlan,
         onUndo,
         onRedo,
@@ -175,6 +177,15 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
       const shareKey = getBinding('share', 'Alt+S');
       if (isKeyMatch(e, shareKey)) {
         runModalShortcut('share');
+        return;
+      }
+
+      // Compare plans dropdown
+      const compareKey = getBinding('compare', 'Alt+C');
+      if (isKeyMatch(e, compareKey)) {
+        e.preventDefault();
+        if (e.repeat) return;
+        onToggleCompare?.();
         return;
       }
 
