@@ -499,10 +499,11 @@ html.dark body {
 }
 
 @media (max-width: 639px) {
-  /* Add course lives on the floating pill. Undo/redo stay on tablet and up. */
+  /* Add course lives on the floating pill. Undo/redo and Import / Export stay on tablet and up. */
   #btn-add-course,
   #btn-undo,
-  #btn-redo {
+  #btn-redo,
+  #btn-import-export {
     display: none;
   }
 
@@ -512,7 +513,6 @@ html.dark body {
     min-width: 44px;
   }
 
-  #btn-theme,
   #btn-settings,
   #btn-ghost-overlay {
     width: 44px;
@@ -529,6 +529,86 @@ html.dark body {
   .up-header-actions {
     padding-left: 0;
   }
+}
+
+.up-import-anchor {
+  position: relative;
+}
+
+.up-import-export-short {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .up-import-export-full {
+    display: none;
+  }
+
+  .up-import-export-short {
+    display: inline;
+  }
+}
+
+.up-import-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 15rem;
+  z-index: 50;
+  padding: 8px;
+  background: var(--up-raised);
+  color: var(--up-ink);
+  border: 1px solid var(--up-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.16);
+}
+
+.up-import-label {
+  margin: 8px 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--up-muted);
+}
+
+.up-import-menu .up-more-item {
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.up-segment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
+}
+
+.up-segment-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.up-segment-btn {
+  position: relative;
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--up-ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.up-segment-btn[aria-pressed='true'] {
+  color: var(--up-ink);
+}
+
+.up-settings-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--up-muted);
 }
 
 .up-header-actions {

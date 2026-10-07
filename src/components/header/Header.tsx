@@ -3,17 +3,16 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { applyDomTheme, persistTheme } from '../../utils/theme';
-import { isPointerClick, isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
+import type { ExportTabType } from '../export/ExportModal';
+import { applyDomTheme, persistTheme, type ThemePreference } from '../../utils/theme';
+import { isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
+import { ImportExportMenu } from './ImportExportMenu';
 import { countConflictPairs, detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
   AlertTriangle,
-  Sun,
-  Moon,
   Undo2,
   Redo2,
-  HelpCircle,
 } from 'lucide-react';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import type { SchedulePlan } from '../../types/schedule';
@@ -27,7 +26,7 @@ const ConflictModal = lazy(() => import('./ConflictModal').then((m) => ({ defaul
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
-  onOpenExport: () => void;
+  onOpenExport: (tab?: ExportTabType, focus?: 'google') => void;
   onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
@@ -55,7 +54,10 @@ export const Header = memo(function Header({
     showWeekends,
     startHour,
     endHour,
+    timeRangeMode,
+    weekStart,
     theme,
+    themePreference,
     setActivePlan,
     createPlan,
     duplicatePlan,
@@ -65,6 +67,8 @@ export const Header = memo(function Header({
     clearGhostPlans,
     setShowWeekends,
     setTimeRange,
+    setTimeRangeMode,
+    setWeekStart,
     setThemePreference,
     undo,
     redo,
@@ -80,7 +84,10 @@ export const Header = memo(function Header({
       showWeekends: state.showWeekends,
       startHour: state.startHour,
       endHour: state.endHour,
+      timeRangeMode: state.timeRangeMode,
+      weekStart: state.weekStart,
       theme: state.theme,
+      themePreference: state.themePreference,
       setActivePlan: state.setActivePlan,
       createPlan: state.createPlan,
       duplicatePlan: state.duplicatePlan,
@@ -90,6 +97,8 @@ export const Header = memo(function Header({
       clearGhostPlans: state.clearGhostPlans,
       setShowWeekends: state.setShowWeekends,
       setTimeRange: state.setTimeRange,
+      setTimeRangeMode: state.setTimeRangeMode,
+      setWeekStart: state.setWeekStart,
       setThemePreference: state.setThemePreference,
       undo: state.undo,
       redo: state.redo,
@@ -116,12 +125,11 @@ export const Header = memo(function Header({
   }, [conflictModalOpen]);
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [importMenuOpen, setImportMenuOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
   const plansDropdownRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const conflicts = useMemo(() => (activePlan ? detectPlanConflicts(activePlan.courses) : []), [activePlan?.courses]);
   const conflictCount = useMemo(() => countConflictPairs(conflicts), [conflicts]);
@@ -174,6 +182,7 @@ export const Header = memo(function Header({
     setGhostMenuOpen(false);
     setPlansMenuOpen(false);
     setIsSettingsOpen(false);
+    setImportMenuOpen(false);
   };
 
   const anyMenuOpen = isSettingsOpen || plansMenuOpen || ghostMenuOpen;
@@ -212,58 +221,30 @@ export const Header = memo(function Header({
       setGhostMenuOpen(false);
       setPlansMenuOpen(false);
       setIsSettingsOpen(false);
+      setImportMenuOpen(false);
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editingPlanId, conflictModalOpen]);
 
-  const handleIcsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const content = event.target?.result;
-      if (typeof content === 'string') {
-        try {
-          const { parseIcsContent } = await import('../../utils/icsImport');
-          const courses = parseIcsContent(content);
-          if (courses.length > 0) {
-            useScheduleStore.getState().bulkAddCourses(courses, activePlanId);
-            showToast(`Imported ${courses.length} course(s) from .ics file.`, 'success');
-          } else {
-            showToast('No valid recurring or class events found in this .ics file.', 'error');
-          }
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          showToast(`Error parsing .ics file: ${msg}`, 'error');
-        }
-      }
-    };
-    reader.onerror = () => {
-      showToast('Failed to read the selected .ics file.', 'error');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  // closeSettings stays false for #btn-theme and Settings Light/Dark so the sheet stays open.
-  const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
+  const handleAppearance = (preference: ThemePreference, event: React.MouseEvent<HTMLElement>) => {
     if (isThemeRevealing()) return;
-    const goingToDark = theme !== 'dark';
-    const next = goingToDark ? 'dark' : 'light';
-
-    if (closeSettings) setIsSettingsOpen(false);
-
+    const resolved = preference === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : preference;
+    if (resolved === theme) {
+      setThemePreference(preference);
+      return;
+    }
     runThemeReveal({
       event,
-      goingToDark,
+      goingToDark: resolved === 'dark',
       apply: () => {
-        applyDomTheme(next);
-        persistTheme(next);
+        applyDomTheme(resolved);
+        persistTheme(preference);
       },
       commit: () => {
-        setThemePreference(next);
+        setThemePreference(preference);
       },
     });
   };
@@ -411,39 +392,29 @@ export const Header = memo(function Header({
             <span className="hidden md:inline">Add course</span>
           </button>
 
-          <input
-            type="file"
-            accept=".ics,text/calendar"
-            ref={fileInputRef}
-            onChange={handleIcsUpload}
-            className="hidden"
+          <ImportExportMenu
+            menuEnter={menuEnter}
+            menuShown={menuShown}
+            menuLeave={menuLeave}
+            menuOpenTransition={menuOpenTransition}
+            open={importMenuOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                setPlansMenuOpen(false);
+                setGhostMenuOpen(false);
+                setIsSettingsOpen(false);
+              }
+              setImportMenuOpen(open);
+            }}
+            onOpenImport={(tab) => {
+              setIsSettingsOpen(false);
+              onOpenImport?.(tab);
+            }}
+            onOpenExport={(tab, focus) => {
+              setIsSettingsOpen(false);
+              onOpenExport(tab, focus);
+            }}
           />
-
-          <button
-            type="button"
-            id="btn-theme"
-            onClick={(event) => handleToggleTheme(event, false)}
-            className="up-icon-btn up-chrome-btn"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label="Dark mode"
-            aria-pressed={theme === 'dark'}
-          >
-            <span className="up-theme-glyph" aria-hidden="true">
-              <Sun className="up-theme-sun w-4 h-4" />
-              <Moon className="up-theme-moon w-4 h-4" />
-            </span>
-          </button>
-
-          <button
-            type="button"
-            id="btn-help"
-            onClick={onOpenHelp}
-            className="up-icon-btn up-chrome-btn"
-            title="Help"
-            aria-label="Help"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
 
           <SettingsMenu
             isPhone={isPhone}
@@ -455,33 +426,21 @@ export const Header = memo(function Header({
             settingsRef={settingsRef}
             startHour={startHour}
             endHour={endHour}
+            timeRangeMode={timeRangeMode}
+            weekStart={weekStart}
             showWeekends={showWeekends}
-            theme={theme}
+            themePreference={themePreference}
             onToggleOpen={() => {
               setPlansMenuOpen(false);
               setGhostMenuOpen(false);
+              setImportMenuOpen(false);
               setIsSettingsOpen((open) => !open);
             }}
             onSetTimeRange={setTimeRange}
+            onSetTimeRangeMode={setTimeRangeMode}
+            onSetWeekStart={setWeekStart}
             onSetShowWeekends={setShowWeekends}
-            onOpenCatalog={() => {
-              setIsSettingsOpen(false);
-              onOpenCatalog();
-            }}
-            onToggleTheme={(event) => handleToggleTheme(event, false)}
-            onImportIcsClick={() => {
-              setIsSettingsOpen(false);
-              if (onOpenImport) onOpenImport('ics');
-              else fileInputRef.current?.click();
-            }}
-            onOpenImport={(tab) => {
-              setIsSettingsOpen(false);
-              onOpenImport?.(tab);
-            }}
-            onOpenExport={() => {
-              setIsSettingsOpen(false);
-              onOpenExport();
-            }}
+            onSetThemePreference={handleAppearance}
             onOpenShortcuts={() => {
               setIsSettingsOpen(false);
               onOpenShortcuts();

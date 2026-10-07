@@ -146,6 +146,7 @@ export default function App() {
 
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportInitialTab, setExportInitialTab] = useState<ExportTabType>('share');
+  const [exportInitialFocus, setExportInitialFocus] = useState<'google' | undefined>(undefined);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
@@ -305,9 +306,10 @@ export default function App() {
     setIsCourseModalOpen(true);
   }, []);
 
-  const handleOpenExport = useCallback((tab: ExportTabType = 'text') => {
+  const handleOpenExport = useCallback((tab: ExportTabType = 'text', focus?: 'google') => {
     setIsPoolCollapsed(true);
     setExportInitialTab(tab);
+    setExportInitialFocus(focus);
     setShortcutSurface(shortcutSurfaceForExportTab(tab));
     setIsExportOpen(true);
   }, []);
@@ -572,7 +574,7 @@ export default function App() {
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-          onOpenExport={() => handleOpenExport('text')}
+          onOpenExport={handleOpenExport}
           onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
           onOpenHelp={() => handleOpenHelp('workflow')}
@@ -640,6 +642,7 @@ export default function App() {
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
+          initialFocus={exportInitialFocus}
           onClose={handleCloseExport}
           onTabChange={handleExportTabChange}
         />

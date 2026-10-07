@@ -32,22 +32,25 @@ export type ExportTabType = 'text' | 'share' | 'ics' | 'image' | 'backup';
 interface ExportModalProps {
   isOpen: boolean;
   initialTab?: ExportTabType;
+  initialFocus?: 'google';
   onClose: () => void;
   onTabChange?: (tab: ExportTabType) => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', onClose, onTabChange }) => {
-  return <ExportModalBody isOpen={isOpen} initialTab={initialTab} onClose={onClose} onTabChange={onTabChange} />;
+export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, initialTab = 'text', initialFocus, onClose, onTabChange }) => {
+  return <ExportModalBody isOpen={isOpen} initialTab={initialTab} initialFocus={initialFocus} onClose={onClose} onTabChange={onTabChange} />;
 };
 
 const ExportModalBody: React.FC<{
   isOpen: boolean;
   initialTab?: ExportTabType;
+  initialFocus?: 'google';
   onClose: () => void;
   onTabChange?: (tab: ExportTabType) => void;
 }> = ({
   isOpen,
   initialTab = 'text',
+  initialFocus,
   onClose,
   onTabChange,
 }) => {
@@ -121,6 +124,12 @@ const ExportModalBody: React.FC<{
       setImportSuccess(false);
     }
   }, [isOpen, initialTab]);
+
+  useEffect(() => {
+    if (!isOpen || initialFocus !== 'google' || activeTab !== 'ics') return;
+    const node = document.getElementById('google-calendar-sync');
+    node?.scrollIntoView({ block: 'nearest' });
+  }, [isOpen, initialFocus, activeTab]);
 
   // Reset scroll position to top whenever active tab changes to prevent scroll glitching
   useEffect(() => {

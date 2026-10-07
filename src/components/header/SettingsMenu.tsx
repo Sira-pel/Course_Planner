@@ -4,18 +4,17 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   CheckCircle2,
-  Download,
   HelpCircle,
-  Moon,
   RotateCcw,
   Settings,
   Smartphone,
   Sparkles,
-  Sun,
-  Upload,
   X,
 } from 'lucide-react';
+import { ModalTabPill } from '../app/ModalTabPill';
+import { ClearAllDialog } from './ClearAllDialog';
 import { usePWAInstall } from '../../utils/usePWAInstall';
+import type { ThemePreference } from '../../utils/theme';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 
 const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
@@ -30,16 +29,16 @@ interface SettingsMenuProps {
   settingsRef: React.RefObject<HTMLDivElement | null>;
   startHour: number;
   endHour: number;
+  timeRangeMode: 'auto' | 'custom';
+  weekStart: 'monday' | 'sunday';
   showWeekends: boolean;
-  theme: 'light' | 'dark';
+  themePreference: ThemePreference;
   onToggleOpen: () => void;
   onSetTimeRange: (start: number, end: number) => void;
+  onSetTimeRangeMode: (mode: 'auto' | 'custom') => void;
+  onSetWeekStart: (weekStart: 'monday' | 'sunday') => void;
   onSetShowWeekends: (show: boolean) => void;
-  onOpenCatalog?: () => void;
-  onToggleTheme: (event: React.MouseEvent<HTMLElement>) => void;
-  onImportIcsClick: () => void;
-  onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
-  onOpenExport: () => void;
+  onSetThemePreference: (preference: ThemePreference, event: React.MouseEvent<HTMLElement>) => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onLoadDemo: () => void;
@@ -59,16 +58,16 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   settingsRef,
   startHour,
   endHour,
+  timeRangeMode,
+  weekStart,
   showWeekends,
-  theme,
+  themePreference,
   onToggleOpen,
   onSetTimeRange,
+  onSetTimeRangeMode,
+  onSetWeekStart,
   onSetShowWeekends,
-  onOpenCatalog,
-  onToggleTheme,
-  onImportIcsClick,
-  onOpenImport,
-  onOpenExport,
+  onSetThemePreference,
   onOpenShortcuts,
   onOpenHelp,
   onLoadDemo,
@@ -122,10 +121,44 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     <>
       <div className="up-settings-controls">
         <div>
-          <label className="up-settings-field-label" htmlFor="settings-start-hour">
-            Time range
-          </label>
-          <div className="up-settings-range">
+          <span className="up-settings-field-label" id="settings-appearance-label">Appearance</span>
+          <div className="up-segment" role="group" aria-labelledby="settings-appearance-label">
+            {(['light', 'dark', 'system'] as const).map((preference) => (
+              <button
+                key={preference}
+                type="button"
+                id={preference === 'system' ? 'btn-appearance-system' : undefined}
+                className="up-segment-btn up-chrome-btn"
+                aria-pressed={themePreference === preference}
+                onClick={(event) => onSetThemePreference(preference, event)}
+              >
+                {themePreference === preference && <ModalTabPill layoutId="settings-appearance" />}
+                <span className="relative">{preference === 'light' ? 'Light' : preference === 'dark' ? 'Dark' : 'System'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="up-settings-field-label" id="settings-range-mode-label">Hours</span>
+          <div className="up-segment up-segment-2" role="group" aria-labelledby="settings-range-mode-label">
+            {(['auto', 'custom'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className="up-segment-btn up-chrome-btn"
+                aria-pressed={timeRangeMode === mode}
+                onClick={() => onSetTimeRangeMode(mode)}
+              >
+                {timeRangeMode === mode && <ModalTabPill layoutId="settings-hours" />}
+                <span className="relative">{mode === 'auto' ? 'Auto-fit' : 'Custom'}</span>
+              </button>
+            ))}
+          </div>
+          {timeRangeMode === 'auto' ? (
+            <p className="up-settings-hint">Hours follow your classes, with a little padding.</p>
+          ) : (
+            <div className="up-settings-range mt-2">
             <select
               id="settings-start-hour"
               value={startHour}
@@ -149,7 +182,27 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 <option key={`end-${h}`} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{h}:00</option>
               ))}
             </select>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <span className="up-settings-field-label" id="settings-week-start-label">Week start</span>
+          <div className="up-segment up-segment-2" role="group" aria-labelledby="settings-week-start-label">
+            {(['monday', 'sunday'] as const).map((day) => (
+              <button
+                key={day}
+                type="button"
+                className="up-segment-btn up-chrome-btn"
+                aria-pressed={weekStart === day}
+                onClick={() => onSetWeekStart(day)}
+              >
+                {weekStart === day && <ModalTabPill layoutId="settings-week-start" />}
+                <span className="relative">{day === 'monday' ? 'Monday' : 'Sunday'}</span>
+              </button>
+            ))}
           </div>
+          <p className="up-settings-hint">Applies when weekends are shown.</p>
         </div>
 
         <div className="up-settings-toggle-row">
@@ -167,36 +220,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       </div>
 
       <div className="up-settings-group">
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          className="up-settings-item up-chrome-btn"
-        >
-          <Sun className="hidden dark:block" />
-          <Moon className="block dark:hidden" />
-          <span className="hidden dark:inline">Light mode</span>
-          <span className="inline dark:hidden">Dark mode</span>
-        </button>
-        <button
-          type="button"
-          id="btn-open-import"
-          onClick={() => {
-            if (onOpenImport) onOpenImport('excel');
-            else onImportIcsClick();
-          }}
-          className="up-settings-item up-chrome-btn"
-        >
-          <Upload />
-          Import
-        </button>
-        <button
-          type="button"
-          onClick={onOpenExport}
-          className="up-settings-item up-chrome-btn"
-        >
-          <Download />
-          Export
-        </button>
         <button
           type="button"
           id="btn-open-help"
@@ -234,38 +257,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
           <Sparkles />
           Load demo
         </button>
-        {isConfirmingClear ? (
-          <div className="up-settings-confirm" role="group" aria-label="Confirm clear all">
-            <p>Clear all plans and the course pool?</p>
-            <div className="up-settings-confirm-actions">
-              <button
-                type="button"
-                id="btn-clear-all-confirm"
-                className="up-settings-confirm-yes up-chrome-btn"
-                onClick={onClearAll}
-              >
-                Yes, clear all
-              </button>
-              <button
-                type="button"
-                className="up-settings-confirm-no up-chrome-btn"
-                onClick={() => setIsConfirmingClear(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            id="btn-clear-all"
-            onClick={() => setIsConfirmingClear(true)}
-            className="up-settings-item is-danger up-chrome-btn"
-          >
-            <RotateCcw />
-            Clear all
-          </button>
-        )}
+        <button
+          type="button"
+          id="btn-clear-all"
+          onClick={() => setIsConfirmingClear(true)}
+          className="up-settings-item is-danger up-chrome-btn"
+        >
+          <RotateCcw />
+          Clear all
+        </button>
       </div>
 
       <p className="up-settings-tip">
@@ -371,6 +371,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
           )}
         </AnimatePresence>
       )}
+
+      <ClearAllDialog
+        open={isConfirmingClear}
+        onCancel={() => setIsConfirmingClear(false)}
+        onConfirm={onClearAll}
+      />
 
       <Suspense fallback={null}>
         <PWAInstallModal
