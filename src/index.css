@@ -1430,6 +1430,16 @@ body[data-up-pool-open] .up-fab-cluster {
   align-self: stretch;
   flex-shrink: 0;
   overflow: visible;
+  transition: none;
+}
+
+.up-pool-desktop.is-open {
+  width: 20rem;
+  min-width: 20rem;
+}
+
+.up-pool-desktop.is-open .up-pool-rail {
+  display: none;
 }
 
 .up-pool-desktop:has(#course-pool-sidebar) .up-pool-rail {
@@ -1452,6 +1462,7 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-pool-rail-mark {
+  position: relative;
   width: 28px;
   height: 28px;
   display: flex;
@@ -1461,13 +1472,21 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-pool-rail-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
-  color: var(--up-ink);
-  flex-shrink: 0;
+  line-height: 16px;
+  text-align: center;
 }
 
 .up-pool-rail-label {
@@ -1486,6 +1505,15 @@ body[data-up-pool-open] .up-fab-cluster {
   overflow: hidden;
 }
 
+.up-pool-desktop.is-open .up-pool-panel {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  height: 100%;
+  transition: none;
+}
+
 .up-pool-panel {
   position: absolute;
   top: 0;
@@ -1493,6 +1521,7 @@ body[data-up-pool-open] .up-fab-cluster {
   bottom: 0;
   width: 20rem;
   min-width: 20rem;
+  transition: none;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--up-line);
