@@ -15,7 +15,7 @@ export function applyDomTheme(theme: ThemeName): void {
   // Sync the mobile browser status bar and PWA title bar color with active theme
   const meta = document.getElementById('theme-color-meta');
   if (meta) {
-    meta.setAttribute('content', theme === 'dark' ? '#020617' : '#f7f8fb');
+    meta.setAttribute('content', theme === 'dark' ? '#070707' : '#f7f8fb');
   }
 }
 

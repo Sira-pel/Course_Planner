@@ -45,13 +45,13 @@ export async function exportScheduleToImage(
   const baseHeight = height / scale;
 
   // Background Colors
-  const bgColor = isDark ? '#090d16' : '#f8fafc';
-  const headerBg = isDark ? '#0f172a' : '#ffffff';
-  const gridLineColor = isDark ? '#1e293b' : '#e2e8f0';
-  const hourLineColor = isDark ? '#334155' : '#cbd5e1';
-  const textPrimary = isDark ? '#f8fafc' : '#0f172a';
-  const textSecondary = isDark ? '#94a3b8' : '#64748b';
-  const timeGutterBg = isDark ? '#0f172a' : '#f1f5f9';
+  const bgColor = isDark ? '#0d0d0d' : '#f8fafc';
+  const headerBg = isDark ? '#181818' : '#ffffff';
+  const gridLineColor = isDark ? '#292929' : '#e2e8f0';
+  const hourLineColor = isDark ? '#404040' : '#cbd5e1';
+  const textPrimary = isDark ? '#fafafa' : '#0f172a';
+  const textSecondary = isDark ? '#a2a2a2' : '#64748b';
+  const timeGutterBg = isDark ? '#181818' : '#f1f5f9';
 
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, baseWidth, baseHeight);
@@ -89,7 +89,7 @@ export async function exportScheduleToImage(
   const colWidth = gridWidth / numDays;
 
   // Draw Top-Left Corner Header (Time Column Header with Clock Icon)
-  ctx.fillStyle = isDark ? '#0f172a' : '#e2e8f0';
+  ctx.fillStyle = isDark ? '#181818' : '#e2e8f0';
   ctx.fillRect(0, calendarTop, timeGutterWidth, dayHeaderHeight);
 
   // Draw Clock Icon inside top-left header cell
@@ -111,7 +111,7 @@ export async function exportScheduleToImage(
   ctx.restore();
 
   // Draw Day Headers
-  ctx.fillStyle = isDark ? '#131c31' : '#f1f5f9';
+  ctx.fillStyle = isDark ? '#1d1d1d' : '#f1f5f9';
   ctx.fillRect(timeGutterWidth, calendarTop, gridWidth, dayHeaderHeight);
 
   // Horizontal border line under day & gutter header
@@ -257,8 +257,8 @@ export async function exportScheduleToImage(
 
       // Text inside block
       ctx.clip();
-      const textCol = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#0f172a' : '#ffffff';
-      const textColSub = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#334155' : 'rgba(255,255,255,0.85)';
+      const textCol = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#181818' : '#ffffff';
+      const textColSub = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? '#404040' : 'rgba(255,255,255,0.85)';
       ctx.fillStyle = textCol;
       ctx.textAlign = 'left';
 

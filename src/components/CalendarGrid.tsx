@@ -262,7 +262,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   className={`h-11 flex items-center select-none ${
                     colWidth < 68 ? 'justify-center px-1' : 'justify-between px-2 sm:px-3'
                   } ${
-                    isToday ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-b-2 border-indigo-600' : ''
+                    isToday ? 'bg-indigo-50/90 dark:bg-slate-800 border-b-2 border-indigo-600 dark:border-slate-200' : ''
                   }`}
                 >
                   <div className="flex items-center gap-1 min-w-0">
@@ -275,7 +275,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                           : 'text-sm'
                       } ${
                         isToday
-                          ? 'text-indigo-700 dark:text-indigo-300'
+                          ? 'text-indigo-700 dark:text-slate-50'
                           : 'text-slate-900 dark:text-slate-100'
                       }`}
                     >
@@ -382,7 +382,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   key={day.id}
                   id={`day-column-${day.id}`}
                   className={`relative h-full overflow-x-clip group/col ${
-                    isToday ? 'bg-indigo-500/[0.02] dark:bg-indigo-500/[0.03]' : ''
+                    isToday ? 'bg-indigo-500/[0.02] dark:bg-white/[0.035]' : ''
                   }`}
                   onDoubleClick={(e) => {
                     if (!onAddCourseAtTime) return;
