@@ -70,7 +70,8 @@ export const CalendarGrid = memo(function CalendarGrid({
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
   const isPhone = useIsPhone();
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayDayOfWeek);
-  const [welcomeHiddenFor, setWelcomeHiddenFor] = useState<string | null>(null);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const welcomeDecided = useRef(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(getInitialCalendarWidth);
@@ -104,10 +105,24 @@ export const CalendarGrid = memo(function CalendarGrid({
   }, []);
 
   const activePlan = useMemo(() => plans.find(p => p.id === activePlanId) || plans[0], [plans, activePlanId]);
-  const activeCourseCount = activePlan?.courses.length ?? 0;
+
+  // Offer the empty-plan welcome once per page load, after saved data is in.
+  // A new plan created later in the same visit must not open it again.
   useEffect(() => {
-    if (activeCourseCount > 0) setWelcomeHiddenFor(null);
-  }, [activeCourseCount]);
+    if (welcomeDecided.current) return;
+    const decide = () => {
+      if (welcomeDecided.current) return;
+      welcomeDecided.current = true;
+      const state = useScheduleStore.getState();
+      const plan = state.plans.find((item) => item.id === state.activePlanId) || state.plans[0];
+      if ((plan?.courses.length ?? 0) === 0) setWelcomeOpen(true);
+    };
+    if (useScheduleStore.persist.hasHydrated()) {
+      decide();
+      return;
+    }
+    return useScheduleStore.persist.onFinishHydration(decide);
+  }, []);
   const ghostPlans = useMemo(() => {
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
@@ -294,9 +309,9 @@ export const CalendarGrid = memo(function CalendarGrid({
           </div>
         </div>
       )}
-      {activeCourseCount === 0 && welcomeHiddenFor !== activePlan?.id && (
+      {welcomeOpen && (
         <EmptyStateCard
-          onClose={() => setWelcomeHiddenFor(activePlan?.id ?? 'plan')}
+          onClose={() => setWelcomeOpen(false)}
           onQuickAdd={() => onOpenNewCourse?.('quick')}
           onImport={() => onOpenImport?.()}
           onLoadDemo={() => onLoadDemo?.()}
