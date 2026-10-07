@@ -2,8 +2,9 @@ import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { nextMeasuredWidth } from './calendarMeasure';
 import { CourseBlock } from './CourseBlock';
-import { Course, DAYS_LIST, DayOfWeek, LayoutSession } from '../types/schedule';
+import { Course, DayOfWeek, LayoutSession } from '../types/schedule';
 import { checkSessionCollision, computeDayLayout, detectPlanConflicts, minutesToTime, timeToMinutes } from '../utils/timeUtils';
+import { calendarDayOrder, computeAutoFitRange, coursesForVisibleRange } from '../utils/calendarRange';
 import { collectDaySessions } from '../utils/collectDaySessions';
 import { Clock } from 'lucide-react';
 
@@ -52,6 +53,8 @@ export const CalendarGrid = memo(function CalendarGrid({
   const activePlanId = useScheduleStore((state) => state.activePlanId);
   const ghostPlanIds = useScheduleStore((state) => state.ghostPlanIds);
   const showWeekends = useScheduleStore((state) => state.showWeekends);
+  const weekStart = useScheduleStore((state) => state.weekStart);
+  const timeRangeMode = useScheduleStore((state) => state.timeRangeMode);
   const startHour = useScheduleStore((state) => state.startHour);
   const endHour = useScheduleStore((state) => state.endHour);
   const theme = useScheduleStore((state) => state.theme);
@@ -93,11 +96,10 @@ export const CalendarGrid = memo(function CalendarGrid({
     return plans.filter(p => ghostPlanIds.includes(p.id) && p.id !== activePlanId);
   }, [plans, ghostPlanIds, activePlanId]);
 
-  const days = useMemo(() => {
-    return showWeekends
-      ? DAYS_LIST
-      : DAYS_LIST.filter(d => d.id !== 'saturday' && d.id !== 'sunday');
-  }, [showWeekends]);
+  const days = useMemo(
+    () => calendarDayOrder(showWeekends, weekStart),
+    [showWeekends, weekStart]
+  );
 
   // Conflict set for active plan
   const conflicts = useMemo(() => {
@@ -113,9 +115,14 @@ export const CalendarGrid = memo(function CalendarGrid({
     return set;
   }, [conflicts]);
 
-  // Adaptive time boundaries: if any enrolled or ghost course has sessions outside startHour/endHour,
-  // gracefully expand the visible hours so no class is cropped or squeezed to zero.
+  // Auto fits the active plan and ghosts. Custom keeps the saved window and only expands
+  // when a class would otherwise be cropped.
   const { effectiveStartHour, effectiveEndHour } = useMemo(() => {
+    if (timeRangeMode === 'auto') {
+      const fitted = computeAutoFitRange(coursesForVisibleRange(activePlan?.courses, ghostPlans));
+      if (fitted) return { effectiveStartHour: fitted.startHour, effectiveEndHour: fitted.endHour };
+    }
+
     let minH = startHour;
     let maxH = endHour;
 
@@ -144,7 +151,7 @@ export const CalendarGrid = memo(function CalendarGrid({
       effectiveStartHour: Math.max(0, minH),
       effectiveEndHour: Math.min(24, Math.max(minH + 1, maxH)),
     };
-  }, [startHour, endHour, activePlan?.courses, ghostPlans]);
+  }, [timeRangeMode, startHour, endHour, activePlan?.courses, ghostPlans]);
 
   // Total grid minutes and dimensions
   const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);

@@ -98,7 +98,11 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
     setShowWeekends: (show: boolean) => set({ showWeekends: show }),
 
     setTimeRange: (startHour: number, endHour: number) => {
-      set({ startHour: clampStartHour(startHour), endHour: clampEndHour(endHour) });
+      set({
+        startHour: clampStartHour(startHour),
+        endHour: clampEndHour(endHour),
+        timeRangeMode: 'custom',
+      });
     },
 
     setTimeRangeMode: (mode: 'auto' | 'custom') => {
