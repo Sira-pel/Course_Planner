@@ -83,18 +83,30 @@ html:not(.up-ready) #root *::after {
 
 html.dark {
   color-scheme: dark;
-  background-color: #020617;
-  --up-raised: #121826;
-  --up-ink: #e8edf4;
-  --up-muted: #8b959e;
-  --up-line: #2a3342;
+  background-color: #070707;
+  /* Same lightness as Tailwind slate, with the blue-violet chroma removed. */
+  --color-slate-50: oklch(98.4% 0 0);
+  --color-slate-100: oklch(96.8% 0 0);
+  --color-slate-200: oklch(92.9% 0 0);
+  --color-slate-300: oklch(86.9% 0 0);
+  --color-slate-400: oklch(70.4% 0 0);
+  --color-slate-500: oklch(55.4% 0 0);
+  --color-slate-600: oklch(44.6% 0 0);
+  --color-slate-700: oklch(37.2% 0 0);
+  --color-slate-800: oklch(27.9% 0 0);
+  --color-slate-900: oklch(20.8% 0 0);
+  --color-slate-950: oklch(12.9% 0 0);
+  --up-raised: #181818;
+  --up-ink: #ececec;
+  --up-muted: #939393;
+  --up-line: #333333;
   --up-accent: #5b6cf0;
   --up-accent-ink: #f4f5ff;
   --up-focus: #8b96ff;
 }
 
 html.dark body {
-  background-color: #020617;
+  background-color: #070707;
 }
 
 
@@ -127,7 +139,7 @@ html.dark body {
 
   html.dark option,
   .dark option {
-    background-color: #0f172a;
+    background-color: #181818;
     color: #f8fafc;
   }
 
@@ -473,7 +485,7 @@ html.dark body {
 }
 
 .up-add-course:hover {
-  background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-add-course:active {
@@ -617,7 +629,7 @@ html.dark .up-settings-select,
 
 html.dark .up-settings-select option,
 .dark .up-settings-select option {
-  background-color: #0f172a;
+  background-color: #181818;
   color: #f8fafc;
 }
 
@@ -1140,7 +1152,7 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-fab-primary:hover {
-  background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-fab-more.up-chrome-btn:active,
@@ -1260,7 +1272,7 @@ body[data-up-pool-open] .up-fab-cluster {
 
   html.dark .up-menu,
   .dark .up-menu {
-    background: #121826 !important;
+    background: #181818 !important;
   }
 
   .up-more-menu {
@@ -1305,7 +1317,7 @@ body[data-up-pool-open] .up-fab-cluster {
 }
 
 .up-sheet-btn-primary:hover {
-  background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-sheet-btn-secondary {
@@ -1451,7 +1463,7 @@ html:not(.dark) .up-pool-drawer {
 
 html.dark .up-pool-drawer,
 .dark .up-pool-drawer {
-  background: #121826;
+  background: #181818;
 }
 
 .up-pool-sheet,
@@ -1483,7 +1495,7 @@ html:not(.dark) .up-mobile-sheet {
 
 html.dark .up-mobile-sheet,
 .dark .up-mobile-sheet {
-  background: #121826;
+  background: #181818;
 }
 
 .up-mobile-sheet-body {
@@ -1770,7 +1782,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-create:hover {
-  background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-pool-list {
@@ -1855,7 +1867,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-add:hover {
-  background: color-mix(in srgb, var(--up-accent) 88%, #0b1020);
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-pool-status {
@@ -2303,7 +2315,7 @@ html:not(.is-theme-revealing) .up-theme-moon {
 }
 
 html.dark .course-tab-pill {
-  --course-pill-bg: #0f172a;
+  --course-pill-bg: #181818;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
 }
 

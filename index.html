@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#020617" id="theme-color-meta" />
+    <meta name="theme-color" content="#070707" id="theme-color-meta" />
     <meta name="google-site-verification" content="-7Pv4KbpvWcJ3ExK0pFdbLNpIh5k8Jit3VOIit7by9Y" />
     <meta name="robots" content="index, follow" />
     <title>Uniplan</title>
@@ -38,7 +38,7 @@
           if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.style.colorScheme = 'dark';
-            if (meta) meta.setAttribute('content', '#020617');
+            if (meta) meta.setAttribute('content', '#070707');
           } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.style.colorScheme = 'light';
@@ -75,7 +75,7 @@
     </script>
     <style>
       html, body, #root { background-color: #f7f8fb; }
-      html.dark, html.dark body, html.dark #root { background-color: #020617; }
+      html.dark, html.dark body, html.dark #root { background-color: #070707; }
 
       #app-launch-splash {
         position: fixed;
@@ -91,7 +91,7 @@
         -webkit-user-select: none;
       }
       html.dark #app-launch-splash {
-        background-color: #020617;
+        background-color: #070707;
       }
       .splash-body {
         display: flex;
@@ -117,7 +117,7 @@
         color: #1b2430;
       }
       html.dark .splash-name {
-        color: #e8edf4;
+        color: #ececec;
       }
       #app-launch-splash.is-hidden {
         opacity: 0;
@@ -136,7 +136,7 @@
       }
     </style>
   </head>
-  <body class="bg-[#f7f8fb] dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
+  <body class="bg-[#f7f8fb] dark:bg-[#070707] text-slate-900 dark:text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white">
     <div id="app-launch-splash">
       <div class="splash-body">
         <img src="/icon.svg" width="72" height="72" class="splash-logo" alt="Uniplan" />
