@@ -553,26 +553,65 @@ html.dark body {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  width: 15rem;
+  width: 17.5rem;
   z-index: 50;
-  padding: 8px;
+  padding: 6px;
   background: var(--up-raised);
   color: var(--up-ink);
   border: 1px solid var(--up-line);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 8px 24px rgb(15 23 42 / 0.16);
 }
 
 .up-import-label {
-  margin: 8px 4px 2px;
-  font-size: 11px;
+  margin: 8px 8px 2px;
+  font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--up-muted);
 }
 
-.up-import-menu .up-more-item {
-  min-height: 36px;
+.up-import-menu .up-import-label:first-child {
+  margin-top: 4px;
+}
+
+.up-import-rule {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--up-line);
+}
+
+.up-import-menu .up-import-row {
+  min-height: 32px;
+  padding: 0 8px;
+  gap: 8px;
+  border-radius: 8px;
   font-size: 13px;
+  font-weight: 500;
+}
+
+.up-import-ico {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--up-muted);
+}
+
+.up-import-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.up-import-hint {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--up-muted);
 }
 
 .up-segment {

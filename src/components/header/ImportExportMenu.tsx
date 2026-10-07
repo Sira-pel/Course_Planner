@@ -1,6 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion, type TargetAndTransition, type Transition } from 'motion/react';
-import { ChevronDown } from 'lucide-react';
+import {
+  AlignLeft,
+  Calendar,
+  ChevronDown,
+  Clock,
+  Download,
+  FileSpreadsheet,
+  Image,
+  Link2,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react';
 import type { ExportTabType } from '../export/ExportModal';
 
 type ImportTab = 'excel' | 'share' | 'ics' | 'backup';
@@ -54,6 +65,17 @@ export function ImportExportMenu({
     onOpenExport(tab, focus);
   };
 
+  const row = (icon: LucideIcon, label: string, hint: string | undefined, onClick: () => void) => {
+    const Icon = icon;
+    return (
+      <button type="button" role="menuitem" className="up-more-item up-import-row" onClick={onClick}>
+        <Icon className="up-import-ico" strokeWidth={1.75} aria-hidden />
+        <span className="up-import-name">{label}</span>
+        {hint ? <span className="up-import-hint">{hint}</span> : null}
+      </button>
+    );
+  };
+
   return (
     <div className="up-import-anchor" ref={rootRef}>
       <button
@@ -81,17 +103,18 @@ export function ImportExportMenu({
             className="up-menu up-import-menu"
           >
             <p className="up-import-label">Import</p>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseImport('excel')}>Spreadsheet</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseImport('share')}>Share link</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseImport('ics')}>Calendar file</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseImport('backup')}>Backup</button>
+            {row(FileSpreadsheet, 'Spreadsheet', '.xlsx .csv', () => chooseImport('excel'))}
+            {row(Link2, 'Share link', undefined, () => chooseImport('share'))}
+            {row(Calendar, 'Calendar file', '.ics', () => chooseImport('ics'))}
+            {row(Download, 'Restore backup', '.json', () => chooseImport('backup'))}
+            <div className="up-import-rule" role="separator" />
             <p className="up-import-label">Export</p>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('text')}>Text</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('share')}>Share link</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('ics')}>Calendar file</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('ics', 'google')}>Google Calendar</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('image')}>Image</button>
-            <button type="button" role="menuitem" className="up-more-item" onClick={() => chooseExport('backup')}>Backup</button>
+            {row(AlignLeft, 'Copy as text', undefined, () => chooseExport('text'))}
+            {row(Link2, 'Share link', undefined, () => chooseExport('share'))}
+            {row(Calendar, 'Calendar file', '.ics', () => chooseExport('ics'))}
+            {row(Clock, 'Google Calendar', 'sync', () => chooseExport('ics', 'google'))}
+            {row(Image, 'Image', '.png', () => chooseExport('image'))}
+            {row(Upload, 'Save backup', '.json', () => chooseExport('backup'))}
           </motion.div>
         )}
       </AnimatePresence>
