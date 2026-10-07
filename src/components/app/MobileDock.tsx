@@ -6,7 +6,8 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
-import { Sparkles, RotateCcw, HelpCircle, Keyboard, ShoppingBag, Plus, MoreVertical, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical, Smartphone, Download, X } from 'lucide-react';
+import { ClearAllDialog } from '../header/ClearAllDialog';
 import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 
@@ -23,6 +24,7 @@ export interface MobileDockProps {
   onLoadDemo: () => void;
   onOpenShortcuts: () => void;
   onOpenHelp?: () => void;
+  onOpenExport?: () => void;
   onRequestClear: () => void;
   onConfirmClear: () => void;
   onCancelClear: () => void;
@@ -40,6 +42,7 @@ export const MobileDock = React.memo(function MobileDock({
   onLoadDemo,
   onOpenShortcuts,
   onOpenHelp,
+  onOpenExport,
   onRequestClear,
   onConfirmClear,
   onCancelClear,
@@ -47,6 +50,7 @@ export const MobileDock = React.memo(function MobileDock({
 }: MobileDockProps) {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
 
   const menuOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
@@ -82,7 +86,7 @@ export const MobileDock = React.memo(function MobileDock({
           className={`up-fab-more up-chrome-btn ${isMoreOpen ? 'is-open' : ''}`}
           title="More actions"
           aria-label="More actions"
-          aria-haspopup="menu"
+          aria-haspopup="dialog"
           aria-expanded={isMoreOpen}
         >
           <MoreVertical className="w-5 h-5" />
@@ -150,7 +154,7 @@ export const MobileDock = React.memo(function MobileDock({
             {isMoreOpen && (
               <motion.div
                 key="more-menu"
-                role="menu"
+                role="dialog"
                 aria-label="More actions"
                 className="up-menu up-more-menu"
                 initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
@@ -162,50 +166,54 @@ export const MobileDock = React.memo(function MobileDock({
                 }
                 transition={menuOpenTransition}
               >
-                {isConfirmingClear ? (
-                  <div className="up-sheet-empty">
-                    <p>Clear all plans and pool?</p>
-                    <button
-                      type="button"
-                      className="up-sheet-btn up-sheet-btn-primary up-chrome-btn"
-                      onClick={onConfirmClear}
-                    >
-                      Yes, clear all
-                    </button>
-                    <button
-                      type="button"
-                      className="up-sheet-btn up-sheet-btn-secondary up-chrome-btn"
-                      onClick={onCancelClear}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {!isInstalled ? (
+                <>
+                    {!isInstalled && !installDismissed && (
+                      <div className="up-more-install">
+                        <Smartphone className="up-more-install-icon" aria-hidden />
+                        <div className="up-more-install-copy">
+                          <span className="up-more-install-title">Install Uniplan</span>
+                          <span className="up-more-install-sub">Add to home screen</span>
+                        </div>
+                        <button
+                          type="button"
+                          id="btn-mobile-install-app"
+                          className="up-more-install-btn up-chrome-btn"
+                          onClick={async () => {
+                            onCloseMoreMenu();
+                            if (isInstallable) {
+                              const outcome = await install();
+                              if (!outcome) setShowInstallGuide(true);
+                            } else {
+                              setShowInstallGuide(true);
+                            }
+                          }}
+                        >
+                          Install
+                        </button>
+                        <button
+                          type="button"
+                          className="up-more-install-dismiss up-chrome-btn"
+                          aria-label="Dismiss install prompt"
+                          onClick={() => setInstallDismissed(true)}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    <div role="menu" aria-label="More actions" className="up-more-actions">
+                    {onOpenExport && (
                       <button
                         type="button"
                         role="menuitem"
-                        id="btn-mobile-install-app"
-                        className="up-more-item up-chrome-btn text-indigo-600 dark:text-indigo-400 font-semibold"
-                        onClick={async () => {
+                        className="up-more-item up-chrome-btn"
+                        onClick={() => {
                           onCloseMoreMenu();
-                          if (isInstallable) {
-                            const outcome = await install();
-                            if (!outcome) setShowInstallGuide(true);
-                          } else {
-                            setShowInstallGuide(true);
-                          }
+                          onOpenExport();
                         }}
                       >
-                        <Smartphone className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        Install Uniplan app
+                        <Download className="w-4 h-4" />
+                        Export…
                       </button>
-                    ) : (
-                      <div className="up-more-item text-slate-500 dark:text-slate-400 pointer-events-none opacity-80 select-none">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        App installed
-                      </div>
                     )}
                     <button
                       type="button"
@@ -233,6 +241,7 @@ export const MobileDock = React.memo(function MobileDock({
                         Help
                       </button>
                     )}
+                    <div className="up-more-rule" role="separator" />
                     <button
                       type="button"
                       role="menuitem"
@@ -242,13 +251,18 @@ export const MobileDock = React.memo(function MobileDock({
                       <RotateCcw className="w-4 h-4" />
                       Clear all
                     </button>
-                  </>
-                )}
+                    </div>
+                </>
               </motion.div>
             )}
           </AnimatePresence>,
           document.body
         )}
+      <ClearAllDialog
+        open={isConfirmingClear}
+        onCancel={onCancelClear}
+        onConfirm={onConfirmClear}
+      />
       {typeof document !== 'undefined' &&
         createPortal(
           <Suspense fallback={null}>

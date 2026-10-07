@@ -14,11 +14,12 @@ import { CoursePoolSidebar } from './components/course-pool/CoursePoolSidebar';
 import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { DeferredDialog, DialogReplaceAppearContext, SuppressFocusRestoreContext } from './components/app/DeferredDialog';
+import { AppToast, type ToastMessage } from './components/app/AppToast';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
-import { applyDomTheme, persistTheme } from './utils/theme';
+import { applyDomTheme, persistTheme, resolveTheme } from './utils/theme';
 import { isThemeRevealing, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
@@ -129,7 +130,7 @@ export default function App() {
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const duplicatePlan = useScheduleStore((state) => state.duplicatePlan);
   const importPlan = useScheduleStore((state) => state.importPlan);
-  const commitTheme = useScheduleStore((state) => state.commitTheme);
+  const setThemePreference = useScheduleStore((state) => state.setThemePreference);
   const undo = useScheduleStore((state) => state.undo);
   const redo = useScheduleStore((state) => state.redo);
   const resetToBlank = useScheduleStore((state) => state.resetToBlank);
@@ -145,6 +146,7 @@ export default function App() {
 
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportInitialTab, setExportInitialTab] = useState<ExportTabType>('share');
+  const [exportInitialFocus, setExportInitialFocus] = useState<'google' | undefined>(undefined);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
@@ -159,6 +161,8 @@ export default function App() {
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [importExportOpen, setImportExportOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [instantDismiss, setInstantDismiss] = useState(false);
   const [replaceAppear, setReplaceAppear] = useState(false);
   const [shortcutSurface, setShortcutSurface] = useState<ShortcutSurface | null>(null);
@@ -167,6 +171,13 @@ export default function App() {
   const [helpSession, setHelpSession] = useState(0);
   const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
+  const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
+  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info') => {
+    setToastMessage({ text, type });
+    window.setTimeout(() => {
+      setToastMessage((prev) => (prev?.text === text ? null : prev));
+    }, 4000);
+  }, []);
 
   const closeMoreMenu = useCallback(() => {
     setIsMoreOpen(false);
@@ -210,8 +221,26 @@ export default function App() {
     const unsub = useScheduleStore.subscribe((state, previous) => {
       if (state.theme !== previous.theme) applyDomTheme(state.theme);
     });
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const syncSystemTheme = () => {
+      const state = useScheduleStore.getState();
+      if (state.themePreference !== 'system') return;
+      const resolved = resolveTheme('system');
+      applyDomTheme(resolved);
+      state.commitTheme(resolved);
+    };
+    media.addEventListener('change', syncSystemTheme);
+    const initial = useScheduleStore.getState();
+    if (initial.themePreference === 'system') {
+      persistTheme('system');
+      const resolved = resolveTheme('system');
+      if (initial.theme !== resolved) initial.commitTheme(resolved);
+    }
+
     return () => {
       unsub();
+      media.removeEventListener('change', syncSystemTheme);
     };
   }, []);
 
@@ -279,9 +308,10 @@ export default function App() {
     setIsCourseModalOpen(true);
   }, []);
 
-  const handleOpenExport = useCallback((tab: ExportTabType = 'text') => {
+  const handleOpenExport = useCallback((tab: ExportTabType = 'text', focus?: 'google') => {
     setIsPoolCollapsed(true);
     setExportInitialTab(tab);
+    setExportInitialFocus(focus);
     setShortcutSurface(shortcutSurfaceForExportTab(tab));
     setIsExportOpen(true);
   }, []);
@@ -509,10 +539,10 @@ export default function App() {
         persistTheme(next);
       },
       commit: () => {
-        commitTheme(next);
+        setThemePreference(next);
       },
     });
-  }, [commitTheme]);
+  }, [setThemePreference]);
 
   useAppShortcuts({
     activePlanId,
@@ -521,7 +551,12 @@ export default function App() {
     isAnyModalOpen,
     onModalShortcut: handleModalShortcut,
     onToggleTheme: handleShortcutToggleTheme,
-    onDuplicatePlan: duplicatePlan,
+    onToggleCompare: () => setCompareOpen((open) => !open),
+    onDuplicatePlan: (planId) => {
+      const newId = duplicatePlan(planId);
+      const created = useScheduleStore.getState().plans.find((plan) => plan.id === newId);
+      if (created && created.id !== planId) showToast(`Switched to "${created.name}"`, 'info');
+    },
     onUndo: undo,
     onRedo: redo,
     onSetActivePlan: setActivePlan,
@@ -542,13 +577,18 @@ export default function App() {
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-          onOpenExport={() => handleOpenExport('text')}
+          onOpenExport={handleOpenExport}
           onOpenImport={handleOpenImport}
           onOpenShortcuts={handleOpenShortcuts}
           onOpenHelp={() => handleOpenHelp('workflow')}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShare={handleOpenShareModal}
           onOpenImportShare={handleOpenImportShare}
+          showToast={showToast}
+          importExportOpen={importExportOpen}
+          onImportExportOpenChange={setImportExportOpen}
+          compareOpen={compareOpen}
+          onCompareOpenChange={setCompareOpen}
         />
 
         {/* Workspace: Calendar Grid and Course Pool Sidebar */}
@@ -559,6 +599,11 @@ export default function App() {
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={handleAddCourseAtTime}
               onOpenNewCourse={handleOpenCalendarCourse}
+              onOpenImport={() => handleOpenImport('excel')}
+              onLoadDemo={() => {
+                resetToSample();
+                showToast('Loaded the demo semester.', 'success');
+              }}
             />
           </div>
 
@@ -584,6 +629,7 @@ export default function App() {
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
         onOpenHelp={() => handleOpenHelp('workflow')}
+        onOpenExport={() => setImportExportOpen(true)}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}
@@ -609,6 +655,7 @@ export default function App() {
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
+          initialFocus={exportInitialFocus}
           onClose={handleCloseExport}
           onTabChange={handleExportTabChange}
         />
@@ -653,6 +700,7 @@ export default function App() {
       </Suspense>
 
       <OfflineIndicator />
+      <AppToast message={toastMessage} onDismiss={() => setToastMessage(null)} />
     </div>
   );
 }

@@ -66,7 +66,7 @@ export function sanitizeCourse(c: any, index: number): Course {
   const code = rawCode ? rawCode.toUpperCase() : `CRS ${index + 1}`;
 
   const rawName = safeTrim(c.name, 200);
-  const name = rawName || `${code} Course`;
+  const name = rawName;
 
   const rawColor = safeTrim(c.color, 32);
   let color = rawColor || COURSE_COLORS[index % COURSE_COLORS.length];

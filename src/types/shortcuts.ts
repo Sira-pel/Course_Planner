@@ -106,7 +106,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutItem[] = [
   {
     id: 'theme',
     name: 'Toggle Theme',
-    description: 'Switch between light and dark visual themes',
+    description: 'Toggle light/dark',
     category: 'general',
     defaultKey: 'Alt+T',
     isCustomizable: true,

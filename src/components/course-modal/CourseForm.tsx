@@ -1,7 +1,8 @@
 import React, { type FormEvent, type Ref, type RefObject } from 'react';
 import { Check, ChevronDown, Clock, Plus, Trash2 } from 'lucide-react';
 import { COURSE_COLORS, COURSE_COLOR_NAMES, DAYS_LIST, DayOfWeek } from '../../types/schedule';
-import { getContrastTextColor, timeToMinutes } from '../../utils/timeUtils';
+import { displayCourseColor } from '../../utils/courseColorDisplay';
+import { timeToMinutes } from '../../utils/timeUtils';
 import {
   DAY_PRESETS,
   DEFAULT_DURATION_MINUTES,
@@ -125,8 +126,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                   startTimeInputRef.current?.focus();
                 }
               }}
-              placeholder="Intro to CS"
-              required
+              placeholder="Add a title (optional)"
               className={`${inputClass} course-field ${shakeField === 'name' ? 'is-error is-shaking' : ''}`}
             />
           </div>
@@ -310,7 +310,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
               )}
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: displayCourseColor(color).bg }}
                 aria-hidden
               />
               <ChevronDown className="course-acc-chevron w-4 h-4 text-slate-400" />
@@ -369,19 +369,20 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                     {COURSE_COLORS.map((swatch) => {
                       const selected = color.toLowerCase() === swatch.toLowerCase();
                       const colorName = COURSE_COLOR_NAMES[swatch] || swatch;
-                      const isDarkText = getContrastTextColor(swatch) === 'text-slate-900';
+                      const shown = displayCourseColor(swatch);
+                      const isDarkText = shown.text === '#0f172a';
                       return (
                         <button
                           key={swatch}
                           type="button"
                           title={colorName}
-                          aria-label={`Use color ${colorName} (${swatch})`}
+                          aria-label={`Use color ${colorName} (${shown.bg})`}
                           aria-pressed={selected}
                           onClick={() => onColorChange(swatch)}
                           className={`course-swatch w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-xs ${
                             selected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900 scale-105' : ''
                           }`}
-                          style={{ backgroundColor: swatch }}
+                          style={{ backgroundColor: shown.bg }}
                         >
                           {selected && (
                             <Check
@@ -400,12 +401,12 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900'
                           : 'border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
                       }`}
-                      style={isCustomColor ? { backgroundColor: color } : undefined}
+                      style={isCustomColor ? { backgroundColor: displayCourseColor(color).bg } : undefined}
                     >
                       <input
                         type="color"
                         tabIndex={-1}
-                        value={color.startsWith('#') && color.length === 7 ? color : '#6366F1'}
+                        value={displayCourseColor(color).bg}
                         onChange={(e) => onColorChange(e.target.value)}
                         className="sr-only"
                         id="custom-course-color-mixer"
@@ -413,7 +414,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                       {isCustomColor ? (
                         <Check
                           className={`w-3 h-3 ${
-                            getContrastTextColor(color) === 'text-slate-900'
+                            displayCourseColor(color).text === '#0f172a'
                               ? 'text-slate-900'
                               : 'text-white drop-shadow-xs'
                           }`}

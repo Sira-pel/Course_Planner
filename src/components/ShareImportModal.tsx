@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { SchedulePlan } from '../types/schedule';
+import { displayCourseColor } from '../utils/courseColorDisplay';
+import { displayCourseTitle } from '../utils/courseIdentity';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { Layers, Check, X, Share2, AlertCircle, ArrowRight } from 'lucide-react';
@@ -190,7 +192,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                           <div className="min-w-0 flex items-start gap-2">
                             <span
                               className="w-2.5 h-2.5 rounded-full mt-1 shrink-0"
-                              style={{ backgroundColor: course.color }}
+                              style={{ backgroundColor: displayCourseColor(course.color).bg }}
                             />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
@@ -203,9 +205,11 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                                {course.name}
-                              </p>
+                              {displayCourseTitle(course) && (
+                                <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                                  {displayCourseTitle(course)}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono text-right shrink-0">

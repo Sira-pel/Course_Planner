@@ -1,10 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
-  Plus,
-  Copy,
   Trash2,
   Edit2,
   Check,
@@ -15,6 +13,8 @@ import {
   Share2,
 } from 'lucide-react';
 import type { SchedulePlan } from '../../types/schedule';
+import { AnimatedBody } from '../app/AnimatedBody';
+import { ModalTabPill } from '../app/ModalTabPill';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
 
 interface PlansMenuProps {
@@ -41,8 +41,7 @@ interface PlansMenuProps {
   onStartRename: (planId: string, currentName: string) => void;
   onSaveRename: () => void;
   onCancelRename: () => void;
-  onCreate: (name?: string) => void;
-  onDuplicateActive: () => void;
+  onNewPlan: (input: { name: string; mode: 'blank' | 'duplicate' }) => void;
   onRequestDelete: (planId: string) => void;
   onConfirmDelete: (planId: string) => void;
   onCancelDelete: () => void;
@@ -72,14 +71,26 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   onStartRename,
   onSaveRename,
   onCancelRename,
-  onCreate,
-  onDuplicateActive,
+  onNewPlan,
   onRequestDelete,
   onConfirmDelete,
   onCancelDelete,
   onSharePlan,
 }) => {
   const reduceMotion = useReducedMotion();
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerMode, setComposerMode] = useState<'blank' | 'duplicate'>('blank');
+
+  useEffect(() => {
+    if (!plansMenuOpen) {
+      setComposerOpen(false);
+      setComposerMode('blank');
+    }
+  }, [plansMenuOpen]);
+
+  const submitNewPlan = () => {
+    onNewPlan({ name: newPlanInputName, mode: composerMode });
+  };
 
   const sheetOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
@@ -254,67 +265,93 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
       </div>
 
       <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
-        <div className="flex items-center gap-1.5">
-          <input
-            type="text"
-            value={newPlanInputName}
-            onChange={(e) => onNewPlanNameChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onCreate();
-            }}
-            placeholder={`New name (e.g. ${nextSuggestedName})`}
-            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-          <button
-            type="button"
-            onClick={() => onCreate()}
-            className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium shadow-sm transition-colors shrink-0 up-chrome-btn"
-            title="Create plan"
-          >
-            <FolderPlus className="w-3.5 h-3.5" />
-            <span>Create</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-          <button
-            type="button"
-            onClick={() => onCreate(nextSuggestedName)}
-            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium border border-slate-200 dark:border-slate-700 up-chrome-btn"
-          >
-            <Plus className="w-3 h-3 text-slate-500" />
-            <span>Blank plan</span>
-          </button>
-          {activePlan && (
+        <button
+          type="button"
+          onClick={() => setComposerOpen((open) => !open)}
+          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 up-chrome-btn"
+          aria-expanded={composerOpen}
+        >
+          <FolderPlus className="w-3.5 h-3.5" />
+          New plan
+        </button>
+        {composerOpen && (
+          <AnimatedBody activeKey={`new-plan-${composerMode}`} contentClassName="space-y-2">
+            <input
+              type="text"
+              value={newPlanInputName}
+              onChange={(e) => onNewPlanNameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitNewPlan();
+              }}
+              placeholder={`New name (e.g. ${nextSuggestedName})`}
+              aria-label="New plan name"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <div
+              role="tablist"
+              aria-label="New plan type"
+              className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={composerMode === 'blank'}
+                onClick={() => setComposerMode('blank')}
+                className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold ${
+                  composerMode === 'blank'
+                    ? 'text-indigo-700 dark:text-indigo-300'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {composerMode === 'blank' && <ModalTabPill layoutId="new-plan-mode" />}
+                <span className="relative z-10">Blank</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={composerMode === 'duplicate'}
+                onClick={() => setComposerMode('duplicate')}
+                disabled={!activePlan}
+                title={activePlan ? `Duplicate "${activePlan.name}"` : undefined}
+                className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold truncate disabled:opacity-40 ${
+                  composerMode === 'duplicate'
+                    ? 'text-indigo-700 dark:text-indigo-300'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {composerMode === 'duplicate' && <ModalTabPill layoutId="new-plan-mode" />}
+                <span className="relative z-10 truncate">
+                  {activePlan ? `Duplicate "${activePlan.name}"` : 'Duplicate'}
+                </span>
+              </button>
+            </div>
             <button
               type="button"
-              onClick={onDuplicateActive}
-              className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium border border-slate-200 dark:border-slate-700 truncate up-chrome-btn"
-              title={`Clone ${activePlan.name}`}
+              onClick={submitNewPlan}
+              className="w-full px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium shadow-sm up-chrome-btn"
             >
-              <Copy className="w-3 h-3 text-slate-500" />
-              <span className="truncate">Clone active</span>
+              Create
             </button>
-          )}
-        </div>
+          </AnimatedBody>
+        )}
       </div>
     </>
   );
 
   return (
-    <div className="relative" ref={plansDropdownRef}>
+    <div className="up-plans-anchor relative" ref={plansDropdownRef}>
       <button
         type="button"
         id="btn-plans-dropdown"
         onClick={onToggleOpen}
         className={`up-text-trigger up-chrome-btn ${plansMenuOpen ? 'is-open' : ''}`}
-        title="View, switch, manage, and create plans"
+        title={isPhone && activePlan?.name ? activePlan.name : 'View, switch, manage, and create plans'}
         aria-haspopup="true"
         aria-expanded={plansMenuOpen}
       >
         <FolderKanban className="w-3.5 h-3.5 shrink-0" />
         <span className="hidden sm:inline">Plans</span>
-        <span className="sm:hidden truncate max-w-[46vw]">{activePlan?.name || 'Plans'}</span>
+        <span className="sm:hidden truncate">{activePlan?.name || 'Plans'}</span>
         <ChevronDown className={`up-chevron w-3 h-3 opacity-60 shrink-0 ${plansMenuOpen ? 'is-open' : ''}`} />
       </button>
 

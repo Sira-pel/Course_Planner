@@ -52,6 +52,8 @@ export interface LayoutSession {
   colIndex: number;
   totalCols: number;
   hasConflict: boolean;
+  /** Phone week overlaps stay full width and step sideways instead of sharing lanes. */
+  cascadeIndex?: number;
 }
 
 // 12 uniquely distinct, visually pleasing, non-overlapping course colors across separate color families.

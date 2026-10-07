@@ -3,21 +3,20 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { applyDomTheme, persistTheme } from '../../utils/theme';
-import { isPointerClick, isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
-import { detectPlanConflicts } from '../../utils/timeUtils';
+import type { ExportTabType } from '../export/ExportModal';
+import { applyDomTheme, persistTheme, type ThemePreference } from '../../utils/theme';
+import { isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
+import { ImportExportMenu } from './ImportExportMenu';
+import { countConflictPairs, detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
   AlertTriangle,
-  Sun,
-  Moon,
   Undo2,
   Redo2,
-  X,
-  HelpCircle,
 } from 'lucide-react';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import type { SchedulePlan } from '../../types/schedule';
+import type { ToastType } from '../app/AppToast';
 import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
@@ -27,13 +26,18 @@ const ConflictModal = lazy(() => import('./ConflictModal').then((m) => ({ defaul
 
 interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
-  onOpenExport: () => void;
+  onOpenExport: (tab?: ExportTabType, focus?: 'google') => void;
   onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onOpenCatalog: () => void;
   onOpenShare?: (plan?: SchedulePlan) => void;
   onOpenImportShare?: () => void;
+  showToast: (text: string, type?: ToastType) => void;
+  importExportOpen: boolean;
+  onImportExportOpenChange: (open: boolean) => void;
+  compareOpen: boolean;
+  onCompareOpenChange: (open: boolean) => void;
 }
 
 export const Header = memo(function Header({
@@ -45,6 +49,11 @@ export const Header = memo(function Header({
   onOpenCatalog,
   onOpenShare,
   onOpenImportShare,
+  showToast,
+  importExportOpen,
+  onImportExportOpenChange,
+  compareOpen,
+  onCompareOpenChange,
 }: HeaderProps) {
   const {
     plans,
@@ -53,7 +62,10 @@ export const Header = memo(function Header({
     showWeekends,
     startHour,
     endHour,
+    timeRangeMode,
+    weekStart,
     theme,
+    themePreference,
     setActivePlan,
     createPlan,
     duplicatePlan,
@@ -63,8 +75,11 @@ export const Header = memo(function Header({
     clearGhostPlans,
     setShowWeekends,
     setTimeRange,
-    setTheme,
-    commitTheme,
+    setTimeRangeMode,
+    setWeekStart,
+    setThemePreference,
+    mobileCalendarView,
+    setMobileCalendarView,
     undo,
     redo,
     canUndo,
@@ -79,7 +94,10 @@ export const Header = memo(function Header({
       showWeekends: state.showWeekends,
       startHour: state.startHour,
       endHour: state.endHour,
+      timeRangeMode: state.timeRangeMode,
+      weekStart: state.weekStart,
       theme: state.theme,
+      themePreference: state.themePreference,
       setActivePlan: state.setActivePlan,
       createPlan: state.createPlan,
       duplicatePlan: state.duplicatePlan,
@@ -89,8 +107,11 @@ export const Header = memo(function Header({
       clearGhostPlans: state.clearGhostPlans,
       setShowWeekends: state.setShowWeekends,
       setTimeRange: state.setTimeRange,
-      setTheme: state.setTheme,
-      commitTheme: state.commitTheme,
+      setTimeRangeMode: state.setTimeRangeMode,
+      setWeekStart: state.setWeekStart,
+      setThemePreference: state.setThemePreference,
+      mobileCalendarView: state.mobileCalendarView,
+      setMobileCalendarView: state.setMobileCalendarView,
       undo: state.undo,
       redo: state.redo,
       canUndo: state.past.length > 0,
@@ -105,7 +126,6 @@ export const Header = memo(function Header({
   const creditsMounted = useRef(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [ghostMenuOpen, setGhostMenuOpen] = useState(false);
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
   const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
@@ -117,21 +137,12 @@ export const Header = memo(function Header({
   const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
   const plansDropdownRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToastMessage({ text, type });
-    setTimeout(() => {
-      setToastMessage((prev) => (prev?.text === text ? null : prev));
-    }, 4000);
-  };
-
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
   const conflicts = useMemo(() => (activePlan ? detectPlanConflicts(activePlan.courses) : []), [activePlan?.courses]);
+  const conflictCount = useMemo(() => countConflictPairs(conflicts), [conflicts]);
   const totalCredits = useMemo(
     () => activePlan?.courses.reduce((sum, c) => sum + (c.credits || 0), 0) || 0,
     [activePlan?.courses]
@@ -177,13 +188,21 @@ export const Header = memo(function Header({
       ? { y: '100%', transition: menuCloseTransition }
       : { opacity: 0, scale: 0.975, y: -3, transition: menuCloseTransition };
 
-  const closeAllMenus = () => {
-    setGhostMenuOpen(false);
+  useEffect(() => {
+    if (!compareOpen) return;
     setPlansMenuOpen(false);
     setIsSettingsOpen(false);
+    onImportExportOpenChange(false);
+  }, [compareOpen, onImportExportOpenChange]);
+
+  const closeAllMenus = () => {
+    onCompareOpenChange(false);
+    setPlansMenuOpen(false);
+    setIsSettingsOpen(false);
+    onImportExportOpenChange(false);
   };
 
-  const anyMenuOpen = isSettingsOpen || plansMenuOpen || ghostMenuOpen;
+  const anyMenuOpen = isSettingsOpen || plansMenuOpen || compareOpen;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -192,7 +211,7 @@ export const Header = memo(function Header({
       if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor')) return;
       if (document.documentElement.classList.contains('is-theme-revealing')) return;
       if (ghostDropdownRef.current && !ghostDropdownRef.current.contains(e.target as Node)) {
-        setGhostMenuOpen(false);
+        onCompareOpenChange(false);
       }
       if (plansDropdownRef.current && !plansDropdownRef.current.contains(e.target as Node)) {
         setPlansMenuOpen(false);
@@ -216,74 +235,54 @@ export const Header = memo(function Header({
         setConflictModalOpen(false);
         return;
       }
-      setGhostMenuOpen(false);
+      onCompareOpenChange(false);
       setPlansMenuOpen(false);
       setIsSettingsOpen(false);
+      onImportExportOpenChange(false);
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editingPlanId, conflictModalOpen]);
 
-  const handleIcsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const content = event.target?.result;
-      if (typeof content === 'string') {
-        try {
-          const { parseIcsContent } = await import('../../utils/icsImport');
-          const courses = parseIcsContent(content);
-          if (courses.length > 0) {
-            useScheduleStore.getState().bulkAddCourses(courses, activePlanId);
-            showToast(`Imported ${courses.length} course(s) from .ics file.`, 'success');
-          } else {
-            showToast('No valid recurring or class events found in this .ics file.', 'error');
-          }
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          showToast(`Error parsing .ics file: ${msg}`, 'error');
-        }
-      }
-    };
-    reader.onerror = () => {
-      showToast('Failed to read the selected .ics file.', 'error');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  // closeSettings stays false for #btn-theme and Settings Light/Dark so the sheet stays open.
-  const handleToggleTheme = (event: React.MouseEvent<HTMLElement>, closeSettings: boolean) => {
+  const handleAppearance = (preference: ThemePreference, event: React.MouseEvent<HTMLElement>) => {
     if (isThemeRevealing()) return;
-    const goingToDark = theme !== 'dark';
-    const next = goingToDark ? 'dark' : 'light';
-
-    if (closeSettings) setIsSettingsOpen(false);
-
+    const resolved = preference === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : preference;
+    if (resolved === theme) {
+      setThemePreference(preference);
+      return;
+    }
     runThemeReveal({
       event,
-      goingToDark,
+      goingToDark: resolved === 'dark',
       apply: () => {
-        applyDomTheme(next);
-        persistTheme(next);
+        applyDomTheme(resolved);
+        persistTheme(preference);
       },
       commit: () => {
-        commitTheme(next);
+        setThemePreference(preference);
       },
     });
   };
 
-  const handleCreatePlan = (nameToUse?: string) => {
-    const finalName = (nameToUse || newPlanInputName).trim() || nextSuggestedName;
-    createPlan(finalName);
-    setNewPlanInputName('');
-    setPlansMenuOpen(false);
+  const announcePlan = (planId: string, fallback: string) => {
+    const created = useScheduleStore.getState().plans.find((plan) => plan.id === planId);
+    showToast(`Switched to "${created?.name || fallback}"`, 'info');
   };
 
-  const handleDuplicatePlan = (sourcePlanId: string) => {
-    duplicatePlan(sourcePlanId);
+  const handleNewPlan = ({ name, mode }: { name: string; mode: 'blank' | 'duplicate' }) => {
+    const typed = name.trim();
+    if (mode === 'duplicate') {
+      if (!activePlan) return;
+      const newId = duplicatePlan(activePlan.id, typed || undefined);
+      announcePlan(newId, typed || `${activePlan.name} (Copy)`);
+    } else {
+      const finalName = typed || nextSuggestedName;
+      const newId = createPlan(finalName);
+      announcePlan(newId, finalName);
+    }
+    setNewPlanInputName('');
     setPlansMenuOpen(false);
   };
 
@@ -344,15 +343,15 @@ export const Header = memo(function Header({
           </div>
 
           <AnimatePresence initial={false}>
-            {conflicts.length > 0 && (
+            {conflictCount > 0 && (
               <motion.button
                 type="button"
                 id="conflict-alert-btn"
                 key="conflict-mark"
                 onClick={() => setConflictModalOpen(true)}
                 className="up-conflict up-chrome-btn"
-                title={`${conflicts.length} schedule ${conflicts.length === 1 ? 'collision' : 'collisions'} detected`}
-                aria-label={`${conflicts.length} ${conflicts.length === 1 ? 'collision' : 'collisions'}`}
+                title={`${conflictCount} schedule ${conflictCount === 1 ? 'conflict' : 'conflicts'}`}
+                aria-label={`${conflictCount} ${conflictCount === 1 ? 'conflict' : 'conflicts'}`}
                 initial={reduceMotion ? { opacity: 0 } : { y: 6, scale: 0.94, opacity: 0 }}
                 animate={{ y: 0, scale: 1, opacity: 1 }}
                 exit={
@@ -364,9 +363,9 @@ export const Header = memo(function Header({
               >
                 <AlertTriangle className="up-conflict-icon w-3.5 h-3.5 shrink-0" />
                 <span className="inline-flex items-baseline gap-1 leading-none tabular-nums font-semibold">
-                  <span>{conflicts.length}</span>
+                  <span>{conflictCount}</span>
                   <span className="hidden lg:inline font-normal">
-                    {conflicts.length === 1 ? 'collision' : 'collisions'}
+                    {conflictCount === 1 ? 'conflict' : 'conflicts'}
                   </span>
                 </span>
               </motion.button>
@@ -398,6 +397,31 @@ export const Header = memo(function Header({
             <Redo2 className="w-4 h-4" />
           </button>
 
+          <ImportExportMenu
+            isPhone={isPhone}
+            menuEnter={menuEnter}
+            menuShown={menuShown}
+            menuLeave={menuLeave}
+            menuOpenTransition={menuOpenTransition}
+            open={importExportOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                setPlansMenuOpen(false);
+                onCompareOpenChange(false);
+                setIsSettingsOpen(false);
+              }
+              onImportExportOpenChange(open);
+            }}
+            onOpenImport={(tab) => {
+              setIsSettingsOpen(false);
+              onOpenImport?.(tab);
+            }}
+            onOpenExport={(tab, focus) => {
+              setIsSettingsOpen(false);
+              onOpenExport(tab, focus);
+            }}
+          />
+
           <button
             type="button"
             id="btn-add-course"
@@ -410,40 +434,6 @@ export const Header = memo(function Header({
             <span className="hidden md:inline">Add course</span>
           </button>
 
-          <input
-            type="file"
-            accept=".ics,text/calendar"
-            ref={fileInputRef}
-            onChange={handleIcsUpload}
-            className="hidden"
-          />
-
-          <button
-            type="button"
-            id="btn-theme"
-            onClick={(event) => handleToggleTheme(event, false)}
-            className="up-icon-btn up-chrome-btn"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label="Dark mode"
-            aria-pressed={theme === 'dark'}
-          >
-            <span className="up-theme-glyph" aria-hidden="true">
-              <Sun className="up-theme-sun w-4 h-4" />
-              <Moon className="up-theme-moon w-4 h-4" />
-            </span>
-          </button>
-
-          <button
-            type="button"
-            id="btn-help"
-            onClick={onOpenHelp}
-            className="up-icon-btn up-chrome-btn"
-            title="Help"
-            aria-label="Help"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
-
           <SettingsMenu
             isPhone={isPhone}
             menuEnter={menuEnter}
@@ -454,33 +444,21 @@ export const Header = memo(function Header({
             settingsRef={settingsRef}
             startHour={startHour}
             endHour={endHour}
+            timeRangeMode={timeRangeMode}
+            weekStart={weekStart}
             showWeekends={showWeekends}
-            theme={theme}
+            themePreference={themePreference}
             onToggleOpen={() => {
               setPlansMenuOpen(false);
-              setGhostMenuOpen(false);
+              onCompareOpenChange(false);
+              onImportExportOpenChange(false);
               setIsSettingsOpen((open) => !open);
             }}
             onSetTimeRange={setTimeRange}
+            onSetTimeRangeMode={setTimeRangeMode}
+            onSetWeekStart={setWeekStart}
             onSetShowWeekends={setShowWeekends}
-            onOpenCatalog={() => {
-              setIsSettingsOpen(false);
-              onOpenCatalog();
-            }}
-            onToggleTheme={(event) => handleToggleTheme(event, false)}
-            onImportIcsClick={() => {
-              setIsSettingsOpen(false);
-              if (onOpenImport) onOpenImport('ics');
-              else fileInputRef.current?.click();
-            }}
-            onOpenImport={(tab) => {
-              setIsSettingsOpen(false);
-              onOpenImport?.(tab);
-            }}
-            onOpenExport={() => {
-              setIsSettingsOpen(false);
-              onOpenExport();
-            }}
+            onSetThemePreference={handleAppearance}
             onOpenShortcuts={() => {
               setIsSettingsOpen(false);
               onOpenShortcuts();
@@ -526,7 +504,7 @@ export const Header = memo(function Header({
               setNewPlanInputName('');
               setEditingPlanId(null);
               setIsSettingsOpen(false);
-              setGhostMenuOpen(false);
+              onCompareOpenChange(false);
               setPlansMenuOpen((open) => !open);
             }}
             onSelectPlan={(planId) => {
@@ -538,10 +516,7 @@ export const Header = memo(function Header({
             onStartRename={handleStartRename}
             onSaveRename={handleSaveRename}
             onCancelRename={() => setEditingPlanId(null)}
-            onCreate={handleCreatePlan}
-            onDuplicateActive={() => {
-              if (activePlan) handleDuplicatePlan(activePlan.id);
-            }}
+            onNewPlan={handleNewPlan}
             onRequestDelete={setPlanIdConfirmDelete}
             onConfirmDelete={(planId) => {
               deletePlan(planId);
@@ -562,6 +537,22 @@ export const Header = memo(function Header({
           </div>
         </div>
 
+        {isPhone && (
+          <div className="up-cal-toggle up-header-view-toggle" role="group" aria-label="Calendar view">
+            {(['week', 'day'] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                className="up-cal-toggle-btn up-chrome-btn"
+                aria-pressed={mobileCalendarView === view}
+                onClick={() => setMobileCalendarView(view)}
+              >
+                {view === 'week' ? 'Week' : 'Day'}
+              </button>
+            ))}
+          </div>
+        )}
+
         <CompareMenu
           isPhone={isPhone}
           reduceMotion={reduceMotion}
@@ -572,12 +563,13 @@ export const Header = memo(function Header({
           plans={plans}
           activePlanId={activePlanId}
           ghostPlanIds={ghostPlanIds}
-          ghostMenuOpen={ghostMenuOpen}
+          ghostMenuOpen={compareOpen}
           ghostDropdownRef={ghostDropdownRef}
           onToggleOpen={() => {
             setIsSettingsOpen(false);
             setPlansMenuOpen(false);
-            setGhostMenuOpen((open) => !open);
+            onImportExportOpenChange(false);
+            onCompareOpenChange(!compareOpen);
           }}
           onToggleGhost={toggleGhostPlan}
           onClearGhosts={clearGhostPlans}
@@ -585,10 +577,12 @@ export const Header = memo(function Header({
             if (!activePlanId) return;
             const newPlanId = duplicatePlan(activePlanId);
             toggleGhostPlan(newPlanId);
+            announcePlan(newPlanId, 'copy');
           }}
           onCreateAndOverlay={() => {
             const newPlanId = createPlan();
             toggleGhostPlan(newPlanId);
+            announcePlan(newPlanId, 'new plan');
           }}
           onOpenShare={() => onOpenShare?.()}
           onImportFriendLink={() => onOpenImportShare?.()}
@@ -607,42 +601,6 @@ export const Header = memo(function Header({
         </Suspense>
       )}
 
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            key="header-toast"
-            className="fixed top-[7.25rem] right-5 z-50"
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={
-              reduceMotion
-                ? { opacity: 0, transition: { duration: 0 } }
-                : { opacity: 0, y: 12, transition: { duration: 0.15, ease: EASE_OUT } }
-            }
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: EASE_OUT }}
-          >
-            <div
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg shadow-lg border text-xs font-medium ${
-                toastMessage.type === 'success'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800'
-                  : toastMessage.type === 'error'
-                  ? 'bg-rose-50 dark:bg-rose-950/90 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800'
-                  : 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700'
-              }`}
-            >
-              <span>{toastMessage.text}</span>
-              <button
-                type="button"
-                onClick={() => setToastMessage(null)}
-                className="opacity-70 hover:opacity-100 p-0.5 up-chrome-btn"
-                aria-label="Dismiss notification"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 });

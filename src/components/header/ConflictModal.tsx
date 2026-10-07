@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Conflict } from '../../types/schedule';
-import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
+import { countConflictPairs, formatConflictPairWhen, groupConflictsByPair } from '../../utils/timeUtils';
+import { EASE_SMOOTH } from '../../utils/motion';
 
 interface ConflictModalProps {
   open: boolean;
@@ -21,6 +22,10 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
   onClose,
 }) => {
   if (typeof document === 'undefined') return null;
+
+  const pairCount = countConflictPairs(conflicts);
+  const groups = groupConflictsByPair(conflicts);
+  const pairLabel = `${pairCount} ${pairCount === 1 ? 'conflict' : 'conflicts'}`;
 
   return createPortal(
     <AnimatePresence>
@@ -50,13 +55,14 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
                 <h3 id="conflict-modal-title" className="font-bold text-base text-slate-900 dark:text-white">
-                  Schedule collision detected
+                  {pairLabel}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className="up-icon-btn up-chrome-btn"
+                title="Close"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -65,22 +71,19 @@ export const ConflictModal: React.FC<ConflictModalProps> = ({
 
             <div className="py-3 space-y-2.5">
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                The following courses in <strong>{activePlanName}</strong> collide on the same day and time interval:
+                These courses in <strong>{activePlanName}</strong> overlap. Each pair is listed once, with every day it collides.
               </p>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {conflicts.map((c, i) => (
+                {groups.map((group) => (
                   <div
-                    key={i}
+                    key={group.key}
                     className="p-3 rounded-md border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-xs"
                   >
-                    <div className="font-bold text-rose-800 dark:text-rose-300 flex items-center justify-between">
-                      <span>{c.courseCode1} vs {c.courseCode2}</span>
-                      <span className="capitalize font-mono text-[11px] px-1.5 py-0.5 rounded bg-white dark:bg-slate-900">
-                        {c.day}
-                      </span>
+                    <div className="font-bold text-rose-800 dark:text-rose-300">
+                      {group.courseCode1} vs {group.courseCode2}
                     </div>
                     <p className="text-slate-600 dark:text-slate-300 mt-1 font-mono text-[11px]">
-                      Overlap window: {c.overlapStart} - {c.overlapEnd}
+                      {formatConflictPairWhen(group)}
                     </p>
                   </div>
                 ))}

@@ -1,12 +1,15 @@
 import React, { memo } from 'react';
 import { LayoutSession, GHOST_PLAN_COLORS } from '../types/schedule';
-import { getContrastTextColor, minutesToTime, timeToMinutes } from '../utils/timeUtils';
+import { displayCourseColor } from '../utils/courseColorDisplay';
+import { displayCourseTitle } from '../utils/courseIdentity';
+import { minutesToTime, timeToMinutes } from '../utils/timeUtils';
 import { AlertTriangle, Edit2, Trash2, MapPin, User } from 'lucide-react';
 
 interface CourseBlockProps {
   layout: LayoutSession;
   startHour: number;
   totalMinutes: number;
+  theme: 'light' | 'dark';
   onEdit: (courseId: string, planId?: string) => void;
   onDelete: (courseId: string, planId?: string) => void;
 }
@@ -15,10 +18,11 @@ export const CourseBlock = memo(function CourseBlock({
   layout,
   startHour,
   totalMinutes,
+  theme,
   onEdit,
   onDelete,
 }: CourseBlockProps) {
-  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict } = layout;
+  const { session, course, isGhost, ghostIndex = 0, planName, planId, colIndex, totalCols, hasConflict, cascadeIndex = 0 } = layout;
 
   const startMin = timeToMinutes(session.startTime);
   const endMin = timeToMinutes(session.endTime);
@@ -42,6 +46,7 @@ export const CourseBlock = memo(function CourseBlock({
   const durationMin = Math.max(15, endMin - startMin);
   const isShortBlock = durationMin < 50;
   const isMediumBlock = durationMin >= 50 && durationMin < 80;
+  const visibleTitle = displayCourseTitle(course);
 
   // Ghost block styling
   if (isGhost) {
@@ -63,7 +68,7 @@ export const CourseBlock = memo(function CourseBlock({
           width: `calc(${widthPercent}% - 2px)`,
           contain: 'layout style',
         }}
-        title={`[Comparing: ${planName}] ${course.code} - ${course.name} (Click to edit in ${planName})`}
+        title={`[Comparing: ${planName}] ${course.code}${visibleTitle ? ` - ${visibleTitle}` : ''} (Click to edit in ${planName})`}
       >
         {/* Top row: Code + Section and Quick Actions / Plan Badge */}
         <div className="flex items-start justify-between gap-1 leading-none">
@@ -122,9 +127,9 @@ export const CourseBlock = memo(function CourseBlock({
         </div>
 
         {/* Course Name */}
-        {!isShortBlock && (
+        {!isShortBlock && visibleTitle && (
           <div className="text-xs font-semibold truncate mt-1 leading-tight text-slate-700 dark:text-slate-200">
-            {course.name}
+            {visibleTitle}
           </div>
         )}
 
@@ -156,10 +161,11 @@ export const CourseBlock = memo(function CourseBlock({
   }
 
   // Active Plan Course Block
-  const contrastText = getContrastTextColor(course.color);
-  const isLightText = contrastText === 'text-white';
-  const subtitleColor = isLightText ? 'text-white/85' : 'text-slate-900/80';
-  const subtextColor = isLightText ? 'text-white/75' : 'text-slate-900/70';
+  const colors = displayCourseColor(course.color, theme);
+  const isLightText = colors.text === '#ffffff';
+  const contrastText = isLightText ? 'text-white' : 'text-slate-900';
+  const subtitleColor = isLightText ? 'text-white/95' : 'text-slate-900/90';
+  const subtextColor = isLightText ? 'text-white/90' : 'text-slate-900/85';
 
   return (
     <div
@@ -170,16 +176,18 @@ export const CourseBlock = memo(function CourseBlock({
       }}
       className={`group absolute rounded-lg transition-[box-shadow,border-color,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer select-none p-2 overflow-hidden shadow-xs hover:shadow-md hover:z-30 active:scale-[0.98] ${
         hasConflict
-          ? 'ring-2 ring-inset ring-red-500 animate-pulse'
+          ? theme === 'dark'
+            ? 'ring-2 ring-red-400'
+            : 'ring-2 ring-inset ring-red-500 motion-safe:animate-pulse'
           : 'border border-black/15 dark:border-white/20 hover:border-black/30 dark:hover:border-white/40'
       }`}
       style={{
-        backgroundColor: course.color,
+        backgroundColor: colors.bg,
         top: `${topPercent}%`,
         height: `calc(${heightPercent}% - 2px)`,
-        left: `calc(${leftPercent}% + 1px)`,
-        width: `calc(${widthPercent}% - 2px)`,
-        zIndex: 20 + colIndex,
+        left: cascadeIndex > 0 ? `${4 + cascadeIndex * 12}px` : `calc(${leftPercent}% + 1px)`,
+        width: cascadeIndex > 0 ? `calc(100% - ${8 + cascadeIndex * 12}px)` : `calc(${widthPercent}% - 2px)`,
+        zIndex: 20 + colIndex + cascadeIndex,
         contain: 'layout style',
       }}
     >
@@ -232,19 +240,19 @@ export const CourseBlock = memo(function CourseBlock({
       </div>
 
       {/* Course Name */}
-      {!isShortBlock && (
+      {!isShortBlock && visibleTitle && (
         <div className={`text-xs font-semibold truncate mt-1 leading-tight ${subtitleColor}`}>
-          {course.name}
+          {visibleTitle}
         </div>
       )}
 
       {/* Time & Details */}
-      <div className={`text-[10.5px] font-mono mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight ${subtextColor}`}>
+      <div className={`text-[11.5px] font-mono font-semibold mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight ${subtextColor}`}>
         <span>
           {minutesToTime(startMin)} - {minutesToTime(endMin)}
         </span>
         {session.room && !isShortBlock && (
-          <span className="inline-flex items-center gap-0.5 truncate font-sans">
+          <span className="inline-flex items-center gap-0.5 truncate font-sans text-[11px] font-medium">
             <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80" />
             {session.room}
           </span>
@@ -278,6 +286,8 @@ export const CourseBlock = memo(function CourseBlock({
   prev.layout.planId === next.layout.planId &&
   prev.layout.colIndex === next.layout.colIndex &&
   prev.layout.totalCols === next.layout.totalCols &&
+  prev.layout.cascadeIndex === next.layout.cascadeIndex &&
   prev.startHour === next.startHour &&
-  prev.totalMinutes === next.totalMinutes
+  prev.totalMinutes === next.totalMinutes &&
+  prev.theme === next.theme
 );

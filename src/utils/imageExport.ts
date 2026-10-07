@@ -1,5 +1,7 @@
 import { SchedulePlan, DayOfWeek, DAYS_LIST } from '../types/schedule';
-import { minutesToTime, timeToMinutes, getContrastTextColor, computeDayLayout } from './timeUtils';
+import { displayCourseTitle } from './courseIdentity';
+import { displayCourseColor } from './courseColorDisplay';
+import { minutesToTime, timeToMinutes, computeDayLayout } from './timeUtils';
 
 export interface ImageExportOptions {
   theme: 'light' | 'dark';
@@ -247,7 +249,8 @@ export async function exportScheduleToImage(
       } else {
         ctx.rect(bX, bY, bW, bH);
       }
-      ctx.fillStyle = course.color || '#3B82F6';
+      const blockColor = displayCourseColor(course.color || '#3B82F6', options.theme);
+      ctx.fillStyle = blockColor.bg;
       ctx.fill();
 
       // Block border
@@ -257,8 +260,8 @@ export async function exportScheduleToImage(
 
       // Text inside block
       ctx.clip();
-      const textCol = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? (isDark ? '#181818' : '#0f172a') : '#ffffff';
-      const textColSub = getContrastTextColor(course.color || '#3B82F6') === 'text-slate-900' ? (isDark ? '#404040' : '#334155') : 'rgba(255,255,255,0.85)';
+      const textCol = blockColor.text;
+      const textColSub = blockColor.text === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)';
       ctx.fillStyle = textCol;
       ctx.textAlign = 'left';
 
@@ -267,11 +270,12 @@ export async function exportScheduleToImage(
       ctx.font = 'bold 12px "Plus Jakarta Sans", system-ui, sans-serif';
       ctx.fillText(codeSec, bX + 6, bY + 16);
 
-      // Course Name if height permits
-      if (bH > 42) {
+      // Course Name if height permits and the course actually has one
+      const visibleTitle = displayCourseTitle(course);
+      if (bH > 42 && visibleTitle) {
         ctx.fillStyle = textColSub;
         ctx.font = '500 11px "Plus Jakarta Sans", system-ui, sans-serif';
-        const truncatedName = course.name.length > 20 ? course.name.substring(0, 18) + '...' : course.name;
+        const truncatedName = visibleTitle.length > 20 ? visibleTitle.substring(0, 18) + '...' : visibleTitle;
         ctx.fillText(truncatedName, bX + 6, bY + 31);
       }
 

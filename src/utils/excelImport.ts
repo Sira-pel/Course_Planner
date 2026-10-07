@@ -1,7 +1,7 @@
 import type { WorkBook, WorkSheet } from 'xlsx';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
 import { prefixedId } from './id';
-import { parseTimeRange, parseSingleTimeToken, normalizeDays } from './textParser';
+import { parseTimeRange, parseSingleTimeToken, normalizeDays, explicitMeridian } from './textParser';
 import { timeToMinutes } from './timeUtils';
 
 type XlsxModule = typeof import('xlsx');
@@ -116,6 +116,21 @@ export function excelSerialToTime(val: number): string | null {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** Parses a clock string, or an Excel day-fraction such as 0.375 for 9:00. */
+function parseCellTime(raw: string): { h: number; m: number } | null {
+  const trimmed = raw.trim();
+  if (/^\d*\.\d+$/.test(trimmed)) {
+    const fraction = Number(trimmed);
+    if (fraction >= 0 && fraction < 1) {
+      const clock = excelSerialToTime(fraction);
+      if (!clock) return null;
+      const [h, m] = clock.split(':').map((part) => Number(part));
+      return { h, m };
+    }
+  }
+  return parseSingleTimeToken(trimmed, false);
+}
+
 /**
  * Extracts a time range { start, end } from any raw string, number, or condensed military format.
  */
@@ -181,6 +196,16 @@ export function extractDays(raw: unknown): DayOfWeek[] {
 
   // Strip cohort prefixes e.g. "(DD)", "(A)", "(AA)", "(Y)", "(Z)", "(B)", "(BB)", "(L)"
   const withoutPrefix = str.replace(/^\([A-Za-z0-9]+\)\s*/, '');
+
+  // "M-F" and "Mon-Fri" are ranges. Replacing the hyphen first would leave only Monday and Friday.
+  const rangeMatch = withoutPrefix.match(
+    /\b(M-F|M-TH|MON-FRI|MON-THU|MONDAY-FRIDAY|MONDAY-THURSDAY|DAILY)\b/i
+  );
+  if (rangeMatch) {
+    const ranged = normalizeDays([rangeMatch[1]]);
+    if (ranged.length > 0) return ranged;
+  }
+
   const cleanStr = withoutPrefix.replace(/[-–—/]/g, ' ');
 
   // Match all day tokens in the string
@@ -547,6 +572,7 @@ export function autoDetectColumns(
     instructor: number;
     credits: number;
     room: number;
+    header: Record<keyof Omit<FieldScore, 'colKey' | 'header'>, number>;
   }
 
   const scores: FieldScore[] = columns.map((col) => {
@@ -571,8 +597,9 @@ export function autoDetectColumns(
     // Subject column detection e.g. "Acad. Dept", "Subject", "Dept"
     if (/\b(acad\s*dept|academic\s*department|subject|subj|department|dept)\b/i.test(cleanH)) subjectH = 14;
 
-    // Course number column detection e.g. "Crse", "Course #"
+    // Course number column detection e.g. "Crse", "Course #", "Number"
     if (/\b(crse|course\s*no|course\s*num|course\s*#|catalog\s*#|cat\s*#|cat\s*no|catalog\s*nbr|catalog\s*number)\b/i.test(cleanH)) courseNumH = 14;
+    else if (/\b(number|num|nbr)\b/i.test(cleanH) && !/\b(section|sec|phone|room|bldg|id)\b/i.test(cleanH)) courseNumH = 12;
 
     // Full Course Code detection e.g. "Course Code", "Course ID", "CRN"
     if (/\b(course\s*code|course\s*id|crn|class\s*#|class\s*nbr|course\s*identifier|subj\s*crse)\b/i.test(cleanH)) codeH = 16;
@@ -630,10 +657,13 @@ export function autoDetectColumns(
       const val = sanitizeString(row[col.index]);
       if (!val) continue;
 
-      // Full Course Code e.g. "BUSN 200", "BUSN 370", "BUSN 370L", "ECON 200"
-      if (COURSE_CODE_REGEX.test(val)) {
+      // Full Course Code e.g. "BUSN 200", "BUSN 370", "BUSN 370L", "ECON 200".
+      // Building names such as "Turing 101" and "Hall 12" are rooms, not codes.
+      const codePrefix = val.match(/^([A-Za-z]{2,5})\b/)?.[1] || '';
+      const looksLikeRoomWord = /^(?:hall|room|rm|lab|bldg|building|aud|auditorium|online|tba|tbd)$/i.test(codePrefix);
+      if (COURSE_CODE_REGEX.test(val) && codePrefix.length >= 2 && codePrefix.length <= 5 && !looksLikeRoomWord) {
         codeMatches++;
-      } else if (/^[A-Za-z]{2,5}\s+\d{2,4}/.test(val)) {
+      } else if (/^[A-Za-z]{2,4}\s+\d{2,4}/.test(val) && !looksLikeRoomWord) {
         codeMatches += 0.8;
       }
 
@@ -717,12 +747,27 @@ export function autoDetectColumns(
       instructor: instructorH + (instructorMatches / totalSampleRows) * 8,
       credits: creditsH + (creditsMatches / totalSampleRows) * 8,
       room: roomH + (roomMatches / totalSampleRows) * 8,
+      header: {
+        code: codeH,
+        subject: subjectH,
+        courseNum: courseNumH,
+        name: nameH,
+        section: sectionH,
+        schedule: scheduleH,
+        days: daysH,
+        time: timeH,
+        startTime: startH,
+        endTime: endH,
+        instructor: instructorH,
+        credits: creditsH,
+        room: roomH,
+      },
     };
   });
 
   const assigned = new Set<string>();
 
-  const pickBest = (field: keyof Omit<FieldScore, 'colKey'>, threshold = 1.5): string => {
+  const pickBest = (field: keyof Omit<FieldScore, 'colKey' | 'header'>, threshold = 1.5): string => {
     const candidates = scores
       .filter((s) => !assigned.has(s.colKey) && s[field] >= threshold)
       .sort((a, b) => b[field] - a[field]);
@@ -735,31 +780,56 @@ export function autoDetectColumns(
     return '';
   };
 
-  // Assign in prioritized order
-  mapping.code = pickBest('code');
-  if (!mapping.code) {
-    mapping.subject = pickBest('subject');
-    mapping.courseNum = pickBest('courseNum');
-  } else {
-    // Subject (Acad Dept) can still be recognized optionally
-    mapping.subject = pickBest('subject', 5.0);
-  }
-
-  mapping.name = pickBest('name');
-  mapping.schedule = pickBest('schedule');
-  if (!mapping.schedule) {
-    mapping.days = pickBest('days');
-    mapping.time = pickBest('time');
-    if (!mapping.time) {
-      mapping.startTime = pickBest('startTime');
-      mapping.endTime = pickBest('endTime');
+  // Header labels win before sample guesses. Otherwise "Turing 101" is read as a
+  // course code and a credits column of 3s is read as section numbers.
+  const headerFields = [
+    'subject',
+    'courseNum',
+    'section',
+    'credits',
+    'room',
+    'instructor',
+    'days',
+    'startTime',
+    'endTime',
+    'schedule',
+    'time',
+    'name',
+    'code',
+  ] as const;
+  for (const field of headerFields) {
+    const best = scores
+      .filter((s) => !assigned.has(s.colKey) && s.header[field] >= 8)
+      .sort((a, b) => b.header[field] - a.header[field])[0];
+    if (best) {
+      mapping[field] = best.colKey;
+      assigned.add(best.colKey);
     }
   }
 
-  mapping.section = pickBest('section');
-  mapping.instructor = pickBest('instructor');
-  mapping.credits = pickBest('credits');
-  mapping.room = pickBest('room');
+  if (!mapping.code) mapping.code = pickBest('code');
+  if (!mapping.code) {
+    if (!mapping.subject) mapping.subject = pickBest('subject');
+    if (!mapping.courseNum) mapping.courseNum = pickBest('courseNum');
+  } else if (!mapping.subject) {
+    mapping.subject = pickBest('subject', 5.0);
+  }
+
+  if (!mapping.name) mapping.name = pickBest('name');
+  if (!mapping.schedule) mapping.schedule = pickBest('schedule');
+  if (!mapping.schedule) {
+    if (!mapping.days) mapping.days = pickBest('days');
+    if (!mapping.time) mapping.time = pickBest('time');
+    if (!mapping.time) {
+      if (!mapping.startTime) mapping.startTime = pickBest('startTime');
+      if (!mapping.endTime) mapping.endTime = pickBest('endTime');
+    }
+  }
+
+  if (!mapping.section) mapping.section = pickBest('section');
+  if (!mapping.instructor) mapping.instructor = pickBest('instructor');
+  if (!mapping.credits) mapping.credits = pickBest('credits');
+  if (!mapping.room) mapping.room = pickBest('room');
 
   // Safety fallback: if code still empty, pick first non-empty column
   if (!mapping.code && !mapping.subject && columns.length > 0) {
@@ -916,10 +986,10 @@ export function parseExcelRowsToCourses(
           }
         } else if (startRaw || endRaw) {
           const pad = (n: number) => String(n).padStart(2, '0');
-          let parsedStart = startRaw ? parseSingleTimeToken(startRaw, false) : null;
-          let parsedEnd = endRaw ? parseSingleTimeToken(endRaw, false) : null;
-          const startExplicit = /[ap]/i.test(startRaw);
-          const endExplicit = /[ap]/i.test(endRaw);
+          let parsedStart = startRaw ? parseCellTime(startRaw) : null;
+          let parsedEnd = endRaw ? parseCellTime(endRaw) : null;
+          const startExplicit = explicitMeridian(startRaw) !== null;
+          const endExplicit = explicitMeridian(endRaw) !== null;
 
           // "7:00" / "9:00" parses as 19:00 and 09:00. Move the end forward
           // before giving up, so the session stays on the same afternoon.
@@ -988,8 +1058,8 @@ export function parseExcelRowsToCourses(
     const colorIdx = (startColorIndex + courses.length) % COURSE_COLORS.length;
     const color = COURSE_COLORS[colorIdx];
 
-    const finalCode = code || name.slice(0, 10).toUpperCase();
-    const finalName = name || finalCode;
+    const finalCode = code || (name ? name.slice(0, 10).toUpperCase() : 'COURSE');
+    const finalName = name || '';
 
     const course: Course = {
       id: courseId,

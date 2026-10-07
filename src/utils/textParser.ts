@@ -417,6 +417,15 @@ export function normalizeDays(tokens: string[]): DayOfWeek[] {
 /**
  * Parses single time token like "8:30", "10:00", "1:45", "3:15", "9:00am", "1:30 PM", "12:00", "0900", "9", "2pm".
  */
+/** 'am' or 'pm' only when the token itself says so. A stray letter p does not count. */
+export function explicitMeridian(raw: string): 'am' | 'pm' | null {
+  const clean = raw.trim().toLowerCase();
+  if (!clean) return null;
+  if (/(?:a\.?m\.?)\b/.test(clean) || /(?:^|\d)\s*a$/.test(clean)) return 'am';
+  if (/(?:p\.?m\.?)\b/.test(clean) || /(?:^|\d)\s*p$/.test(clean)) return 'pm';
+  return null;
+}
+
 export function parseSingleTimeToken(
   rawToken: string,
   defaultPM: boolean = false,
@@ -433,7 +442,7 @@ export function parseSingleTimeToken(
     const parts = stripped.split(':');
     let h = parseInt(parts[0], 10);
     const m = parts[1] ? parseInt(parts[1], 10) : 0;
-    if (isNaN(h) || isNaN(m)) return null;
+    if (isNaN(h) || isNaN(m) || m > 59 || h > 24) return null;
 
     if (isExplicitPM) {
       if (h < 12) h += 12;
@@ -519,8 +528,12 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
   const rawStart = parts[0].trim();
   const rawEnd = parts[1].trim();
 
-  const endHasPM = /p/i.test(rawEnd);
-  const startHasPM = /p/i.test(rawStart);
+  const endMeridian = explicitMeridian(rawEnd);
+  const startMeridian = explicitMeridian(rawStart);
+  const endHasPM = endMeridian === 'pm';
+  const startHasPM = startMeridian === 'pm';
+  const endHasAM = endMeridian === 'am';
+  const startHasAM = startMeridian === 'am';
 
   const endParsed = parseSingleTimeToken(rawEnd, endHasPM);
   if (!endParsed) return null;
@@ -535,18 +548,21 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
   let startMinutes = startParsed.h * 60 + startParsed.m;
   let endMinutes = endParsed.h * 60 + endParsed.m;
 
-  // Auto-correct if start is 11 or 10 and end is 1 or 2 (crosses noon)
-  if (startMinutes >= endMinutes && startParsed.h >= 12 && !startHasPM) {
+  // 7:00-8:30 has no meridian: 7 becomes 19:00 and 8 stays 08:00.
+  // Move the end into the same afternoon before pulling the start back to morning.
+  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM) {
+    endParsed.h += 12;
+    endMinutes = endParsed.h * 60 + endParsed.m;
+  }
+
+  if (startMinutes >= endMinutes && startParsed.h >= 12 && !startHasPM && !startHasAM) {
     startParsed.h -= 12;
     startMinutes = startParsed.h * 60 + startParsed.m;
   }
 
-  if (startMinutes >= endMinutes) {
-    // If start is e.g. 12:00 and end resolved to 01:30 AM, bump end to PM
-    if (endParsed.h < 12 && !endHasPM) {
-      endParsed.h += 12;
-      endMinutes = endParsed.h * 60 + endParsed.m;
-    }
+  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM) {
+    endParsed.h += 12;
+    endMinutes = endParsed.h * 60 + endParsed.m;
   }
 
   if (startMinutes >= endMinutes) {
@@ -653,6 +669,21 @@ export function generateCodeFromTitle(title: string): string {
   // Generate acronym from first letter of each significant word (up to 4 chars)
   const acronym = candidateWords.map((w) => w[0]).join('').substring(0, 4).toUpperCase();
   return `${acronym} ${levelSuffix}`;
+}
+
+/**
+ * Pulls a trailing building and room number out of a title, e.g. "Calculus II Newton 204".
+ * Leaves a title that is itself a subject and number, such as "English 101".
+ */
+function peelTrailingRoom(name: string): { name: string; room: string } | null {
+  const match = name.match(/^(.*\S)\s+([A-Z][A-Za-z]{2,}(?:\s+[A-Z][A-Za-z]{2,})?\s+\d{2,4}[A-Za-z]?)$/);
+  if (!match) return null;
+  const title = match[1].trim();
+  const room = match[2].trim();
+  const roomWord = room.split(/\s+/)[0];
+  if (title.length < 3) return null;
+  if (/^(?:CS|MATH|PHYS|ENG|BIO|CHEM|HIST|ART|MUS|PSYC|ACCT|ITM|BUS|BUSN|STAT|ECON)$/i.test(roomWord)) return null;
+  return { name: title, room };
 }
 
 /**
@@ -805,7 +836,7 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
 
   if (code || scheduleCol || name) {
     const finalCode = code || generateCodeFromTitle(name || 'Course');
-    const finalName = name || `${finalCode} Lecture`;
+    const finalName = name || '';
     const courseId = prefixedId('c');
 
     const parsedSessionsList: { days: DayOfWeek[]; startTime: string; endTime: string }[] = [];
@@ -1221,30 +1252,38 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       }
     }
 
-    if (!name) {
-      if (code) {
-        name = `${code} Lecture`;
-      } else {
-        name = 'Course';
+    if (!code) {
+      // generateCodeFromTitle needs some input when the line has neither a code nor a title.
+      code = generateCodeFromTitle(name || 'Course');
+    }
+
+    if (isOnlineOrAsync && name) {
+      const stripped = name
+        .replace(/\b(?:online|async(?:hronous)?|distance(?:\s*ed)?|virtual|tba)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (stripped) name = stripped;
+    }
+
+    if (name && (!room || room === 'Online / Flexible')) {
+      const peeled = peelTrailingRoom(name);
+      if (peeled) {
+        name = peeled.name;
+        room = peeled.room;
       }
     }
 
-    if (!code) {
-      code = generateCodeFromTitle(name);
-    }
-
-    // Default sessions if none detected
-    if (parsedSessionsList.length === 0) {
+    // Default sessions if none detected. Online classes stay off the grid
+    // instead of occupying a fake Monday/Wednesday/Friday meeting.
+    if (parsedSessionsList.length === 0 && !isOnlineOrAsync) {
       parsedSessionsList.push({
         days: ['monday', 'wednesday', 'friday'],
         startTime: '09:00',
         endTime: '10:15',
       });
-      warnings.push(
-        isOnlineOrAsync
-          ? 'Online / Asynchronous course scheduled with flexible placeholder hours'
-          : 'No schedule detected, defaulted to Mon, Wed, Fri 09:00-10:15 AM'
-      );
+      warnings.push('No schedule detected, defaulted to Mon, Wed, Fri 09:00-10:15 AM');
+    } else if (parsedSessionsList.length === 0) {
+      warnings.push('Online / Asynchronous course (no calendar meetings assigned)');
     }
 
     // Format final Course object

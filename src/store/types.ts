@@ -16,7 +16,11 @@ export interface ScheduleState {
   showWeekends: boolean;
   startHour: number;
   endHour: number;
+  timeRangeMode: 'auto' | 'custom';
+  weekStart: 'monday' | 'sunday';
+  mobileCalendarView: 'week' | 'day';
   theme: 'light' | 'dark';
+  themePreference: 'light' | 'dark' | 'system';
   semesterStart: string;
   semesterEnd: string;
 
@@ -27,7 +31,7 @@ export interface ScheduleState {
   // Plan actions
   setActivePlan: (planId: string) => void;
   createPlan: (name?: string) => string;
-  duplicatePlan: (planId: string) => string;
+  duplicatePlan: (planId: string, name?: string) => string;
   renamePlan: (planId: string, newName: string) => void;
   deletePlan: (planId: string) => void;
   toggleGhostPlan: (planId: string) => void;
@@ -62,10 +66,14 @@ export interface ScheduleState {
   setCustomShortcut: (actionId: string, shortcut: string) => void;
   resetCustomShortcuts: () => void;
   setTheme: (theme: 'light' | 'dark') => void;
+  setThemePreference: (preference: 'light' | 'dark' | 'system') => void;
   commitTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   setShowWeekends: (show: boolean) => void;
   setTimeRange: (startHour: number, endHour: number) => void;
+  setTimeRangeMode: (mode: 'auto' | 'custom') => void;
+  setWeekStart: (weekStart: 'monday' | 'sunday') => void;
+  setMobileCalendarView: (view: 'week' | 'day') => void;
   setSemesterDates: (start: string, end: string) => void;
   resetToBlank: () => void;
   resetToSample: () => void;
@@ -80,7 +88,11 @@ export type PersistedSchedule = Pick<
   | 'showWeekends'
   | 'startHour'
   | 'endHour'
+  | 'timeRangeMode'
+  | 'weekStart'
+  | 'mobileCalendarView'
   | 'theme'
+  | 'themePreference'
   | 'semesterStart'
   | 'semesterEnd'
   | 'customShortcuts'

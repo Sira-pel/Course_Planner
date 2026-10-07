@@ -1,4 +1,4 @@
-import { ClassSession, Course, Conflict, DayOfWeek, LayoutSession } from '../types/schedule';
+import { ClassSession, Course, Conflict, DayOfWeek, DAYS_LIST, LayoutSession } from '../types/schedule';
 
 /**
  * Converts HH:mm or HH:mm AM/PM string to minutes from midnight (0 to 1439).
@@ -163,6 +163,90 @@ export function detectPlanConflicts(courses: Course[]): Conflict[] {
   }
 
   return conflicts;
+}
+
+/** Order-independent key. A course overlapping itself keys on that one id. */
+export function conflictPairKey(c: Conflict): string {
+  if (c.courseId1 === c.courseId2) return c.courseId1;
+  return c.courseId1 < c.courseId2 ? `${c.courseId1}|${c.courseId2}` : `${c.courseId2}|${c.courseId1}`;
+}
+
+export function countConflictPairs(conflicts: Conflict[]): number {
+  const keys = new Set<string>();
+  for (const conflict of conflicts) keys.add(conflictPairKey(conflict));
+  return keys.size;
+}
+
+export interface ConflictPairDay {
+  day: DayOfWeek;
+  overlapStart: string;
+  overlapEnd: string;
+}
+
+export interface ConflictPairGroup {
+  key: string;
+  courseCode1: string;
+  courseCode2: string;
+  days: ConflictPairDay[];
+}
+
+const DAY_ORDER = DAYS_LIST.map((d) => d.id);
+
+/**
+ * One row per overlapping pair, with that pair's days in week order.
+ * `detectPlanConflicts` stays per-day; this only groups for the pill and modal.
+ */
+export function groupConflictsByPair(conflicts: Conflict[]): ConflictPairGroup[] {
+  const groups = new Map<string, ConflictPairGroup>();
+  for (const conflict of conflicts) {
+    const key = conflictPairKey(conflict);
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        key,
+        courseCode1: conflict.courseCode1,
+        courseCode2: conflict.courseCode2,
+        days: [],
+      };
+      groups.set(key, group);
+    }
+    const already = group.days.some(
+      (day) =>
+        day.day === conflict.day &&
+        day.overlapStart === conflict.overlapStart &&
+        day.overlapEnd === conflict.overlapEnd
+    );
+    if (!already) {
+      group.days.push({
+        day: conflict.day,
+        overlapStart: conflict.overlapStart,
+        overlapEnd: conflict.overlapEnd,
+      });
+    }
+  }
+
+  for (const group of groups.values()) {
+    group.days.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+  }
+  return [...groups.values()];
+}
+
+const DAY_LABEL = new Map(DAYS_LIST.map((day) => [day.id, day.label]));
+
+/** "Mon, Wed · 10:30–11:15", or one window per day when they differ. */
+export function formatConflictPairWhen(group: ConflictPairGroup): string {
+  if (group.days.length === 0) return '';
+  const [first] = group.days;
+  const sameWindow = group.days.every(
+    (day) => day.overlapStart === first.overlapStart && day.overlapEnd === first.overlapEnd
+  );
+  const label = (day: DayOfWeek) => DAY_LABEL.get(day) ?? day;
+  if (sameWindow) {
+    return `${group.days.map((day) => label(day.day)).join(', ')} · ${first.overlapStart}–${first.overlapEnd}`;
+  }
+  return group.days
+    .map((day) => `${label(day.day)} · ${day.overlapStart}–${day.overlapEnd}`)
+    .join(' · ');
 }
 
 /**
