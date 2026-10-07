@@ -126,7 +126,12 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-readout flex items-center justify-between gap-1">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <div
+          className="flex items-center gap-1.5 min-w-0 flex-1"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Adding to:</span>
           <strong className="truncate text-xs text-slate-800 dark:text-slate-100">{activePlanName}</strong>
         </div>
