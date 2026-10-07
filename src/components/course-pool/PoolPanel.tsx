@@ -137,14 +137,14 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
 
       <div className="up-pool-readout flex items-center justify-between gap-1">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Target:</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Adding to:</span>
           {!plans || plans.length <= 1 || !onSelectTargetPlan ? (
             <strong className="truncate text-xs text-slate-800 dark:text-slate-100">{activePlanName}</strong>
           ) : (
             <select
               value={targetPlanId || activePlanId}
               onChange={(e) => onSelectTargetPlan(e.target.value)}
-              aria-label="Select Target Plan"
+              aria-label="Adding to"
               className="text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 max-w-[130px] sm:max-w-[160px] truncate text-slate-800 dark:text-slate-200 cursor-pointer focus:ring-1 focus:ring-indigo-500 shadow-2xs"
             >
               <option value={activePlanId}>
@@ -182,8 +182,8 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-controls">
-        <div className="flex items-center gap-1.5">
-          <div className="up-pool-search-wrap flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="up-pool-search-wrap basis-full min-w-0">
             <Search className="w-3.5 h-3.5" />
             <input
               ref={searchRef}
@@ -199,6 +199,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                 type="button"
                 onClick={onClearSearch}
                 className="up-pool-search-clear up-chrome-btn"
+                title="Clear search"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -217,6 +218,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                 aria-label="Import courses"
               >
                 <Upload className="w-3.5 h-3.5" />
+                <span>Import</span>
               </button>
             )}
             <button
@@ -224,10 +226,11 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               id="btn-pool-add-course"
               onClick={onOpenNewCourse}
               className="up-pool-create up-chrome-btn"
-              title="Create course"
-              aria-label="Create course"
+              title="New course"
+              aria-label="New course"
             >
               <Plus className="w-3.5 h-3.5" />
+              <span>New</span>
             </button>
             <button
               type="button"
@@ -247,6 +250,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               aria-label="Clear unused courses from pool"
             >
               <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear</span>
             </button>
           </div>
         </div>
@@ -421,7 +425,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
       </div>
 
       <div className="up-pool-foot">
-        <span className="truncate">Adding creates independent copies</span>
+        <span>Adding copies the course into your plan. Saving it updates the pool.</span>
       </div>
     </div>
   );

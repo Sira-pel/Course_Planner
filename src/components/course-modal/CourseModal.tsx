@@ -643,7 +643,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >
-              Build
+              Add manually
             </button>
             <button
               type="button"
@@ -658,7 +658,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >
-              Paste
+              Quick add
             </button>
           </div>
         )}

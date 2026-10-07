@@ -118,9 +118,9 @@ const ImportModalBody: React.FC<{
 
   const importTabs: { id: ImportTabType; label: string; mobileLabel: string; icon: React.ReactNode }[] = [
     { id: 'excel', label: 'Excel / CSV', mobileLabel: 'Excel', icon: <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'share', label: 'Friend Link', mobileLabel: 'Friend', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'share', label: 'Share link', mobileLabel: 'Friend', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'backup', label: 'JSON Backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'backup', label: 'JSON backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
   if (typeof document === 'undefined') return null;

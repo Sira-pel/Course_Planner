@@ -99,7 +99,8 @@ export const CourseBlock = memo(function CourseBlock({
                 e.stopPropagation();
                 onEdit(course.id, planId);
               }}
-              title={`Edit Course in ${planName}`}
+              title={`Edit ${course.code} in ${planName}`}
+              aria-label={`Edit ${course.code} in ${planName}`}
               className="p-0.5 text-white hover:text-amber-200 transition-colors"
             >
               <Edit2 className="w-3 h-3" />
@@ -111,7 +112,8 @@ export const CourseBlock = memo(function CourseBlock({
                 e.stopPropagation();
                 onDelete(course.id, planId);
               }}
-              title={`Remove Course from ${planName}`}
+              title={`Remove ${course.code} from ${planName}`}
+              aria-label={`Remove ${course.code} from ${planName}`}
               className="p-0.5 text-white hover:text-red-200 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
@@ -207,7 +209,8 @@ export const CourseBlock = memo(function CourseBlock({
               e.stopPropagation();
               onEdit(course.id, planId);
             }}
-            title="Edit Course"
+            title={`Edit ${course.code}`}
+            aria-label={`Edit ${course.code}`}
             className="p-0.5 text-white hover:text-amber-200 transition-colors"
           >
             <Edit2 className="w-3 h-3" />
@@ -219,7 +222,8 @@ export const CourseBlock = memo(function CourseBlock({
               e.stopPropagation();
               onDelete(course.id, planId);
             }}
-            title="Remove from Plan"
+            title={`Remove ${course.code}`}
+            aria-label={`Remove ${course.code}`}
             className="p-0.5 text-white hover:text-red-200 transition-colors"
           >
             <Trash2 className="w-3 h-3" />

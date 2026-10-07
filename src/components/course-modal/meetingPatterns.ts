@@ -81,6 +81,12 @@ export function formatDaysShort(days: DayOfWeek[]): string {
   return sorted.map((d) => DAYS_LIST.find((x) => x.id === d)?.label ?? d).join(' ');
 }
 
+export function formatDaysFull(days: readonly DayOfWeek[]): string {
+  return sortDays([...days])
+    .map((day) => DAYS_LIST.find((entry) => entry.id === day)?.full ?? day)
+    .join(' & ');
+}
+
 export function toInputTime(value: string, fallback: string): string {
   const trimmed = value.trim();
   const hm = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(trimmed);

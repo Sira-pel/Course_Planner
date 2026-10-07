@@ -19,7 +19,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutItem[] = [
   },
   {
     id: 'quick_add',
-    name: 'Quick-Add Course',
+    name: 'Quick add',
     description: 'Open smart text-based quick course parser',
     category: 'courses',
     defaultKey: 'Alt+K',

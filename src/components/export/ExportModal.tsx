@@ -282,11 +282,11 @@ const ExportModalBody: React.FC<{
   };
 
   const exportTabs: { id: ExportTabType; label: string; mobileLabel: string; icon: React.ReactNode }[] = [
-    { id: 'text', label: 'Clean Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'share', label: 'Share Link', mobileLabel: 'Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'ics', label: 'Google Cal (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'image', label: 'Snapshot', mobileLabel: 'Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'backup', label: 'JSON Backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'text', label: 'Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'share', label: 'Share link', mobileLabel: 'Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'image', label: 'Image', mobileLabel: 'Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'backup', label: 'JSON backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
   if (typeof document === 'undefined') return null;
@@ -316,7 +316,7 @@ const ExportModalBody: React.FC<{
               Export Schedule & Backup
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-              Plan: <strong className="text-indigo-600 dark:text-indigo-400">{activePlan.name}</strong> ({activePlan.courses.length} courses)
+              {activePlan.name} · {activePlan.courses.length} {activePlan.courses.length === 1 ? 'course' : 'courses'}
             </p>
           </div>
           <button
