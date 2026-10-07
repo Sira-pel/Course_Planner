@@ -233,9 +233,7 @@ export default function App() {
     media.addEventListener('change', syncSystemTheme);
     const initial = useScheduleStore.getState();
     if (initial.themePreference === 'system') {
-      persistTheme('system');
-      const resolved = resolveTheme('system');
-      if (initial.theme !== resolved) initial.commitTheme(resolved);
+      initial.setThemePreference(resolveTheme('system'));
     }
 
     return () => {

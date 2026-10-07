@@ -14,7 +14,7 @@ import {
 import { ModalTabPill } from '../app/ModalTabPill';
 import { ClearAllDialog } from './ClearAllDialog';
 import { usePWAInstall } from '../../utils/usePWAInstall';
-import type { ThemePreference } from '../../utils/theme';
+import { resolveTheme, type ThemePreference } from '../../utils/theme';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 
 const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
@@ -122,20 +122,22 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       <div className="up-settings-controls">
         <div>
           <span className="up-settings-field-label" id="settings-appearance-label">Appearance</span>
-          <div className="up-segment" role="group" aria-labelledby="settings-appearance-label">
-            {(['light', 'dark', 'system'] as const).map((preference) => (
-              <button
-                key={preference}
-                type="button"
-                id={preference === 'system' ? 'btn-appearance-system' : undefined}
-                className="up-segment-btn up-chrome-btn"
-                aria-pressed={themePreference === preference}
-                onClick={(event) => onSetThemePreference(preference, event)}
-              >
-                {themePreference === preference && <ModalTabPill layoutId="settings-appearance" />}
-                <span className="relative">{preference === 'light' ? 'Light' : preference === 'dark' ? 'Dark' : 'System'}</span>
-              </button>
-            ))}
+          <div className="up-segment up-segment-2" role="group" aria-labelledby="settings-appearance-label">
+            {(['light', 'dark'] as const).map((preference) => {
+              const selected = (themePreference === 'system' ? resolveTheme('system') : themePreference) === preference;
+              return (
+                <button
+                  key={preference}
+                  type="button"
+                  className="up-segment-btn up-chrome-btn"
+                  aria-pressed={selected}
+                  onClick={(event) => onSetThemePreference(preference, event)}
+                >
+                  {selected && <ModalTabPill layoutId="settings-appearance" />}
+                  <span className="relative">{preference === 'light' ? 'Light' : 'Dark'}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
