@@ -621,6 +621,7 @@ export default function App() {
         onLoadDemo={handleLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
         onOpenHelp={() => handleOpenHelp('workflow')}
+        onOpenExport={() => handleOpenExport('text')}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}

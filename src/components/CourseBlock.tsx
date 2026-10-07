@@ -76,7 +76,7 @@ export const CourseBlock = memo(function CourseBlock({
             }}
             title={`Edit ${course.code} in ${planName}`}
             aria-label={`Edit ${course.code} in ${planName}`}
-            className={`absolute z-[35] inline-flex max-w-[calc(100%-12px)] items-center truncate rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-xs border border-current/25 bg-white/95 dark:bg-slate-900/95 ${ghostStyle.text}`}
+            className={`up-ghost-chip absolute z-[35] inline-flex max-w-[calc(100%-12px)] items-center truncate rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-xs border border-current/25 bg-white/95 dark:bg-slate-900/95 ${ghostStyle.text}`}
             style={
               coveredExtendsBelow
                 ? { top: `calc(${topPercent}% + ${heightPercent}% - 20px)`, left: '6px' }
