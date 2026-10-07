@@ -1847,11 +1847,6 @@ html.dark .up-welcome-option {
   background: color-mix(in srgb, var(--up-ink) 4%, var(--up-raised));
 }
 
-.up-welcome-option-quick {
-  border-color: color-mix(in srgb, var(--up-accent) 45%, var(--up-line));
-  background: color-mix(in srgb, var(--up-accent) 8%, var(--up-raised));
-}
-
 .up-welcome-option:hover,
 .up-welcome-option:focus-visible {
   border-color: color-mix(in srgb, var(--up-accent) 55%, var(--up-line));
@@ -1868,8 +1863,8 @@ html.dark .up-welcome-option {
 }
 
 .up-welcome-mark-quick {
-  background: var(--up-accent);
-  color: var(--up-accent-ink);
+  background: color-mix(in srgb, var(--up-accent) 16%, transparent);
+  color: var(--up-accent);
 }
 
 .up-welcome-mark-file {
@@ -1977,10 +1972,6 @@ html.dark .up-welcome-mark-demo {
     margin-top: auto;
     font-size: 12px;
     font-weight: 600;
-  }
-
-  .up-welcome-option-quick .up-welcome-chevron {
-    display: none;
   }
 
   .up-welcome-chevron {
