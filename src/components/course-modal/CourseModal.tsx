@@ -613,7 +613,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
             aria-label="Add course method"
           >
             <motion.span
-              className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-slate-900 shadow-sm pointer-events-none"
+              className="up-tab-pill absolute top-1 bottom-1 rounded-lg pointer-events-none"
               animate={{
                 x: mode === 'form' ? 0 : '100%',
               }}
@@ -632,7 +632,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               onClick={() => switchMode('form')}
               className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                 mode === 'form'
-                  ? 'text-indigo-600 dark:text-indigo-300'
+                  ? 'up-tab-on'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >
@@ -647,7 +647,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               onClick={() => switchMode('quick')}
               className={`relative z-10 py-2 text-sm font-semibold rounded-lg text-center transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                 mode === 'quick'
-                  ? 'text-indigo-600 dark:text-indigo-300'
+                  ? 'up-tab-on'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >

@@ -33,6 +33,12 @@
   --up-accent: #3d4fd8;
   --up-accent-ink: #f4f5ff;
   --up-focus: #3d4fd8;
+  /* Pale lavender selected highlight. Same hue as the accent, lighter than the solid button. */
+  --up-secondary: #dde3fb;
+  --up-secondary-ink: #1b2430;
+  --up-secondary-line: color-mix(in srgb, var(--up-accent) 32%, transparent);
+  --color-indigo-600: var(--up-accent);
+  --color-indigo-700: color-mix(in srgb, var(--up-accent) 82%, #101218);
 }
 
 html {
@@ -103,6 +109,15 @@ html.dark {
   --up-accent: #5b6cf0;
   --up-accent-ink: #f4f5ff;
   --up-focus: #8b96ff;
+  /* Deep indigo selected highlight. Same hue as the accent, darker than the solid button. */
+  --up-secondary: #323a86;
+  --up-secondary-ink: #f4f5ff;
+  --up-secondary-line: color-mix(in srgb, var(--up-accent) 55%, transparent);
+  --color-indigo-300: var(--up-focus);
+  --color-indigo-400: var(--up-focus);
+  --color-indigo-500: var(--up-accent);
+  --color-indigo-600: var(--up-accent);
+  --color-indigo-700: color-mix(in srgb, var(--up-accent) 82%, #101218);
 }
 
 html.dark body {
@@ -679,7 +694,42 @@ html.dark body {
 }
 
 .up-segment-btn[aria-pressed='true'] {
-  color: var(--up-ink);
+  color: var(--up-secondary-ink);
+}
+
+.up-tab-pill {
+  background: var(--up-secondary);
+  box-shadow: none;
+}
+
+.up-tab-on {
+  color: var(--up-secondary-ink);
+}
+
+.up-choice.is-on {
+  background: var(--up-secondary);
+  color: var(--up-secondary-ink);
+  border-color: transparent;
+}
+
+.up-selected {
+  background: var(--up-secondary);
+  color: var(--up-secondary-ink);
+  border-color: var(--up-secondary-line);
+}
+
+.up-selected-mark {
+  background: var(--up-secondary-ink);
+  color: var(--up-secondary);
+}
+
+.up-selected-chip {
+  background: color-mix(in srgb, var(--up-secondary-ink) 16%, transparent);
+  color: var(--up-secondary-ink);
+}
+
+.up-selected-icon {
+  color: var(--up-secondary-ink);
 }
 
 .up-settings-hint {
@@ -1024,6 +1074,14 @@ html.dark .up-settings-select option,
 
 .up-text-trigger.is-open:hover {
   background: color-mix(in srgb, var(--up-ink) 12%, transparent);
+}
+
+.up-plan-trigger,
+.up-plan-trigger:hover,
+.up-plan-trigger.is-open,
+.up-plan-trigger.is-open:hover {
+  background: var(--up-secondary);
+  color: var(--up-secondary-ink);
 }
 
 .up-text-trigger:active {
@@ -1420,24 +1478,15 @@ body[data-up-pool-open] .up-fab-cluster {
   margin: 0 0 8px;
   padding: 10px 6px 10px 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--up-accent) 12%, #ffffff);
-  border: 1px solid color-mix(in srgb, var(--up-accent) 24%, transparent);
-}
-
-html.dark .up-more-install {
-  background: color-mix(in srgb, var(--up-accent) 38%, #12121c);
-  border-color: color-mix(in srgb, var(--up-accent) 46%, transparent);
+  background: var(--up-secondary);
+  border: 1px solid var(--up-secondary-line);
 }
 
 .up-more-install-icon {
   width: 18px;
   height: 18px;
   flex: none;
-  color: var(--up-accent);
-}
-
-html.dark .up-more-install-icon {
-  color: #c9ceff;
+  color: var(--up-secondary-ink);
 }
 
 .up-more-install-copy {
@@ -1452,19 +1501,15 @@ html.dark .up-more-install-icon {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--up-ink);
+  color: var(--up-secondary-ink);
   line-height: 1.2;
 }
 
 .up-more-install-sub {
   font-size: 12px;
   font-weight: 500;
-  color: var(--up-muted);
+  color: color-mix(in srgb, var(--up-secondary-ink) 80%, transparent);
   line-height: 1.2;
-}
-
-html.dark .up-more-install-sub {
-  color: #b7b6d6;
 }
 
 .up-more-install-btn {
@@ -1494,11 +1539,7 @@ html.dark .up-more-install-sub {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--up-muted);
-}
-
-html.dark .up-more-install-dismiss {
-  color: #c9ceff;
+  color: var(--up-secondary-ink);
 }
 
 .up-more-install-dismiss:hover,
@@ -1616,19 +1657,13 @@ html.dark .up-more-install-dismiss {
 }
 
 .up-cal-toggle-btn[aria-pressed='true'] {
-  background: #fff;
-  color: var(--up-ink);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  background: var(--up-secondary);
+  color: var(--up-secondary-ink);
+  box-shadow: none;
 }
 
 html.dark .up-cal-toggle {
   background: #34343c;
-}
-
-html.dark .up-cal-toggle-btn[aria-pressed='true'] {
-  background: #101014;
-  color: #ffffff;
-  box-shadow: none;
 }
 
 .up-phone-week-head {
@@ -2468,8 +2503,8 @@ html.dark .up-mobile-sheet,
   left: 0;
   width: 0;
   border-radius: 6px;
-  background: var(--up-raised);
-  border: 1px solid var(--up-line);
+  background: var(--up-secondary);
+  border: 1px solid var(--up-secondary);
   pointer-events: none;
   z-index: 0;
   transition-property: transform, width;
@@ -2504,7 +2539,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-tab[aria-selected='true'] {
-  color: var(--up-ink);
+  color: var(--up-secondary-ink);
   font-weight: 600;
 }
 
@@ -3212,6 +3247,18 @@ input[type="time"].course-input::-webkit-calendar-picker-indicator {
 
 .course-swatch {
   transition: transform var(--dur-chrome) var(--ease-out);
+}
+
+.course-swatch.is-selected {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--up-focus);
+}
+
+html.dark .course-swatch.is-selected {
+  box-shadow:
+    0 0 0 2px var(--color-slate-900),
+    0 0 0 4px var(--up-focus);
 }
 
 .course-swatch:hover {

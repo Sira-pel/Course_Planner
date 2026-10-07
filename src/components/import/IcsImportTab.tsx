@@ -177,7 +177,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
             </div>
             <button
               type="button"
-              className="mt-1 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              className="mt-1 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
               <Upload className="w-3.5 h-3.5" />
               Browse .ics Files
@@ -290,19 +290,19 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                     onClick={() => handleToggleSelectCourse(c.id)}
                     className={`py-2 px-2.5 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
+                        ? 'up-selected'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-70'
                     }`}
                   >
                     <button
                       type="button"
                       aria-label={`Select ${c.code}`}
-                      className="shrink-0 text-indigo-600 dark:text-indigo-400"
+                      className={`shrink-0 ${isSelected ? 'up-selected-icon' : 'text-slate-400 dark:text-slate-600'}`}
                     >
                       {isSelected ? (
                         <CheckSquare className="w-4 h-4" />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+                        <Square className="w-4 h-4" />
                       )}
                     </button>
 
@@ -358,7 +358,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 onClick={handleImport}
                 className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-semibold text-white shadow-xs up-modal-card flex items-center justify-center gap-1.5 shrink-0 ${
                   selectedCourseIds.size > 0
-                    ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 active:scale-95'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                     : 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed'
                 }`}
               >

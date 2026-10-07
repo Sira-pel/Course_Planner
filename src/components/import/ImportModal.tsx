@@ -174,7 +174,7 @@ const ImportModalBody: React.FC<{
                 onClick={() => selectTab(tab.id)}
                 className={`relative py-1.5 px-1 sm:px-2 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 text-center z-10 transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                   isActive
-                    ? 'text-indigo-600 dark:text-indigo-400'
+                    ? 'up-tab-on'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >

@@ -260,7 +260,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     tabIndex={isActive ? 0 : -1}
                     className={`relative min-w-0 w-full py-2 px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center z-10 transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                       isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
+                        ? 'up-tab-on'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >

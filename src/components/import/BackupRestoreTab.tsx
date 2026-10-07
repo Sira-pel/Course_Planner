@@ -106,7 +106,7 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
         <button
           type="button"
           onClick={handleApplyImport}
-          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5"
+          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5"
         >
           <Upload className="w-3.5 h-3.5" />
           Apply Backup & Restore

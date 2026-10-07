@@ -167,9 +167,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                             title={spoken}
                             aria-label={`${preset.label}, ${spoken}`}
                             onClick={() => onApplyDayPreset(index, [...preset.days])}
-                            className={`px-2 py-1 text-[11px] font-mono font-semibold rounded-md transition-colors duration-[var(--dur-chrome)] ${
+                            className={`up-choice px-2 py-1 text-[11px] font-mono font-semibold rounded-md transition-colors duration-[var(--dur-chrome)] ${
                               daysEqual(pattern.days, preset.days)
-                                ? 'bg-indigo-600 text-white'
+                                ? 'is-on'
                                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
                             }`}
                           >
@@ -203,9 +203,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           title={d.full}
                           aria-label={d.full}
                           onClick={() => onTogglePatternDay(index, d.id)}
-                          className={`course-day flex-1 rounded-md text-[11px] font-semibold ${
+                          className={`course-day up-choice flex-1 rounded-md text-[11px] font-semibold ${
                             on
-                              ? 'bg-indigo-600 text-white'
+                              ? 'is-on'
                               : `bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 ${
                                   weekend ? 'opacity-70' : ''
                                 }`
@@ -279,9 +279,9 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           key={chip.label}
                           type="button"
                           onClick={() => onSetPatternDuration(index, chip.minutes)}
-                          className={`px-2 py-0.5 text-[11px] font-mono rounded-md transition-colors duration-[var(--dur-chrome)] ${
+                          className={`up-choice px-2 py-0.5 text-[11px] font-mono rounded-md transition-colors duration-[var(--dur-chrome)] ${
                             duration === chip.minutes
-                              ? 'bg-indigo-600 text-white font-semibold'
+                              ? 'is-on font-semibold'
                               : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300'
                           }`}
                         >
@@ -380,7 +380,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                           aria-pressed={selected}
                           onClick={() => onColorChange(swatch)}
                           className={`course-swatch w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 shadow-xs ${
-                            selected ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900 scale-105' : ''
+                            selected ? 'is-selected scale-105' : ''
                           }`}
                           style={{ backgroundColor: shown.bg }}
                         >
@@ -398,7 +398,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
                       title="Custom color"
                       className={`course-swatch relative w-6 h-6 rounded-full flex items-center justify-center cursor-pointer ${
                         isCustomColor
-                          ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-900'
+                          ? 'is-selected'
                           : 'border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
                       }`}
                       style={isCustomColor ? { backgroundColor: displayCourseColor(color).bg } : undefined}

@@ -127,15 +127,15 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                 return (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between px-2 py-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-semibold"
+                    className="flex items-center justify-between px-2 py-1.5 rounded-md up-selected font-semibold"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className="w-4 h-4 rounded flex items-center justify-center bg-indigo-600 text-white shrink-0 shadow-2xs">
+                      <span className="up-selected-mark w-4 h-4 rounded flex items-center justify-center shrink-0">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       </span>
                       <span className="truncate text-xs">{p.name}</span>
                     </div>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+                    <span className="up-selected-chip text-[10px] px-1.5 py-0.5 rounded">
                       Active
                     </span>
                   </div>

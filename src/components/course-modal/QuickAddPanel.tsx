@@ -222,9 +222,9 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                                     : [...currentDays, d.id];
                                   onUpdateItemSessionDays(item.id, newDays);
                                 }}
-                                className={`course-day flex-1 rounded-md text-[11px] font-semibold ${
+                                className={`course-day up-choice flex-1 rounded-md text-[11px] font-semibold ${
                                   isSelected
-                                    ? 'bg-indigo-600 text-white'
+                                    ? 'is-on'
                                     : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                                 }`}
                               >
@@ -280,9 +280,9 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                                     endAfterStart(session0.startTime || '09:00', chip.minutes)
                                   );
                                 }}
-                                className={`px-2 py-0.5 text-[11px] font-mono rounded-md ${
+                                className={`up-choice px-2 py-0.5 text-[11px] font-mono rounded-md ${
                                   duration === chip.minutes
-                                    ? 'bg-indigo-600 text-white font-semibold'
+                                    ? 'is-on font-semibold'
                                     : 'text-slate-500 hover:text-indigo-600'
                                 }`}
                               >

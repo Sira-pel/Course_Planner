@@ -137,7 +137,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
             return (
               <div
                 key={plan.id}
-                className="flex items-center gap-1.5 p-1.5 rounded-md bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800"
+                className="flex items-center gap-1.5 p-1.5 rounded-md up-selected border"
               >
                 <input
                   type="text"
@@ -206,19 +206,21 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
               key={plan.id}
               className={`group flex items-center justify-between px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/80 text-indigo-900 dark:text-indigo-200'
+                  ? 'up-selected border'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
               }`}
               onClick={() => onSelectPlan(plan.id)}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isActive ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-300 dark:bg-slate-600'
+                  isActive ? 'bg-current' : 'bg-slate-300 dark:bg-slate-600'
                 }`} />
                 <span className="truncate font-medium text-xs">
                   {plan.name}
                 </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums shrink-0">
+                <span className={`text-[10px] font-mono tabular-nums shrink-0 ${
+                  isActive ? 'opacity-80' : 'text-slate-500 dark:text-slate-400'
+                }`}>
                   {planCredits} cr
                 </span>
               </div>
@@ -231,7 +233,11 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   <button
                     type="button"
                     onClick={() => onSharePlan(plan)}
-                    className="p-1 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
+                    className={`p-1 rounded transition-colors up-chrome-btn ${
+                      isActive
+                        ? 'hover:bg-white/40 dark:hover:bg-white/10'
+                        : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title={`Share ${plan.name}`}
                     aria-label={`Share ${plan.name}`}
                   >
@@ -241,7 +247,11 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                 <button
                   type="button"
                   onClick={() => onStartRename(plan.id, plan.name)}
-                  className="p-1 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
+                  className={`p-1 rounded transition-colors up-chrome-btn ${
+                    isActive
+                      ? 'hover:bg-white/40 dark:hover:bg-white/10'
+                      : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700'
+                  }`}
                   title="Rename plan"
                   aria-label={`Rename ${plan.name}`}
                 >
@@ -251,7 +261,11 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   <button
                     type="button"
                     onClick={() => onRequestDelete(plan.id)}
-                    className="p-1 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors up-chrome-btn"
+                    className={`p-1 rounded transition-colors up-chrome-btn ${
+                      isActive
+                        ? 'hover:text-rose-600 dark:hover:text-rose-300 hover:bg-white/40 dark:hover:bg-white/10'
+                        : 'text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title="Delete plan"
                     aria-label={`Delete ${plan.name}`}
                   >
@@ -299,7 +313,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                 onClick={() => setComposerMode('blank')}
                 className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold ${
                   composerMode === 'blank'
-                    ? 'text-indigo-700 dark:text-indigo-300'
+                    ? 'up-tab-on'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
@@ -315,7 +329,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                 title={activePlan ? `Duplicate "${activePlan.name}"` : undefined}
                 className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold truncate disabled:opacity-40 ${
                   composerMode === 'duplicate'
-                    ? 'text-indigo-700 dark:text-indigo-300'
+                    ? 'up-tab-on'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
@@ -344,7 +358,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
         type="button"
         id="btn-plans-dropdown"
         onClick={onToggleOpen}
-        className={`up-text-trigger up-chrome-btn ${plansMenuOpen ? 'is-open' : ''}`}
+        className={`up-text-trigger up-plan-trigger up-chrome-btn ${plansMenuOpen ? 'is-open' : ''}`}
         title={isPhone && activePlan?.name ? activePlan.name : 'View, switch, manage, and create plans'}
         aria-haspopup="true"
         aria-expanded={plansMenuOpen}
