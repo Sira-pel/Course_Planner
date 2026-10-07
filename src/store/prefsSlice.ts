@@ -204,8 +204,10 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
         let nextTheme = state.theme;
         let nextPreference = state.themePreference;
         if (isThemePreference(backup.themePreference)) {
-          nextPreference = backup.themePreference;
-          nextTheme = resolveTheme(backup.themePreference);
+          nextPreference = backup.themePreference === 'system'
+            ? resolveTheme('system')
+            : backup.themePreference;
+          nextTheme = nextPreference;
           applyDomTheme(nextTheme);
           persistTheme(nextPreference);
         } else if (isThemeName(backup.theme)) {
