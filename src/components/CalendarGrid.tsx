@@ -54,6 +54,7 @@ export const CalendarGrid = memo(function CalendarGrid({
   const showWeekends = useScheduleStore((state) => state.showWeekends);
   const startHour = useScheduleStore((state) => state.startHour);
   const endHour = useScheduleStore((state) => state.endHour);
+  const theme = useScheduleStore((state) => state.theme);
   const deleteCourse = useScheduleStore((state) => state.deleteCourse);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -424,6 +425,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                       layout={layoutItem}
                       startHour={effectiveStartHour}
                       totalMinutes={totalMinutes}
+                      theme={theme}
                       onEdit={onEditCourse}
                       onDelete={deleteCourse}
                     />
