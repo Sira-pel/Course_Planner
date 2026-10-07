@@ -375,7 +375,10 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       <ClearAllDialog
         open={isConfirmingClear}
         onCancel={() => setIsConfirmingClear(false)}
-        onConfirm={onClearAll}
+        onConfirm={() => {
+          setIsConfirmingClear(false);
+          onClearAll();
+        }}
       />
 
       <Suspense fallback={null}>

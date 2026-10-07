@@ -1140,6 +1140,11 @@ html.dark .up-text-trigger.up-import-export.is-open {
   contain: strict;
 }
 
+.up-confirm-backdrop,
+.up-confirm-dialog {
+  z-index: 110;
+}
+
 .course-modal-backdrop {
   z-index: 100 !important;
 }
