@@ -592,6 +592,10 @@ export default function App() {
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={handleAddCourseAtTime}
               onOpenNewCourse={handleOpenCalendarCourse}
+              onLoadDemo={() => {
+                resetToSample();
+                showToast('Loaded the demo semester.', 'success');
+              }}
             />
           </div>
 

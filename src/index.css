@@ -1361,6 +1361,49 @@ body[data-up-pool-open] .up-fab-cluster {
   }
 }
 
+.up-empty-plan {
+  position: absolute;
+  z-index: 25;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  width: min(22rem, calc(100% - 32px));
+  padding: 16px;
+  border: 1px solid var(--up-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--up-raised) 92%, transparent);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.12);
+  text-align: center;
+}
+
+.up-empty-plan h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--up-ink);
+}
+
+.up-empty-plan p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--up-muted);
+}
+
+.up-empty-plan-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.up-empty-plan-actions .up-sheet-btn-primary,
+.up-empty-plan-actions .up-sheet-btn-secondary {
+  width: auto;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
 .up-sheet-empty {
   display: flex;
   flex-direction: column;
