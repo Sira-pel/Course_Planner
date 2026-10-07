@@ -2739,3 +2739,42 @@ html[data-lite-motion] .up-modal-card {
   transition: none;
 }
 
+.up-app {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+@media (min-width: 1600px) {
+  .up-empty-plan,
+  .up-import-menu,
+  .up-settings {
+    max-width: 22rem;
+  }
+
+  .up-menu {
+    max-height: min(32rem, 70dvh);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .up-header-row {
+    min-height: 40px;
+  }
+
+  .up-cal-switch-bar {
+    padding-top: 4px;
+    padding-bottom: 0;
+  }
+
+  .up-fab-cluster {
+    padding-top: 6px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .up-menu,
+  .up-mobile-sheet,
+  .up-pool-sheet {
+    max-height: min(78dvh, calc(100dvh - 12px));
+  }
+}
+
