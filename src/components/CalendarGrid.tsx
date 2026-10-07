@@ -203,27 +203,19 @@ export const CalendarGrid = memo(function CalendarGrid({
 
     days.forEach(dayObj => {
       const items = collectDaySessions(dayObj.id, activePlan, ghostPlans, conflictingCourseIds, planIndexMap);
-      const activeLayout = computeDayLayout(items.filter((item) => !item.isGhost));
-      const ghostLayout = computeDayLayout(items.filter((item) => item.isGhost)).map((ghost) => {
-        const covering = activeLayout.filter((active) => checkSessionCollision(ghost.session, active.session));
-        if (covering.length === 0) return ghost;
-        const ghostEnd = timeToMinutes(ghost.session.endTime);
-        const coverEnd = Math.max(...covering.map((active) => timeToMinutes(active.session.endTime)));
-        return {
-          ...ghost,
-          coveredByActive: true,
-          coveredExtendsBelow: ghostEnd > coverEnd,
-        };
-      });
+      const layout = computeDayLayout(items);
       const phoneWeek = isPhone && mobileCalendarView === 'week';
       const cascaded = phoneWeek
-        ? activeLayout.map((item) =>
-            item.totalCols > 1
-              ? { ...item, cascadeIndex: item.colIndex, colIndex: 0, totalCols: 1 }
-              : item
-          )
-        : activeLayout;
-      map.set(dayObj.id, cascaded.concat(ghostLayout));
+        ? layout.map((item) => {
+            if (item.isGhost || item.totalCols <= 1) return item;
+            const sharesLaneWithGhost = layout.some(
+              (other) => other.isGhost && checkSessionCollision(item.session, other.session)
+            );
+            if (sharesLaneWithGhost) return item;
+            return { ...item, cascadeIndex: item.colIndex, colIndex: 0, totalCols: 1 };
+          })
+        : layout;
+      map.set(dayObj.id, cascaded);
     });
 
     return map;
