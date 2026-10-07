@@ -30,14 +30,12 @@ interface PlansMenuProps {
   plansMenuOpen: boolean;
   editingPlanId: string | null;
   editingName: string;
-  newPlanInputName: string;
   nextSuggestedName: string;
   planIdConfirmDelete: string | null;
   plansDropdownRef: React.RefObject<HTMLDivElement | null>;
   onToggleOpen: () => void;
   onSelectPlan: (planId: string) => void;
   onEditingNameChange: (value: string) => void;
-  onNewPlanNameChange: (value: string) => void;
   onStartRename: (planId: string, currentName: string) => void;
   onSaveRename: () => void;
   onCancelRename: () => void;
@@ -60,14 +58,12 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   plansMenuOpen,
   editingPlanId,
   editingName,
-  newPlanInputName,
   nextSuggestedName,
   planIdConfirmDelete,
   plansDropdownRef,
   onToggleOpen,
   onSelectPlan,
   onEditingNameChange,
-  onNewPlanNameChange,
   onStartRename,
   onSaveRename,
   onCancelRename,
@@ -80,16 +76,18 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   const reduceMotion = useReducedMotion();
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<'blank' | 'duplicate'>('blank');
+  const [newPlanName, setNewPlanName] = useState('');
 
   useEffect(() => {
     if (!plansMenuOpen) {
       setComposerOpen(false);
       setComposerMode('blank');
+      setNewPlanName('');
     }
   }, [plansMenuOpen]);
 
   const submitNewPlan = () => {
-    onNewPlan({ name: newPlanInputName, mode: composerMode });
+    onNewPlan({ name: newPlanName, mode: composerMode });
   };
 
   const sheetOpenTransition: Transition = reduceMotion
@@ -278,8 +276,8 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
           <AnimatedBody activeKey={`new-plan-${composerMode}`} contentClassName="space-y-2">
             <input
               type="text"
-              value={newPlanInputName}
-              onChange={(e) => onNewPlanNameChange(e.target.value)}
+              value={newPlanName}
+              onChange={(e) => setNewPlanName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') submitNewPlan();
               }}
@@ -288,39 +286,39 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             <div
-              role="tablist"
+              role="radiogroup"
               aria-label="New plan type"
               className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg"
             >
               <button
                 type="button"
-                role="tab"
-                aria-selected={composerMode === 'blank'}
+                role="radio"
+                aria-checked={composerMode === 'blank'}
                 onClick={() => setComposerMode('blank')}
-                className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold ${
+                className={`relative min-w-0 px-2 py-1.5 rounded-md text-[11px] font-semibold ${
                   composerMode === 'blank'
                     ? 'text-indigo-700 dark:text-indigo-300'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {composerMode === 'blank' && <ModalTabPill layoutId="new-plan-mode" />}
-                <span className="relative z-10">Blank</span>
+                <span className="relative z-10 block truncate">Blank</span>
               </button>
               <button
                 type="button"
-                role="tab"
-                aria-selected={composerMode === 'duplicate'}
+                role="radio"
+                aria-checked={composerMode === 'duplicate'}
                 onClick={() => setComposerMode('duplicate')}
                 disabled={!activePlan}
                 title={activePlan ? `Duplicate "${activePlan.name}"` : undefined}
-                className={`relative px-2 py-1.5 rounded-md text-[11px] font-semibold truncate disabled:opacity-40 ${
+                className={`relative min-w-0 px-2 py-1.5 rounded-md text-[11px] font-semibold disabled:opacity-40 ${
                   composerMode === 'duplicate'
                     ? 'text-indigo-700 dark:text-indigo-300'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {composerMode === 'duplicate' && <ModalTabPill layoutId="new-plan-mode" />}
-                <span className="relative z-10 truncate">
+                <span className="relative z-10 block truncate">
                   {activePlan ? `Duplicate "${activePlan.name}"` : 'Duplicate'}
                 </span>
               </button>

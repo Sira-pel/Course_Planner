@@ -18,6 +18,7 @@ import {
 import { useIsPhone } from '../../utils/usePoolLayout';
 import type { SchedulePlan } from '../../types/schedule';
 import type { ToastType } from '../app/AppToast';
+import { toastSwitchedPlan } from '../app/toastPlanSwitch';
 import { PlansMenu } from './PlansMenu';
 import { CompareMenu } from './CompareMenu';
 import { SettingsMenu } from './SettingsMenu';
@@ -109,7 +110,6 @@ export const Header = memo(function Header({
   const [editingName, setEditingName] = useState('');
   const [ghostMenuOpen, setGhostMenuOpen] = useState(false);
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
-  const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [conflictModalMounted, setConflictModalMounted] = useState(false);
 
@@ -270,23 +270,28 @@ export const Header = memo(function Header({
     });
   };
 
-  const announcePlan = (planId: string, fallback: string) => {
-    const created = useScheduleStore.getState().plans.find((plan) => plan.id === planId);
-    showToast(`Switched to "${created?.name || fallback}"`, 'info');
+  const announceOverlaySwitch = (sourceId: string | undefined, newPlanId: string) => {
+    const before = useScheduleStore.getState().ghostPlanIds;
+    toggleGhostPlan(newPlanId);
+    const after = useScheduleStore.getState().ghostPlanIds;
+    const overlayChanged =
+      before.length !== after.length || before.some((id, index) => after[index] !== id);
+    // Ghosting the plan that just became active does not overlay anything.
+    if (!overlayChanged) return;
+    toastSwitchedPlan(showToast, newPlanId, sourceId);
   };
 
   const handleNewPlan = ({ name, mode }: { name: string; mode: 'blank' | 'duplicate' }) => {
     const typed = name.trim();
     if (mode === 'duplicate') {
       if (!activePlan) return;
-      const newId = duplicatePlan(activePlan.id, typed || undefined);
-      announcePlan(newId, typed || `${activePlan.name} (Copy)`);
+      const sourceId = activePlan.id;
+      const newId = duplicatePlan(sourceId, typed || undefined);
+      toastSwitchedPlan(showToast, newId, sourceId);
     } else {
-      const finalName = typed || nextSuggestedName;
-      const newId = createPlan(finalName);
-      announcePlan(newId, finalName);
+      const newId = createPlan(typed || nextSuggestedName);
+      toastSwitchedPlan(showToast, newId, activePlanId);
     }
-    setNewPlanInputName('');
     setPlansMenuOpen(false);
   };
 
@@ -521,12 +526,10 @@ export const Header = memo(function Header({
             plansMenuOpen={plansMenuOpen}
             editingPlanId={editingPlanId}
             editingName={editingName}
-            newPlanInputName={newPlanInputName}
             nextSuggestedName={nextSuggestedName}
             planIdConfirmDelete={planIdConfirmDelete}
             plansDropdownRef={plansDropdownRef}
             onToggleOpen={() => {
-              setNewPlanInputName('');
               setEditingPlanId(null);
               setIsSettingsOpen(false);
               setGhostMenuOpen(false);
@@ -537,7 +540,6 @@ export const Header = memo(function Header({
               setPlansMenuOpen(false);
             }}
             onEditingNameChange={setEditingName}
-            onNewPlanNameChange={setNewPlanInputName}
             onStartRename={handleStartRename}
             onSaveRename={handleSaveRename}
             onCancelRename={() => setEditingPlanId(null)}
@@ -583,14 +585,11 @@ export const Header = memo(function Header({
           onClearGhosts={clearGhostPlans}
           onDuplicateAndOverlay={() => {
             if (!activePlanId) return;
-            const newPlanId = duplicatePlan(activePlanId);
-            toggleGhostPlan(newPlanId);
-            announcePlan(newPlanId, 'copy');
+            const sourceId = activePlanId;
+            announceOverlaySwitch(sourceId, duplicatePlan(sourceId));
           }}
           onCreateAndOverlay={() => {
-            const newPlanId = createPlan();
-            toggleGhostPlan(newPlanId);
-            announcePlan(newPlanId, 'new plan');
+            announceOverlaySwitch(activePlanId, createPlan());
           }}
           onOpenShare={() => onOpenShare?.()}
           onImportFriendLink={() => onOpenImportShare?.()}

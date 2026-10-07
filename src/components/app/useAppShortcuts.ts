@@ -188,7 +188,9 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
       // 7. Duplicate Plan
       const duplicateKey = getBinding('duplicate_plan', 'Alt+D');
       if (isKeyMatch(e, duplicateKey)) {
+        if (isInputFocused) return;
         e.preventDefault();
+        if (e.repeat) return;
         onDuplicatePlan(activePlanId);
         return;
       }

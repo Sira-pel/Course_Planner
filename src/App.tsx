@@ -15,6 +15,7 @@ import type { HelpTabType } from './components/HelpModal';
 import { StorageWriteBanner } from './components/StorageWriteBanner';
 import { DeferredDialog, DialogReplaceAppearContext, SuppressFocusRestoreContext } from './components/app/DeferredDialog';
 import { AppToast, type ToastMessage } from './components/app/AppToast';
+import { toastSwitchedPlan } from './components/app/toastPlanSwitch';
 import { MobileDock } from './components/app/MobileDock';
 import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppShortcuts';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -169,12 +170,46 @@ export default function App() {
   const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
-  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info') => {
-    setToastMessage({ text, type });
-    window.setTimeout(() => {
-      setToastMessage((prev) => (prev?.text === text ? null : prev));
-    }, 4000);
+  const toastIdRef = useRef(0);
+  const toastTimerRef = useRef<number | null>(null);
+  const clearToastTimer = useCallback(() => {
+    if (toastTimerRef.current === null) return;
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
   }, []);
+  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info', planId?: string) => {
+    const id = toastIdRef.current + 1;
+    toastIdRef.current = id;
+    setToastMessage({ id, text, type, planId });
+    clearToastTimer();
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
+      setToastMessage((prev) => (prev?.id === id ? null : prev));
+    }, 4000);
+  }, [clearToastTimer]);
+  const dismissToast = useCallback(() => {
+    clearToastTimer();
+    setToastMessage(null);
+  }, [clearToastTimer]);
+  const toastMessageRef = useRef(toastMessage);
+  toastMessageRef.current = toastMessage;
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const activePlanIdRef = useRef(activePlanId);
+  useEffect(() => {
+    const previousPlanId = activePlanIdRef.current;
+    activePlanIdRef.current = activePlanId;
+    if (previousPlanId === activePlanId) return;
+    const current = toastMessageRef.current;
+    if (!current?.planId || current.planId === activePlanId) return;
+    clearToastTimer();
+    setToastMessage(null);
+  }, [activePlanId, clearToastTimer]);
 
   const closeMoreMenu = useCallback(() => {
     setIsMoreOpen(false);
@@ -531,8 +566,7 @@ export default function App() {
     onToggleTheme: handleShortcutToggleTheme,
     onDuplicatePlan: (planId) => {
       const newId = duplicatePlan(planId);
-      const created = useScheduleStore.getState().plans.find((plan) => plan.id === newId);
-      if (created && created.id !== planId) showToast(`Switched to "${created.name}"`, 'info');
+      toastSwitchedPlan(showToast, newId, planId);
     },
     onUndo: undo,
     onRedo: redo,
@@ -666,7 +700,7 @@ export default function App() {
       </Suspense>
 
       <OfflineIndicator />
-      <AppToast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      <AppToast message={toastMessage} onDismiss={dismissToast} />
     </div>
   );
 }
