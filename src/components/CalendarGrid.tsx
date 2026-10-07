@@ -388,7 +388,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                       ? 'justify-center px-1'
                       : 'justify-between px-2 sm:px-3'
                   } ${
-                    !phoneWeek && isToday ? 'bg-indigo-50/90 dark:bg-slate-900 border-b-2 border-indigo-600 dark:border-slate-200' : ''
+                    !phoneWeek && isToday ? 'bg-indigo-50/90 dark:bg-transparent border-b-2 border-indigo-600 dark:border-[var(--up-accent)]' : ''
                   }`}
                 >
                   {phoneWeek ? (
@@ -404,7 +404,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                           : 'text-sm'
                       } ${
                         isToday
-                          ? 'text-indigo-700 dark:text-slate-50'
+                          ? 'text-indigo-700 dark:text-[var(--up-accent)]'
                           : 'text-slate-900 dark:text-slate-100'
                       }`}
                     >
@@ -518,7 +518,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                   key={day.id}
                   id={`day-column-${day.id}`}
                   className={`relative h-full overflow-x-clip group/col ${
-                    isToday && !phoneWeek ? 'bg-indigo-500/[0.02] dark:bg-white/[0.035]' : ''
+                    isToday && !phoneWeek ? 'bg-indigo-500/[0.02] dark:bg-transparent' : ''
                   }`}
                   onDoubleClick={(e) => {
                     if (!onAddCourseAtTime) return;
