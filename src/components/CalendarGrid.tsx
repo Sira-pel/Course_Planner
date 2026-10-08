@@ -25,6 +25,15 @@ function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
 }
 
+/** Axis label that fits a narrow phone gutter: "7 AM", not "7:00 AM". */
+function formatAxisHour(hour: number): string {
+  const h = hour >= 24 ? hour % 24 : hour;
+  if (h === 0) return '12 AM';
+  if (h === 12) return '12 PM';
+  if (h > 12) return `${h - 12} PM`;
+  return `${h} AM`;
+}
+
 function getInitialCalendarWidth(): number {
   if (typeof window === 'undefined') return 1000;
   const w = window.innerWidth;
@@ -257,7 +266,9 @@ export const CalendarGrid = memo(function CalendarGrid({
     };
   }, [currentDayOfWeek]);
 
-  const gutterWidth = isPhone ? 44 : containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
+  const gutterWidth = isPhone
+    ? (containerWidth < 340 ? 42 : 48)
+    : containerWidth < 400 ? 56 : containerWidth < 640 ? 60 : 64;
   const minGridWidth = days.length > 5 ? gutterWidth + days.length * 64 : undefined;
   const effectiveGridWidth = minGridWidth ? Math.max(containerWidth, minGridWidth) : containerWidth;
   const colWidth = days.length > 0 ? (effectiveGridWidth - gutterWidth) / days.length : 120;
@@ -271,6 +282,7 @@ export const CalendarGrid = memo(function CalendarGrid({
 
   const needsHorizontalScroll = Boolean(minGridWidth && containerWidth < minGridWidth);
   const phoneWeek = isPhone && mobileCalendarView === 'week';
+  const phoneDay = isPhone && mobileCalendarView === 'day';
 
   const swipeLock = useRef(0);
   const shiftDay = (direction: -1 | 1) => {
@@ -303,7 +315,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
                 onClick={() => setSelectedDay(day.id)}
               >
-                {day.label}
+                <span className={`up-phone-day-name${day.id === days[0]?.id ? ' is-today' : ''}`}>{day.label}</span>
               </button>
             ))}
           </div>
@@ -348,7 +360,8 @@ export const CalendarGrid = memo(function CalendarGrid({
           className="flex flex-col flex-1 min-h-0 w-full"
           style={{ minWidth: minGridWidth ? `${minGridWidth}px` : '100%' }}
         >
-          {/* Day Headers (Sticky at top of scroll area) */}
+          {/* Day headers. Phone day view already has the Mon–Fri strip, so this row is omitted. */}
+          {!phoneDay && (
           <div className={`flex sticky top-0 z-30 w-full max-w-full ${
             phoneWeek
               ? 'up-phone-week-head'
@@ -363,7 +376,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 : 'border-r border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950'
             }`}
           >
-            {!phoneWeek && <Clock className="w-3.5 h-3.5" />}
+            {!isPhone && <Clock className="w-3.5 h-3.5" />}
           </div>
 
           {/* Days header columns */}
@@ -449,6 +462,7 @@ export const CalendarGrid = memo(function CalendarGrid({
             })}
           </div>
         </div>
+          )}
 
         {/* Main Grid Area (Time rows & Day columns) */}
         <div
@@ -489,8 +503,8 @@ export const CalendarGrid = memo(function CalendarGrid({
             }`}
           >
             {hourMarks.map((hour, idx) => {
-              const timeStr = containerWidth < 380
-                ? (hour === 0 || hour === 24 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`)
+              const timeStr = isPhone || gutterWidth < 62
+                ? formatAxisHour(hour)
                 : minutesToTime(hour * 60, true);
               const topPct = (idx / numHours) * 100;
               const isFirst = idx === 0;
@@ -500,8 +514,12 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={hour}
                   style={{ top: `${topPct}%` }}
-                  className={`absolute right-1 sm:right-2 font-mono text-slate-600 dark:text-slate-400 select-none pointer-events-none whitespace-nowrap leading-none font-semibold ${
-                    colWidth < 68 ? 'text-[9px] sm:text-[9.5px]' : 'text-[10px]'
+                  className={`absolute select-none pointer-events-none whitespace-nowrap leading-none ${
+                    isPhone
+                      ? 'up-phone-hour'
+                      : `right-1 sm:right-2 font-mono font-semibold text-slate-600 dark:text-slate-400 ${
+                          colWidth < 68 ? 'text-[9px] sm:text-[9.5px]' : 'text-[10px]'
+                        }`
                   } ${
                     isFirst
                       ? 'top-1.5 translate-y-0'

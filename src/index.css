@@ -1623,8 +1623,9 @@ body[data-up-pool-open] .up-fab-cluster {
 .up-cal-switch-bar {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px 4px;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--up-line);
 }
 
 .up-cal-switch-row {
@@ -1677,6 +1678,24 @@ html.dark .up-cal-toggle {
   border-right: 0;
 }
 
+.up-phone-hour {
+  left: 6px;
+  right: 2px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-align: left;
+  color: var(--up-muted);
+}
+
+@media (max-width: 359px) {
+  .up-phone-hour {
+    left: 4px;
+    font-size: 10px;
+  }
+}
+
 .up-phone-day-cell {
   padding: 0;
 }
@@ -1697,18 +1716,18 @@ html.dark .up-cal-toggle {
 
 .up-day-strip {
   display: flex;
-  gap: 4px;
+  gap: 0;
   overflow-x: auto;
 }
 
 .up-day-strip-btn {
   flex: 1 0 auto;
-  min-height: 36px;
+  min-height: 40px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
   color: var(--up-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1716,8 +1735,7 @@ html.dark .up-cal-toggle {
 .up-day-strip-btn.is-selected {
   background: transparent;
   color: var(--up-accent);
-  box-shadow: inset 0 -2px 0 var(--up-accent);
-  border-radius: 0;
+  box-shadow: none;
 }
 
 .up-day-context {
