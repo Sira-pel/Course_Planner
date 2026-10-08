@@ -5,10 +5,12 @@ import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   CheckCircle2,
   HelpCircle,
+  Moon,
   RotateCcw,
   Settings,
   Smartphone,
   Sparkles,
+  Sun,
   X,
 } from 'lucide-react';
 import { ModalTabPill } from '../app/ModalTabPill';
@@ -120,21 +122,24 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   const renderContent = () => (
     <>
       <div className="up-settings-controls">
-        <div>
+        <div className="up-settings-appearance">
           <span className="up-settings-field-label" id="settings-appearance-label">Appearance</span>
-          <div className="up-segment up-segment-2" role="group" aria-labelledby="settings-appearance-label">
+          <div className="up-segment up-appearance-segment" role="group" aria-labelledby="settings-appearance-label">
             {(['light', 'dark'] as const).map((preference) => {
               const selected = (themePreference === 'system' ? resolveTheme('system') : themePreference) === preference;
+              const label = preference === 'light' ? 'Light' : 'Dark';
+              const Icon = preference === 'light' ? Sun : Moon;
               return (
                 <button
                   key={preference}
                   type="button"
-                  className="up-segment-btn up-chrome-btn"
+                  className="up-segment-btn up-appearance-btn up-chrome-btn"
                   aria-pressed={selected}
+                  aria-label={label}
+                  title={label}
                   onClick={(event) => onSetThemePreference(preference, event)}
                 >
-                  {selected && <ModalTabPill layoutId="settings-appearance" />}
-                  <span className="relative">{preference === 'light' ? 'Light' : 'Dark'}</span>
+                  <Icon aria-hidden="true" />
                 </button>
               );
             })}
