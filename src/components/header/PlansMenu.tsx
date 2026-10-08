@@ -9,6 +9,7 @@ import {
   X,
   ChevronDown,
   FolderPlus,
+  Folder,
   FolderKanban,
   Share2,
 } from 'lucide-react';
@@ -363,7 +364,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
         aria-haspopup="true"
         aria-expanded={plansMenuOpen}
       >
-        <FolderKanban className="w-3.5 h-3.5 shrink-0" />
+        <Folder className="w-4 h-4 shrink-0" />
         <span className="hidden sm:inline">Plans</span>
         <span className="sm:hidden truncate">{activePlan?.name || 'Plans'}</span>
         <ChevronDown className={`up-chevron w-3 h-3 opacity-60 shrink-0 ${plansMenuOpen ? 'is-open' : ''}`} />

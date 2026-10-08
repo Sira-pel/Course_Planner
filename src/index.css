@@ -1080,8 +1080,46 @@ html.dark .up-settings-select option,
 .up-plan-trigger:hover,
 .up-plan-trigger.is-open,
 .up-plan-trigger.is-open:hover {
-  background: var(--up-secondary);
-  color: var(--up-secondary-ink);
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--up-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--up-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+html.dark .up-plan-trigger,
+html.dark .up-plan-trigger:hover,
+html.dark .up-plan-trigger.is-open,
+html.dark .up-plan-trigger.is-open:hover {
+  background: var(--up-raised);
+}
+
+.up-plan-trigger:hover,
+.up-plan-trigger.is-open,
+.up-plan-trigger.is-open:hover {
+  background: color-mix(in srgb, var(--up-ink) 4%, #fff);
+}
+
+html.dark .up-plan-trigger:hover,
+html.dark .up-plan-trigger.is-open,
+html.dark .up-plan-trigger.is-open:hover {
+  background: color-mix(in srgb, var(--up-ink) 8%, var(--up-raised));
+}
+
+.up-plan-trigger > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--up-muted);
+  opacity: 1;
+}
+
+.up-plan-trigger > .up-chevron {
+  width: 14px;
+  height: 14px;
 }
 
 .up-text-trigger:active {
