@@ -22,6 +22,8 @@ const FALLBACK_START_RADIUS_PX = 8;
 const MIN_START_RADIUS_PX = 0.5;
 const DEFAULT_EASE: [number, number, number, number] = [0.3, 0.55, 0.3, 1];
 const DEFAULT_EASE_CSS = 'cubic-bezier(0.3, 0.55, 0.3, 1)';
+/** Same length both ways. Was `--dur-scene` (620ms) to dark and `--dur-emphasis` (500ms) to light. */
+const REVEAL_DURATION_MS = 400;
 
 export type ScaleLadderFrame = {
   offset: number;
@@ -37,10 +39,13 @@ type ThemeViewTransition = {
 
 type ActiveReveal = {
   transition: ThemeViewTransition | null;
+  superseded: boolean;
   finish: () => void;
 };
 
 let activeReveal: ActiveReveal | null = null;
+/** Theme the newest reveal is heading toward, before the store has caught up. */
+let chosenTheme: 'light' | 'dark' | null = null;
 let failsafe = 0;
 let pendingFrame = 0;
 let groupSizeWarned = false;
@@ -49,17 +54,19 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function readDurationMs(token: string, fallback: number): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-  if (raw.endsWith('ms')) {
-    const value = Number.parseFloat(raw);
-    return Number.isFinite(value) ? value : fallback;
-  }
-  if (raw.endsWith('s')) {
-    const value = Number.parseFloat(raw) * 1000;
-    return Number.isFinite(value) ? value : fallback;
-  }
-  return fallback;
+function rememberChosenTheme(goingToDark: boolean): 'light' | 'dark' {
+  const theme = goingToDark ? 'dark' : 'light';
+  chosenTheme = theme;
+  return theme;
+}
+
+function settleChosenTheme(theme: 'light' | 'dark'): void {
+  if (chosenTheme === theme) chosenTheme = null;
+}
+
+/** In-flight theme, if a reveal was requested and the store has not applied it yet. */
+export function revealingTheme(): 'light' | 'dark' | null {
+  return chosenTheme;
 }
 
 function readEase(token: string): string {
@@ -211,20 +218,8 @@ function farthestCornerRadius(x: number, y: number, width: number, height: numbe
   return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }
 
-export function isMobileScreen(): boolean {
-  const g = globalThis as typeof globalThis & { matchMedia?: (query: string) => { matches: boolean } };
-  if (typeof g.matchMedia !== 'function') return false;
-  return g.matchMedia('(max-width: 639px)').matches;
-}
-
 function startRadiusPxFromEvent(event: ThemeRevealOptions['event']): number {
-  let target = event.currentTarget;
-  if (target && isMobileScreen()) {
-    const mobileBtn = typeof document !== 'undefined' ? document.getElementById('btn-settings') : null;
-    if (mobileBtn) {
-      target = mobileBtn;
-    }
-  }
+  const target = event.currentTarget;
   if (
     typeof target === 'object' &&
     target !== null &&
@@ -365,17 +360,33 @@ export function isThemeRevealing(): boolean {
  * Capture light/dark as named body groups, then scale a rounded-clip wrapper
  * with an inverse-scaled snapshot so only transform/opacity run on the compositor.
  * Never clips live #root. Keyboard and reduced-motion callers must skip this.
+ * A tap during a running reveal skips that animation and applies the newest choice immediately.
  */
 export function runThemeReveal(options: ThemeRevealOptions): void {
   const { event, goingToDark, apply, commit } = options;
+  const theme = rememberChosenTheme(goingToDark);
 
-  // Ignore rapid repeated clicks or double clicks while an active transition is animating.
+  const applyAndSettle = () => {
+    apply();
+    settleChosenTheme(theme);
+  };
+
   if (activeReveal) {
+    const previous = activeReveal;
+    previous.superseded = true;
+    try {
+      previous.transition?.skipTransition?.();
+    } catch {
+      // The view transition may already have finished.
+    }
+    previous.finish();
+    applyAndSettle();
+    commit();
     return;
   }
 
   if (!canStartViewTransition(document)) {
-    apply();
+    applyAndSettle();
     commit();
     return;
   }
@@ -393,12 +404,19 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
   const runApply = () => {
     if (applied) return;
     applied = true;
-    apply();
+    applyAndSettle();
+  };
+
+  const record: ActiveReveal = {
+    transition: null,
+    superseded: false,
+    finish: () => {},
   };
 
   const finish = () => {
     if (released) return;
     released = true;
+    const superseded = record.superseded;
     window.clearTimeout(failsafe);
     failsafe = 0;
     window.cancelAnimationFrame(pendingFrame);
@@ -406,26 +424,26 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
     clearRevealClasses();
     cancelAnimations(animations);
     clearRevealGeometry();
-    runApply();
-    commit();
-    activeReveal = null;
+    if (!superseded) {
+      runApply();
+      commit();
+    }
+    if (activeReveal === record) activeReveal = null;
   };
 
-  activeReveal = {
-    transition: null,
-    finish,
-  };
+  record.finish = finish;
+  activeReveal = record;
   armFailsafe(finish);
 
   pendingFrame = window.requestAnimationFrame(() => {
     pendingFrame = 0;
-    if (released || activeReveal == null) return;
+    if (released || activeReveal !== record) return;
 
     try {
       const transition = document.startViewTransition(() => {
         runApply();
       });
-      activeReveal.transition = transition;
+      record.transition = transition;
       armFailsafe(finish);
 
       void transition.ready
@@ -449,9 +467,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
             }
           }
 
-          const duration = goingToDark
-            ? readDurationMs('--dur-scene', 620)
-            : readDurationMs('--dur-emphasis', 500);
+          const duration = REVEAL_DURATION_MS;
           const easeCss = readEase('--ease-reveal');
 
           if (root.classList.contains('is-gecko-reveal')) {
@@ -511,6 +527,7 @@ export function runThemeReveal(options: ThemeRevealOptions): void {
           );
         })
         .catch(() => {
+          if (released || record.superseded) return;
           runApply();
         });
 
@@ -527,19 +544,6 @@ export function originRelativeTo(
 ): ThemeRevealOrigin {
   const frame = container.getBoundingClientRect();
   const target = event.currentTarget;
-
-  if (target && isMobileScreen()) {
-    const btn =
-      (typeof document !== 'undefined' ? document.getElementById('btn-settings') : null) ||
-      (target && typeof target === 'object' && 'getBoundingClientRect' in target ? (target as Element) : null);
-    if (btn && typeof btn.getBoundingClientRect === 'function') {
-      const box = btn.getBoundingClientRect();
-      return {
-        x: box.left + box.width / 2 - frame.left,
-        y: box.top + box.height / 2 - frame.top,
-      };
-    }
-  }
 
   if (
     typeof target === 'object' &&

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, Suspense, lazy, memo } from 'react';
+import { flushSync } from 'react-dom';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import type { ExportTabType } from '../export/ExportModal';
 import { applyDomTheme, persistTheme, type ThemePreference } from '../../utils/theme';
-import { isThemeRevealing, runThemeReveal } from '../../utils/themeTransition';
+import { revealingTheme, runThemeReveal } from '../../utils/themeTransition';
 import { ImportExportMenu } from './ImportExportMenu';
 import { countConflictPairs, detectPlanConflicts } from '../../utils/timeUtils';
 import {
@@ -64,7 +65,6 @@ export const Header = memo(function Header({
     endHour,
     timeRangeMode,
     weekStart,
-    theme,
     themePreference,
     setActivePlan,
     createPlan,
@@ -96,7 +96,6 @@ export const Header = memo(function Header({
       endHour: state.endHour,
       timeRangeMode: state.timeRangeMode,
       weekStart: state.weekStart,
-      theme: state.theme,
       themePreference: state.themePreference,
       setActivePlan: state.setActivePlan,
       createPlan: state.createPlan,
@@ -245,24 +244,22 @@ export const Header = memo(function Header({
   }, [editingPlanId, conflictModalOpen]);
 
   const handleAppearance = (preference: ThemePreference, event: React.MouseEvent<HTMLElement>) => {
-    if (isThemeRevealing()) return;
     const resolved = preference === 'system'
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : preference;
-    if (resolved === theme) {
-      setThemePreference(preference);
-      return;
-    }
+    const current = revealingTheme() ?? useScheduleStore.getState().theme;
+    if (resolved === current) return;
     runThemeReveal({
       event,
       goingToDark: resolved === 'dark',
       apply: () => {
         applyDomTheme(resolved);
         persistTheme(preference);
+        flushSync(() => {
+          setThemePreference(preference);
+        });
       },
-      commit: () => {
-        setThemePreference(preference);
-      },
+      commit: () => {},
     });
   };
 

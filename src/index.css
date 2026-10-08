@@ -697,6 +697,74 @@ html.dark body {
   color: var(--up-secondary-ink);
 }
 
+.up-settings-appearance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.up-settings-appearance .up-settings-field-label {
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--up-ink);
+}
+
+.up-appearance-segment {
+  width: max-content;
+  flex: none;
+  grid-template-columns: 44px 44px;
+  border-radius: 12px;
+}
+
+.up-appearance-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 10px;
+  color: var(--up-muted);
+}
+
+.up-appearance-btn svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.up-appearance-btn[aria-pressed='true'] {
+  background: var(--up-secondary);
+  color: var(--up-secondary-ink);
+}
+
+.up-appearance-btn:focus {
+  outline: none;
+}
+
+.up-appearance-btn:focus-visible {
+  outline: 2px solid var(--up-focus);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+@media (min-width: 640px) {
+  .up-appearance-btn:hover {
+    background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+    color: var(--up-ink);
+  }
+
+  .up-appearance-btn[aria-pressed='true']:hover {
+    background: color-mix(in srgb, var(--up-secondary) 84%, var(--up-ink));
+    color: var(--up-secondary-ink);
+  }
+}
+
 .up-tab-pill {
   background: var(--up-secondary);
   box-shadow: none;
@@ -2838,6 +2906,22 @@ html.dark .up-mobile-sheet,
 /* Theme reveal: named body snapshots. Chromium scales a circle; Gecko clips one. */
 html.is-theme-revealing {
   view-transition-name: none;
+}
+
+html.is-theme-revealing::view-transition,
+html.is-theme-revealing::view-transition-group(root),
+html.is-theme-revealing::view-transition-image-pair(root),
+html.is-theme-revealing::view-transition-old(root),
+html.is-theme-revealing::view-transition-new(root),
+html.is-theme-revealing::view-transition-group(theme-light),
+html.is-theme-revealing::view-transition-image-pair(theme-light),
+html.is-theme-revealing::view-transition-old(theme-light),
+html.is-theme-revealing::view-transition-new(theme-light),
+html.is-theme-revealing::view-transition-group(theme-dark),
+html.is-theme-revealing::view-transition-image-pair(theme-dark),
+html.is-theme-revealing::view-transition-old(theme-dark),
+html.is-theme-revealing::view-transition-new(theme-dark) {
+  pointer-events: none;
 }
 
 html.is-theme-revealing:not(.dark) body {

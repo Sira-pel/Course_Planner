@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { flushSync } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 import { useScheduleStore } from './store/useScheduleStore';
 import { Header } from './components/header/Header';
@@ -20,7 +21,7 @@ import { useAppShortcuts, type ShortcutSurface } from './components/app/useAppSh
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme, persistTheme, resolveTheme } from './utils/theme';
-import { isThemeRevealing, runThemeReveal } from './utils/themeTransition';
+import { revealingTheme, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
 
 // Start these with the app shell so the first open does not wait on a download.
@@ -518,8 +519,7 @@ export default function App() {
   ]);
 
   const handleShortcutToggleTheme = useCallback(() => {
-    if (isThemeRevealing()) return;
-    const currentTheme = useScheduleStore.getState().theme;
+    const currentTheme = revealingTheme() ?? useScheduleStore.getState().theme;
     const goingToDark = currentTheme !== 'dark';
     const next = goingToDark ? 'dark' : 'light';
 
@@ -535,10 +535,11 @@ export default function App() {
       apply: () => {
         applyDomTheme(next);
         persistTheme(next);
+        flushSync(() => {
+          setThemePreference(next);
+        });
       },
-      commit: () => {
-        setThemePreference(next);
-      },
+      commit: () => {},
     });
   }, [setThemePreference]);
 
