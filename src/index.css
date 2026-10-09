@@ -33,8 +33,8 @@
   --up-accent: #3d4fd8;
   --up-accent-ink: #f4f5ff;
   --up-focus: #3d4fd8;
-  /* Pale lavender selected highlight. Same hue as the accent, lighter than the solid button. */
-  --up-secondary: #dde3fb;
+  /* Selected highlight. Same hue and chroma as the dark-mode pill, light enough for dark text. */
+  --up-secondary: #7e8ee2;
   --up-secondary-ink: #1b2430;
   --up-secondary-line: color-mix(in srgb, var(--up-accent) 32%, transparent);
   --color-indigo-600: var(--up-accent);
