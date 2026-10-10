@@ -364,7 +364,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
           ) : (
             filteredCourses.map((item, index) => {
               const inActivePlan = isEnrolled(item);
-              const conflict = !inActivePlan ? findConflict(item) : null;
+              const conflict = findConflict(item);
 
               return (
                 <PoolRow
