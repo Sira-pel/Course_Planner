@@ -108,7 +108,12 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     (catalogItem: Course): Course | null => {
       if (!activePlan || activeSessionsByDay.size === 0) return null;
 
-      for (const poolSession of catalogItem.sessions) {
+      const enrolledCopy = activePlan.courses.find(
+        (course) => course.id === catalogItem.id || sameCourseIdentity(course, catalogItem)
+      );
+      const subject = enrolledCopy ?? catalogItem;
+
+      for (const poolSession of subject.sessions) {
         const candidates = activeSessionsByDay.get(poolSession.day);
         if (!candidates) continue;
         const sStart = timeToMinutes(poolSession.startTime);
@@ -116,7 +121,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
         if (sEnd <= sStart) continue;
 
         for (const enrolled of candidates) {
-          if (sameCourseIdentity(enrolled.course, catalogItem)) continue;
+          if (enrolled.course.id === subject.id || sameCourseIdentity(enrolled.course, subject)) continue;
           if (sStart < enrolled.end && enrolled.start < sEnd) {
             return enrolled.course;
           }
