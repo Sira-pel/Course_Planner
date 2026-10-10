@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Course, SchedulePlan } from '../../types/schedule';
+import { withUnusedCourseColors } from '../../utils/courseColor';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import {
@@ -248,6 +249,20 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     );
   }, [allCourses, searchQuery]);
 
+  const coursesToImport = useMemo(() => {
+    const selected = allCourses.filter((course) => selectedCourseIds.has(course.id));
+    if (!alsoAddToActivePlan) return selected;
+    return withUnusedCourseColors(
+      selected,
+      activePlan.courses.map((course) => course.color)
+    );
+  }, [allCourses, selectedCourseIds, alsoAddToActivePlan, activePlan]);
+
+  const visibleCourses = useMemo(() => {
+    const byId = new Map(coursesToImport.map((course) => [course.id, course]));
+    return filteredCourses.map((course) => byId.get(course.id) ?? course);
+  }, [filteredCourses, coursesToImport]);
+
   const handleToggleSelectCourse = useCallback((id: string) => {
     setSelectedCourseIds((prev) => {
       const next = new Set(prev);
@@ -269,7 +284,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     if (selectedCourseIds.size === 0) return;
     setIsImporting(true);
 
-    const toImport = allCourses.filter((c) => selectedCourseIds.has(c.id));
+    const toImport = coursesToImport;
 
     if (alsoAddToActivePlan) {
       onImportToPlanAndPool(toImport, activePlan.id);
@@ -596,7 +611,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 </p>
               </div>
             ) : (
-              filteredCourses.map((c) => (
+              visibleCourses.map((c) => (
                 <CourseRow
                   key={c.id}
                   course={c}
