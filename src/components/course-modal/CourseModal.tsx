@@ -5,6 +5,7 @@ import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseBulkCourses } from '../../utils/textParser';
+import { nextUnusedCourseColor } from '../../utils/courseColor';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
 import { TAB_PILL_TRANSITION, useModalMotion } from '../../utils/motion';
@@ -167,12 +168,21 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
 
     const timer = setTimeout(() => {
       const parsed = parseBulkCourses(rawText, currentPlan?.courses.length || 0);
+      const usedColors = (currentPlan?.courses || []).map((course) => course.color || '');
+      let fallbackIndex = usedColors.length;
+      const colors = parsed.map(() => {
+        const color = nextUnusedCourseColor(usedColors, fallbackIndex);
+        usedColors.push(color);
+        fallbackIndex += 1;
+        return color;
+      });
       setRecognizedItems((prev) => {
         return parsed.map((res, idx) => {
           const prevItem = prev[idx];
           const stableId = prevItem?.id || `rec_${idx}`;
           const isSelected = prevItem ? prevItem.selected : true;
           const isEditing = prevItem ? prevItem.isEditing : false;
+          const color = colors[idx];
 
           if (res.success && res.course) {
             return {
@@ -181,6 +191,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               course: {
                 ...res.course,
                 id: prevItem?.course?.id || res.course.id || `c_rec_${idx}`,
+                color,
               },
               selected: isSelected,
               isEditing,
@@ -191,7 +202,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
             code: 'COURSE 101',
             name: res.rawText.trim().slice(0, 40),
             credits: 3,
-            color: COURSE_COLORS[idx % COURSE_COLORS.length],
+            color,
             sessions: [
               {
                 id: `s_fail_${idx}`,
@@ -215,7 +226,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [rawText, currentPlan?.courses.length]);
+  }, [rawText, currentPlan]);
 
   const selectedCourses = useMemo(() => {
     return recognizedItems.filter((item) => item.selected && !item.hasError).map((item) => item.course);
