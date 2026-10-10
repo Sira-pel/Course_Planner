@@ -26,3 +26,28 @@ export function nextUnusedCourseColor(usedColors: Iterable<string>, fallbackInde
   const idx = ((fallbackIndex % count) + count) % count;
   return COURSE_COLORS[idx];
 }
+
+/**
+ * Keep each course color when it is still free. Replace a missing or already used color
+ * with the next free palette color. Checks `usedColors` and earlier courses in this list.
+ */
+export function withUnusedCourseColors<T extends { color: string }>(
+  courses: readonly T[],
+  usedColors: Iterable<string>
+): T[] {
+  const used = [...usedColors];
+  let fallbackIndex = used.length;
+  return courses.map((course) => {
+    const normalized = normalizeCourseColor(course.color);
+    const taken = normalized !== '' && used.some((color) => normalizeCourseColor(color) === normalized);
+    if (normalized && !taken) {
+      used.push(course.color);
+      fallbackIndex += 1;
+      return course;
+    }
+    const color = nextUnusedCourseColor(used, fallbackIndex);
+    used.push(color);
+    fallbackIndex += 1;
+    return { ...course, color };
+  });
+}

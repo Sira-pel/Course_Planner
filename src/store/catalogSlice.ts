@@ -1,4 +1,5 @@
 import type { Course } from '../types/schedule';
+import { withUnusedCourseColors } from '../utils/courseColor';
 import { courseIdentityKey, sameCourseIdentity } from '../utils/courseIdentity';
 import { prefixedId } from '../utils/id';
 import { commitWithHistory } from './history';
@@ -125,13 +126,16 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       );
       if (alreadyInPlan) return;
 
-      // Deep copy with fresh unique IDs
+      // Deep copy with fresh unique IDs. Keep the pool color when this plan is not using it.
       const newCourseId = prefixedId('c');
+      const [placed] = withUnusedCourseColors(
+        [catalogItem],
+        targetPlan.courses.map((course) => course.color)
+      );
       const freshCopy: Course = {
-        ...catalogItem,
+        ...placed,
         id: newCourseId,
-        color: catalogItem.color || state.getNextColor(targetId),
-        sessions: catalogItem.sessions.map((s, idx) => ({
+        sessions: placed.sessions.map((s, idx) => ({
           ...s,
           id: `s_${newCourseId}_${idx}`,
         })),

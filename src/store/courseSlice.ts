@@ -1,5 +1,5 @@
 import { type Course } from '../types/schedule';
-import { nextUnusedCourseColor } from '../utils/courseColor';
+import { nextUnusedCourseColor, withUnusedCourseColors } from '../utils/courseColor';
 import { courseIdentityKey, sameCourseIdentity } from '../utils/courseIdentity';
 import { commitWithHistory } from './history';
 import type { ScheduleState, StoreGet, StoreSet } from './types';
@@ -138,12 +138,17 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       if (newCourses.length === 0) return;
       const state = get();
       const targetId = targetPlanId || state.activePlanId;
+      const targetPlan = state.plans.find((plan) => plan.id === targetId);
+      const coloredCourses = withUnusedCourseColors(
+        newCourses,
+        (targetPlan?.courses || []).map((course) => course.color)
+      );
 
       const updatedPlans = state.plans.map(p => {
         if (p.id === targetId) {
           return {
             ...p,
-            courses: [...p.courses, ...newCourses],
+            courses: [...p.courses, ...coloredCourses],
           };
         }
         return p;
@@ -154,7 +159,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
         state.catalogCourses.map(cat => courseIdentityKey(cat.code, cat.section))
       );
       const currentCatalog = [...state.catalogCourses];
-      for (const c of newCourses) {
+      for (const c of coloredCourses) {
         const key = courseIdentityKey(c.code, c.section);
         if (!catalogKeys.has(key)) {
           catalogKeys.add(key);
