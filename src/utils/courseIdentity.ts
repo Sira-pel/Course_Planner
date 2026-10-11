@@ -4,6 +4,11 @@ export function courseIdentityKey(code: string, section?: string): string {
   return `${normCode}__${normSec}`;
 }
 
+/** Stable key for an exact set of sections, ignoring order and id. */
+export function sectionSetKey(courses: { code: string; section?: string }[]): string {
+  return courses.map((course) => courseIdentityKey(course.code, course.section)).sort().join('|');
+}
+
 export function sameCourseIdentity(
   a: { code: string; section?: string },
   b: { code: string; section?: string }

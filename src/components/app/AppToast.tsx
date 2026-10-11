@@ -1,12 +1,19 @@
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { X } from 'lucide-react';
 import { EASE_OUT } from '../../utils/motion';
 
 export type ToastType = 'success' | 'error' | 'info';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastMessage {
   text: string;
   type: ToastType;
+  action?: ToastAction;
 }
 
 export function AppToast({
@@ -17,13 +24,12 @@ export function AppToast({
   onDismiss: () => void;
 }) {
   const reduceMotion = useReducedMotion();
-
-  return (
+  const toast = (
     <AnimatePresence>
       {message && (
         <motion.div
           key="header-toast"
-          className="fixed top-[7.25rem] right-5 z-50"
+          className={`fixed top-[7.25rem] right-5 ${message.action ? 'z-[120]' : 'z-50'}`}
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={
@@ -43,6 +49,15 @@ export function AppToast({
             }`}
           >
             <span>{message.text}</span>
+            {message.action && (
+              <button
+                type="button"
+                onClick={message.action.onClick}
+                className="font-semibold underline underline-offset-2 px-1.5 min-h-11 sm:min-h-8 up-chrome-btn"
+              >
+                {message.action.label}
+              </button>
+            )}
             <button
               type="button"
               onClick={onDismiss}
@@ -56,4 +71,9 @@ export function AppToast({
       )}
     </AnimatePresence>
   );
+
+  if (message?.action && typeof document !== 'undefined') {
+    return createPortal(toast, document.body);
+  }
+  return toast;
 }

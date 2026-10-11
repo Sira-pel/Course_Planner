@@ -68,6 +68,8 @@ export interface GeneratorResult {
   capped: boolean;
   estimate: number;
   emptyReason: string | null;
+  /** Requested days off that no mix can honor, with the course or locked section that blocks them. */
+  dayOffNotices: string[];
 }
 
 export interface GeneratorSearch {
@@ -389,17 +391,55 @@ function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: numb
   score += days.size * 0.5;
 
   const tags: string[] = [];
-  const requestedOff = prefs.daysOff.filter((day) => !hasClass(day));
-  const otherOff = WEEKDAYS.filter((day) => !hasClass(day) && !requestedOff.includes(day));
-  for (const day of [...requestedOff, ...otherOff].slice(0, 2)) {
-    tags.push(`${DAY_LABEL.get(day) ?? day} off`);
+  const freeWeekdays = WEEKDAYS.filter((day) => !hasClass(day));
+  if (freeWeekdays.length > 0) {
+    const names = freeWeekdays.map((day) => DAY_LABEL.get(day) ?? day);
+    tags.push(`${names.join(', ')} off`);
   }
   tags.push(formatGap(maxGap));
   if (prefs.lunchEnabled && lunchWindowOk && missingLunch === 0 && days.size > 0) tags.push('Lunch free');
   return { score, tags };
 }
 
-function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, capped: boolean): string {
+function lockedSectionLabel(code: string, section: Course): string {
+  const sec = (section.section || '').trim();
+  return sec ? `${code} · ${sec}` : code;
+}
+
+function sectionMeets(section: Course, day: DayOfWeek): boolean {
+  return (section.sessions || []).some((session) => session.day === day);
+}
+
+function lockedSectionsIn(groups: PreparedGroup[], prefs: GeneratorPreferences): { code: string; key: string; section: Course }[] {
+  const locked = new Set(prefs.lockedSectionIds);
+  const found: { code: string; key: string; section: Course }[] = [];
+  for (const group of groups) {
+    for (const section of group.sections) {
+      if (locked.has(section.id)) found.push({ code: group.code, key: group.key, section });
+    }
+  }
+  return found;
+}
+
+function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, prefs: GeneratorPreferences, capped: boolean): string {
+  const locks = lockedSectionsIn(groups, prefs);
+  for (let i = 0; i < locks.length; i += 1) {
+    for (let j = i + 1; j < locks.length; j += 1) {
+      if (locks[i].key === locks[j].key) continue;
+      if (!mixClashes([locks[i].section, locks[j].section])) continue;
+      const left = lockedSectionLabel(locks[i].code, locks[i].section);
+      const right = lockedSectionLabel(locks[j].code, locks[j].section);
+      return `${left} overlaps ${right}.`;
+    }
+  }
+  for (const lock of locks) {
+    for (const group of groups) {
+      if (group.key === lock.key || !pinned.has(group.key) || group.sections.length === 0) continue;
+      if (!pairAlwaysClashes([lock.section], group.sections)) continue;
+      return `${lockedSectionLabel(lock.code, lock.section)} overlaps every section of ${group.code}.`;
+    }
+  }
+
   const ordered = [
     ...groups.filter((group) => pinned.has(group.key)),
     ...groups.filter((group) => !pinned.has(group.key)),
@@ -418,6 +458,29 @@ function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, capped: bool
     return 'Checked 5,000 mixes and none were clash-free. Narrow the list or clear a blocked time.';
   }
   return 'No clash-free mix fits these courses and filters.';
+}
+
+function dayOffNotices(groups: PreparedGroup[], pinned: Set<string>, prefs: GeneratorPreferences): string[] {
+  const notices: string[] = [];
+  const locks = lockedSectionsIn(groups, prefs);
+  for (const day of prefs.daysOff) {
+    const full = DAYS_LIST.find((item) => item.id === day)?.full ?? day;
+    const blockingLock = locks.find((lock) => sectionMeets(lock.section, day));
+    if (blockingLock) {
+      const label = lockedSectionLabel(blockingLock.code, blockingLock.section);
+      notices.push(`${full} off isn't possible: ${label} meets on ${full}.`);
+      continue;
+    }
+    const blockingPin = groups.find((group) => (
+      pinned.has(group.key)
+      && group.sections.length > 0
+      && group.sections.every((section) => sectionMeets(section, day))
+    ));
+    if (blockingPin) {
+      notices.push(`${full} off isn't possible: ${blockingPin.code} meets every ${full}.`);
+    }
+  }
+  return notices;
 }
 
 function selectVaried(buckets: Map<string, Bucket>): ScoredMix[] {
@@ -462,8 +525,12 @@ class PlanSearch implements GeneratorSearch {
 
   constructor(input: GeneratorInput) {
     this.prefs = input.preferences;
-    this.pinned = new Set(input.pinnedKeys);
     const picked = input.groups.slice(0, MAX_CANDIDATES);
+    const lockedIds = new Set(input.preferences.lockedSectionIds);
+    const lockedKeys = picked
+      .filter((group) => group.sections.some((section) => lockedIds.has(section.id)))
+      .map((group) => group.key);
+    this.pinned = new Set([...input.pinnedKeys, ...lockedKeys]);
     const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
     const firstProblem = [...pinnedGroups, ...picked.filter((group) => !this.pinned.has(group.key))]
       .map((group) => unusableReason(group, input.preferences))
@@ -631,7 +698,7 @@ class PlanSearch implements GeneratorSearch {
 
     let emptyReason = this.emptyReason;
     if (!emptyReason && plans.length === 0) {
-      emptyReason = explainEmpty(this.prepared, this.pinned, this.capped);
+      emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, this.capped);
     }
 
     return {
@@ -641,6 +708,7 @@ class PlanSearch implements GeneratorSearch {
       capped: this.capped,
       estimate: this.estimate,
       emptyReason,
+      dayOffNotices: plans.length > 0 ? dayOffNotices(this.prepared, this.pinned, this.prefs) : [],
     };
   }
 }

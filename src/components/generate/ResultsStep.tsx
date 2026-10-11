@@ -1,4 +1,6 @@
-import { Pin } from 'lucide-react';
+import { Pin, X } from 'lucide-react';
+import type { Course } from '../../types/schedule';
+import { sectionSetKey } from '../../utils/courseIdentity';
 import type { GeneratedPlan, GeneratorResult } from '../../utils/planGenerator';
 import { MiniWeekPreview } from './MiniWeekPreview';
 
@@ -8,20 +10,24 @@ export function ResultsStep({
   result,
   lunch,
   previewId,
-  savedNames,
-  planNames,
+  plans,
   onTogglePreview,
   onSave,
+  onOpen,
+  noticeDismissed,
+  onDismissNotice,
 }: {
   running: boolean;
   checked: number;
   result: GeneratorResult | null;
   lunch: { start: number; end: number } | null;
   previewId: string | null;
-  savedNames: Record<string, string>;
-  planNames: string[];
+  plans: { id: string; name: string; courses: Course[] }[];
   onTogglePreview: (id: string) => void;
   onSave: (plan: GeneratedPlan) => void;
+  onOpen: (planId: string) => void;
+  noticeDismissed: boolean;
+  onDismissNotice: () => void;
 }) {
   if (running || !result) {
     return (
@@ -45,15 +51,37 @@ export function ResultsStep({
     );
   }
 
+  const notices = result.dayOffNotices;
+  const savedByKey = new Map<string, { id: string; name: string }>();
+  for (const plan of plans) {
+    savedByKey.set(sectionSetKey(plan.courses), { id: plan.id, name: plan.name });
+  }
+
   return (
     <div className="up-gen-step-body">
+      {notices.length > 0 && !noticeDismissed && (
+        <div className="up-gen-notice" role="status">
+          <div className="up-gen-notice-copy">
+            {notices.map((notice) => (
+              <p key={notice}>{notice}</p>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="up-icon-btn up-chrome-btn up-pool-icon-hit"
+            aria-label="Dismiss day off notice"
+            onClick={onDismissNotice}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
       {result.capped && (
         <p className="up-gen-hint">Stopped after 5,000 mixes so this stays responsive.</p>
       )}
       <div className="up-gen-results">
         {result.plans.map((plan, index) => {
-          const saved = savedNames[plan.id];
-          const savedLive = saved != null && planNames.includes(saved);
+          const savedPlan = savedByKey.get(sectionSetKey(plan.courses));
           const open = previewId === plan.id;
           return (
             <article key={plan.id} className="up-gen-card">
@@ -101,10 +129,20 @@ export function ResultsStep({
                 <button
                   type="button"
                   className="up-gen-primary up-chrome-btn"
+                  disabled={savedPlan != null}
                   onClick={() => onSave(plan)}
                 >
-                  Save as plan
+                  {savedPlan ? 'Saved ✓' : 'Save as plan'}
                 </button>
+                {savedPlan && (
+                  <button
+                    type="button"
+                    className="up-gen-open up-chrome-btn"
+                    onClick={() => onOpen(savedPlan.id)}
+                  >
+                    Open
+                  </button>
+                )}
                 <button
                   type="button"
                   className="up-gen-outline up-chrome-btn"
@@ -114,7 +152,6 @@ export function ResultsStep({
                   {open ? 'Hide preview' : 'Preview'}
                 </button>
               </div>
-              {savedLive && <p className="up-gen-saved">Saved as {saved}</p>}
             </article>
           );
         })}

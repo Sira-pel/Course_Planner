@@ -176,11 +176,11 @@ export default function App() {
   const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
-  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info') => {
-    setToastMessage({ text, type });
+  const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info', action?: ToastMessage['action']) => {
+    setToastMessage({ text, type, action });
     window.setTimeout(() => {
       setToastMessage((prev) => (prev?.text === text ? null : prev));
-    }, 4000);
+    }, action ? 6000 : 4000);
   }, []);
 
   const closeMoreMenu = useCallback(() => {
@@ -690,7 +690,18 @@ export default function App() {
         <GeneratePlansModal
           isOpen={isGenerateOpen}
           onClose={() => setIsGenerateOpen(false)}
-          onSaved={(name) => showToast(`Saved as "${name}"`, 'success')}
+          onSaved={(name) => showToast(`Saved as "${name}"`, 'success', {
+            label: 'Undo',
+            onClick: () => {
+              const state = useScheduleStore.getState();
+              const plan = state.plans.find((item) => item.name === name);
+              const previous = state.past[0];
+              if (plan && previous && !previous.plans.some((item) => item.id === plan.id)) {
+                state.undo();
+              }
+              setToastMessage(null);
+            },
+          })}
         />
       </DeferredDialog>
 

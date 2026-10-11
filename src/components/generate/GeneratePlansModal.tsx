@@ -4,6 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
 import { ChevronLeft, ChevronRight, Shuffle, X } from 'lucide-react';
 import { useScheduleStore } from '../../store/useScheduleStore';
+import { withUnusedCourseColors } from '../../utils/courseColor';
+import { sectionSetKey } from '../../utils/courseIdentity';
 import { prefixedId } from '../../utils/id';
 import {
   loadGeneratorPrefs,
@@ -67,10 +69,9 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const reduceMotion = useReducedMotion();
   const { backdropProps, panelProps, contentProps } = useModalMotion(isOpen);
   const catalogCourses = useScheduleStore((state) => state.catalogCourses);
-  const createPlan = useScheduleStore((state) => state.createPlan);
-  const bulkAddCourses = useScheduleStore((state) => state.bulkAddCourses);
+  const importPlan = useScheduleStore((state) => state.importPlan);
+  const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const plans = useScheduleStore((state) => state.plans);
-  const planNames = useMemo(() => plans.map((plan) => plan.name), [plans]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [query, setQuery] = useState('');
@@ -85,9 +86,10 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const [checked, setChecked] = useState(0);
   const [result, setResult] = useState<GeneratorResult | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
-  const [savedNames, setSavedNames] = useState<Record<string, string>>({});
+  const [dayOffNoticeDismissed, setDayOffNoticeDismissed] = useState(false);
   const blockSeq = useRef(0);
   const cancelRef = useRef<(() => void) | null>(null);
+  const pinBeforeLock = useRef<Map<string, boolean>>(new Map());
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
   const filteredGroups = useMemo(
@@ -131,19 +133,41 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     setChecked(0);
     setResult(null);
     setPreviewId(null);
-    setSavedNames({});
+    setDayOffNoticeDismissed(false);
+    pinBeforeLock.current.clear();
   }, [isOpen]);
+
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onClose();
+      onCloseRef.current();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const modified = event.ctrlKey || event.metaKey;
+      if (!modified || event.altKey) return;
+      const undo = key === 'z' && !event.shiftKey;
+      const redo = key === 'y' || (key === 'z' && event.shiftKey);
+      if (!undo && !redo) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (undo) useScheduleStore.getState().undo();
+      else useScheduleStore.getState().redo();
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isPhone || !isOpen) return;
@@ -186,9 +210,56 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     setResult(null);
   };
 
+  const lockedGroupKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const group of groups) {
+      if (group.sections.some((section) => lockedIds.includes(section.id))) keys.add(group.key);
+    }
+    return keys;
+  }, [groups, lockedIds]);
+
+  const groupForSection = (id: string) => groups.find((group) => group.sections.some((section) => section.id === id));
+
+  const rememberAndPin = (groupKey: string) => {
+    if (!pinBeforeLock.current.has(groupKey)) {
+      pinBeforeLock.current.set(groupKey, pinned.has(groupKey));
+    }
+    setPicked((prev) => {
+      if (prev.has(groupKey)) return prev;
+      const next = new Set(prev);
+      next.add(groupKey);
+      return next;
+    });
+    setPinned((prev) => {
+      if (prev.has(groupKey)) return prev;
+      const next = new Set(prev);
+      next.add(groupKey);
+      return next;
+    });
+  };
+
+  const restoreIfReleased = (groupKey: string, nextLockedIds: string[]) => {
+    const group = groups.find((item) => item.key === groupKey);
+    if (!group) return;
+    const stillLocked = nextLockedIds.some((lockId) => group.sections.some((section) => section.id === lockId));
+    if (stillLocked) return;
+    const before = pinBeforeLock.current.get(groupKey);
+    pinBeforeLock.current.delete(groupKey);
+    if (before === undefined || !picked.has(groupKey)) return;
+    setPinned((prev) => {
+      const has = prev.has(groupKey);
+      if (before === has) return prev;
+      const next = new Set(prev);
+      if (before) next.add(groupKey);
+      else next.delete(groupKey);
+      return next;
+    });
+  };
+
   const togglePin = (key: string) => {
     setResult(null);
     if (pinned.has(key)) {
+      if (lockedGroupKeys.has(key)) return;
       setPinned((prev) => {
         const next = new Set(prev);
         next.delete(key);
@@ -246,13 +317,21 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   useEffect(() => {
     setLockedIds((prev) => {
       const next = prev.filter((id) => pickedSectionIds.has(id));
-      return next.length === prev.length ? prev : next;
+      if (next.length === prev.length) return prev;
+      for (const id of prev) {
+        if (next.includes(id)) continue;
+        const group = groups.find((item) => item.sections.some((section) => section.id === id));
+        if (!group) continue;
+        const stillLocked = next.some((lockId) => group.sections.some((section) => section.id === lockId));
+        if (!stillLocked) pinBeforeLock.current.delete(group.key);
+      }
+      return next;
     });
     setExcludedIds((prev) => {
       const next = prev.filter((id) => pickedSectionIds.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [pickedSectionIds]);
+  }, [pickedSectionIds, groups]);
 
   const stopSearch = () => {
     cancelRef.current?.();
@@ -264,7 +343,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     stopSearch();
     setStep(3);
     setPreviewId(null);
-    setSavedNames({});
+    setDayOffNoticeDismissed(false);
     setChecked(0);
     setResult(null);
     setRunning(true);
@@ -325,9 +404,12 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   };
 
   const handleSave = (plan: GeneratedPlan) => {
-    const name = nextGeneratedPlanName(useScheduleStore.getState().plans);
-    const planId = createPlan(name);
-    const copies = plan.courses.map((course) => {
+    const state = useScheduleStore.getState();
+    const wanted = sectionSetKey(plan.courses);
+    const already = state.plans.some((item) => sectionSetKey(item.courses) === wanted);
+    if (already) return;
+    const name = nextGeneratedPlanName(state.plans);
+    const copies = withUnusedCourseColors(plan.courses.map((course) => {
       const id = prefixedId('c');
       return {
         ...course,
@@ -337,10 +419,14 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
           id: `s_${id}_${index}`,
         })),
       };
-    });
-    bulkAddCourses(copies, planId);
-    setSavedNames((prev) => ({ ...prev, [plan.id]: name }));
+    }), []);
+    importPlan({ id: prefixedId('plan'), name, courses: copies }, false);
     onSaved?.(name);
+  };
+
+  const handleOpenSaved = (planId: string) => {
+    setActivePlan(planId);
+    onClose();
   };
 
   const goStep = (next: 1 | 2 | 3) => {
@@ -449,6 +535,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
               onToggle={togglePicked}
               onTogglePin={togglePin}
               onSelectAll={selectAll}
+              lockedKeys={lockedGroupKeys}
             />
           )}
           {step === 2 && (
@@ -491,17 +578,25 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
                 setResult(null);
               }}
               onLock={(id) => {
+                const group = groupForSection(id);
                 setLockedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
                 setExcludedIds((prev) => prev.filter((item) => item !== id));
+                if (group) rememberAndPin(group.key);
                 setResult(null);
               }}
               onUnlock={(id) => {
-                setLockedIds((prev) => prev.filter((item) => item !== id));
+                const group = groupForSection(id);
+                const next = lockedIds.filter((item) => item !== id);
+                setLockedIds(next);
+                if (group) restoreIfReleased(group.key, next);
                 setResult(null);
               }}
               onExclude={(id) => {
+                const group = groupForSection(id);
+                const nextLocks = lockedIds.filter((item) => item !== id);
                 setExcludedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-                setLockedIds((prev) => prev.filter((item) => item !== id));
+                setLockedIds(nextLocks);
+                if (group) restoreIfReleased(group.key, nextLocks);
                 setResult(null);
               }}
               onUnexclude={(id) => {
@@ -517,10 +612,12 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
               result={result}
               lunch={lunch}
               previewId={previewId}
-              savedNames={savedNames}
-              planNames={planNames}
+              plans={plans}
               onTogglePreview={(id) => setPreviewId((prev) => (prev === id ? null : id))}
               onSave={handleSave}
+              onOpen={handleOpenSaved}
+              noticeDismissed={dayOffNoticeDismissed}
+              onDismissNotice={() => setDayOffNoticeDismissed(true)}
             />
           )}
         </motion.div>

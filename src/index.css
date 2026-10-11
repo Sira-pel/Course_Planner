@@ -3822,6 +3822,31 @@ html.dark .up-gen-panel,
   color: var(--up-muted);
 }
 
+.up-gen-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 8px 10px 12px;
+  border: 1px solid var(--up-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--up-ink) 4%, transparent);
+}
+
+.up-gen-notice-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.up-gen-notice p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--up-ink);
+}
+
 .up-gen-pref {
   display: flex;
   flex-wrap: wrap;
@@ -4229,6 +4254,29 @@ html.dark .up-gen-panel,
   background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
+.up-gen-primary:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.up-gen-primary:disabled:hover {
+  background: var(--up-accent);
+}
+
+.up-gen-open {
+  border: 0;
+  background: transparent;
+  color: var(--up-accent);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0 4px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
 .up-gen-outline {
   border: 1px solid var(--up-line);
   background: transparent;
@@ -4274,6 +4322,7 @@ html.dark .up-gen-panel,
   .up-gen-pin,
   .up-gen-primary,
   .up-gen-outline,
+  .up-gen-open,
   .up-gen-quiet,
   .up-gen-chip,
   .up-gen-stepper-btn,

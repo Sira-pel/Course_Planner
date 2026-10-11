@@ -8,6 +8,7 @@ export function CoursesStep({
   query,
   picked,
   pinned,
+  lockedKeys,
   onQuery,
   onToggle,
   onTogglePin,
@@ -17,6 +18,7 @@ export function CoursesStep({
   query: string;
   picked: Set<string>;
   pinned: Set<string>;
+  lockedKeys: Set<string>;
   onQuery: (value: string) => void;
   onToggle: (key: string) => void;
   onTogglePin: (key: string) => void;
@@ -58,6 +60,7 @@ export function CoursesStep({
           groups.map((group) => {
             const on = picked.has(group.key);
             const must = pinned.has(group.key);
+            const locked = lockedKeys.has(group.key);
             const sectionLabel = `${group.sections.length} ${group.sections.length === 1 ? 'section' : 'sections'}`;
             return (
               <div key={group.key} className={`up-gen-course ${on ? 'is-on' : ''}`}>
@@ -90,8 +93,9 @@ export function CoursesStep({
                   type="button"
                   className="up-gen-pin up-chrome-btn"
                   aria-pressed={must}
+                  aria-disabled={locked && must}
                   aria-label={must ? `Unpin ${group.code}` : `Pin ${group.code} as a must-take`}
-                  title={must ? 'Unpin must-take' : 'Pin as a must-take'}
+                  title={locked && must ? 'A locked section keeps this as a must-take' : must ? 'Unpin must-take' : 'Pin as a must-take'}
                   onClick={() => onTogglePin(group.key)}
                 >
                   <Pin className="w-3.5 h-3.5" fill={must ? 'currentColor' : 'none'} />

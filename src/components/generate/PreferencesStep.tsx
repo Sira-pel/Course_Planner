@@ -419,7 +419,7 @@ export function PreferencesStep({
 
               <div>
                 <h3>Lock a section</h3>
-                <p className="up-gen-hint">Only this section of the course can be used.</p>
+                <p className="up-gen-hint">Must-take. Every plan uses this section.</p>
                 <select
                   aria-label="Lock a section"
                   className="up-gen-select"
