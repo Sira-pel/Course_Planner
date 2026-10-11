@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
 import { ChevronLeft, ChevronRight, Shuffle, X } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { prefixedId } from '../../utils/id';
 import {
@@ -67,14 +66,11 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const isPhone = useIsPhone();
   const reduceMotion = useReducedMotion();
   const { backdropProps, panelProps, contentProps } = useModalMotion(isOpen);
-  const { catalogCourses, createPlan, bulkAddCourses, planNames } = useScheduleStore(
-    useShallow((state) => ({
-      catalogCourses: state.catalogCourses,
-      createPlan: state.createPlan,
-      bulkAddCourses: state.bulkAddCourses,
-      planNames: state.plans.map((plan) => plan.name),
-    })),
-  );
+  const catalogCourses = useScheduleStore((state) => state.catalogCourses);
+  const createPlan = useScheduleStore((state) => state.createPlan);
+  const bulkAddCourses = useScheduleStore((state) => state.bulkAddCourses);
+  const plans = useScheduleStore((state) => state.plans);
+  const planNames = useMemo(() => plans.map((plan) => plan.name), [plans]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [query, setQuery] = useState('');
