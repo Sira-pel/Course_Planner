@@ -27,11 +27,14 @@ import {
   type ExcelWorkbook,
   type ExcelWorkbookData,
 } from '../../utils/excelImport';
+import { ImportDestinationSelect, type ImportDestination } from './ImportDestinationSelect';
 
 interface ExcelImportTabProps {
   activePlan: SchedulePlan;
+  newPlanName: string;
   onImportToPool: (courses: Course[]) => void;
   onImportToPlanAndPool: (courses: Course[], planId: string) => void;
+  onImportToNewPlan: (courses: Course[], planName: string) => void;
   onSuccess: (count: number, destination: string) => void;
 }
 
@@ -124,8 +127,10 @@ CourseRow.displayName = 'CourseRow';
 
 export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   activePlan,
+  newPlanName,
   onImportToPool,
   onImportToPlanAndPool,
+  onImportToNewPlan,
   onSuccess,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,7 +149,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   // Selection & options
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [alsoAddToActivePlan, setAlsoAddToActivePlan] = useState(false);
+  const [destination, setDestination] = useState<ImportDestination>('pool');
   const [isImporting, setIsImporting] = useState(false);
   const [warningsDismissed, setWarningsDismissed] = useState(false);
 
@@ -251,12 +256,12 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
   const coursesToImport = useMemo(() => {
     const selected = allCourses.filter((course) => selectedCourseIds.has(course.id));
-    if (!alsoAddToActivePlan) return selected;
-    return withUnusedCourseColors(
-      selected,
-      activePlan.courses.map((course) => course.color)
-    );
-  }, [allCourses, selectedCourseIds, alsoAddToActivePlan, activePlan]);
+    if (destination === 'pool') return selected;
+    const usedColors = destination === 'active'
+      ? activePlan.courses.map((course) => course.color)
+      : [];
+    return withUnusedCourseColors(selected, usedColors);
+  }, [allCourses, selectedCourseIds, destination, activePlan]);
 
   const visibleCourses = useMemo(() => {
     const byId = new Map(coursesToImport.map((course) => [course.id, course]));
@@ -286,9 +291,12 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
     const toImport = coursesToImport;
 
-    if (alsoAddToActivePlan) {
+    if (destination === 'active') {
       onImportToPlanAndPool(toImport, activePlan.id);
       onSuccess(toImport.length, `Course Pool & ${activePlan.name}`);
+    } else if (destination === 'new') {
+      onImportToNewPlan(toImport, newPlanName);
+      onSuccess(toImport.length, `Course Pool & ${newPlanName}`);
     } else {
       onImportToPool(toImport);
       onSuccess(toImport.length, 'Course Pool');
@@ -625,19 +633,12 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           {/* Action Footer - Compact Single-row on all screen sizes */}
           <div className="pt-1 pb-0.5 shrink-0">
             <div className="p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2 shadow-xs">
-              <label className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none min-w-0">
-                <input
-                  type="checkbox"
-                  checked={alsoAddToActivePlan}
-                  onChange={(e) => setAlsoAddToActivePlan(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 shrink-0"
-                />
-                <span className="truncate text-[11px] sm:text-xs">
-                  <span className="hidden sm:inline">Also enroll in </span>
-                  <span className="sm:hidden">Add to </span>
-                  <strong>{activePlan.name}</strong>
-                </span>
-              </label>
+              <ImportDestinationSelect
+                value={destination}
+                activePlanName={activePlan.name}
+                newPlanName={newPlanName}
+                onChange={setDestination}
+              />
 
               <button
                 type="button"

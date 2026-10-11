@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import type { Course, SchedulePlan } from '../../types/schedule';
+import { prefixedId } from '../../utils/id';
 import { X, FileSpreadsheet, Calendar, Database, Check, Share2 } from 'lucide-react';
 import { EASE_OUT, useModalMotion } from '../../utils/motion';
 import { AnimatedBody } from '../app/AnimatedBody';
@@ -74,6 +75,10 @@ const ImportModalBody: React.FC<{
     () => plans.find((p) => p.id === activePlanId) || plans[0],
     [plans, activePlanId]
   );
+  const nextPlanName = useMemo(
+    () => `Plan ${String.fromCharCode(65 + (plans.length % 26))}`,
+    [plans.length],
+  );
 
   const [activeTab, setActiveTab] = useState<ImportTabType>(initialTab);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -107,6 +112,14 @@ const ImportModalBody: React.FC<{
 
   const handleImportToPlanAndPool = (courses: Course[], planId: string) => {
     bulkAddCourses(courses, planId);
+  };
+
+  const handleImportToNewPlan = (courses: Course[], name: string) => {
+    importPlan({
+      id: prefixedId('plan'),
+      name,
+      courses,
+    }, false);
   };
 
   const handleSuccess = (count: number, destination: string) => {
@@ -222,8 +235,10 @@ const ImportModalBody: React.FC<{
             {activeTab === 'excel' && (
               <ExcelImportTab
                 activePlan={activePlan}
+                newPlanName={nextPlanName}
                 onImportToPool={handleImportToPool}
                 onImportToPlanAndPool={handleImportToPlanAndPool}
+                onImportToNewPlan={handleImportToNewPlan}
                 onSuccess={handleSuccess}
               />
             )}
@@ -244,8 +259,10 @@ const ImportModalBody: React.FC<{
             {activeTab === 'ics' && (
               <IcsImportTab
                 activePlan={activePlan}
+                newPlanName={nextPlanName}
                 onImportToPool={handleImportToPool}
                 onImportToPlanAndPool={handleImportToPlanAndPool}
+                onImportToNewPlan={handleImportToNewPlan}
                 onSuccess={handleSuccess}
               />
             )}
