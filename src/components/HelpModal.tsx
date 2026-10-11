@@ -389,7 +389,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
                       <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                         {[
-                          { number: '1', title: 'Add', description: <>Add a course, double-click an empty slot, or use <strong>Import</strong>.</> },
+                          { number: '1', title: 'Add', description: <>Add a course, double-click an empty slot, import a list, or generate plans from the pool.</> },
                           { number: '2', title: 'Edit', description: <>Click a class to change its days, time, room, or color.</> },
                           { number: '3', title: 'Compare', description: <>Overlay another plan and edit either schedule on the calendar.</> },
                           { number: '4', title: 'Share', description: <>Copy a link, text, calendar file, or image.</> },
@@ -439,7 +439,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                       <ul className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Add quickly.</strong> Use + on a course to put it on the current plan.</li>
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Switch plans.</strong> The Pool is shared across your plans.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Import the spreadsheet and leave “Also enroll in” or “Add to” unchecked, then pick courses later.</li>
+                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Bring a spreadsheet into the pool. Choose Pool only when you want to pick courses later.</li>
+                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Generate plans.</strong> Tick courses, pin must-takes, then set size, gaps, and lunch. Save a clash-free result as a normal plan. The pool and your other plans stay as they are.</li>
                       </ul>
 
                       {onOpenCatalog && (
@@ -485,7 +486,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                       <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                         <div className="flex items-start gap-3 py-4">
                           <FileSpreadsheet className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Excel / CSV.</strong> Course tables with code, title, day, time, room, and instructor.</p>
+                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Excel / CSV.</strong> Course tables with code, title, day, time, room, and instructor. Put them in the pool only, on the open plan, or on a new empty plan.</p>
                         </div>
                         <div className="flex items-start gap-3 py-4">
                           <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
@@ -493,7 +494,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                         </div>
                         <div className="flex items-start gap-3 py-4">
                           <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar (.ics).</strong> Import recurring classes from a calendar file.</p>
+                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar (.ics).</strong> Import recurring classes from a calendar file, into the pool, the open plan, or a new empty plan.</p>
                         </div>
                         <div className="flex items-start gap-3 py-4">
                           <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />

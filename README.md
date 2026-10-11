@@ -15,8 +15,10 @@ Course schedule planner for university students. Plan multiple scenarios, check 
 - **Import**:
   - Excel spreadsheets (`.xlsx`, `.csv`) with column mapping, multi-meeting times, and section filtering.
   - iCalendar (`.ics`) files.
+  - Excel and calendar imports can stay in the course pool, enroll in the open plan, or start a new empty plan. The pool still receives the courses. One undo removes a plan created this way.
   - Friend share links.
   - JSON backup files.
+- **Generate plans**: From the course pool, tick candidate courses and pin must-takes. Uniplan tries section mixes on your device, drops time clashes, and shows a few ranked plans. Lunch is any free stretch of the length you choose inside the window you set. Saving a result creates a normal plan and leaves the pool and your other plans unchanged.
 - **Export**:
   - Direct Google Calendar sync via Google OAuth (creates or updates a `{Plan} - Uniplan` calendar).
   - `.ics` calendar files (Google Calendar, Apple Calendar, Outlook).
@@ -24,7 +26,7 @@ Course schedule planner for university students. Plan multiple scenarios, check 
   - Formatted text and markdown for messaging.
   - Shareable URL links to send plans to classmates.
   - JSON backup download.
-- **Course scratchpad pool**: Save alternate sections and electives in a sidebar pool so you can swap them between plans without retyping.
+- **Course scratchpad pool**: Save alternate sections and electives in a sidebar pool so you can swap them between plans without retyping. Generate plans from the courses already in the pool.
 - **Keyboard navigation & custom shortcuts**: Keyboard controls for common actions, plus a built-in shortcut rebind editor (`?`).
 - **PWA support**: Installable on mobile and desktop via `vite-plugin-pwa`, with bottom dock navigation and offline caching.
 - **Theme support**: Dark mode with circular reveal transition.
