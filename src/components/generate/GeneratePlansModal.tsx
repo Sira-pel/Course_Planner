@@ -36,6 +36,52 @@ import { GenerateStepHeader } from './GenerateStepHeader';
 import { PreferencesStep, type BlockedDraft } from './PreferencesStep';
 import { ResultsStep } from './ResultsStep';
 
+interface GeneratorVisit {
+  step: 1 | 2 | 3;
+  query: string;
+  picked: string[];
+  pinned: string[];
+  prefs: StoredGeneratorPrefs;
+  moreOpen: boolean;
+  blocked: BlockedDraft[];
+  lockedIds: string[];
+  excludedIds: string[];
+  checked: number;
+  result: GeneratorResult | null;
+  previewId: string | null;
+  dayOffNoticeDismissed: boolean;
+  pinBeforeLock: Array<[string, boolean]>;
+  blockSeq: number;
+  running: boolean;
+}
+
+/** Survives closing the dialog, including when the dialog unmounts. Cleared on reload. */
+let generatorVisit: GeneratorVisit | null = null;
+
+function generatorVisitState(): GeneratorVisit {
+  if (!generatorVisit) {
+    generatorVisit = {
+      step: 1,
+      query: '',
+      picked: [],
+      pinned: [],
+      prefs: loadGeneratorPrefs(),
+      moreOpen: false,
+      blocked: [],
+      lockedIds: [],
+      excludedIds: [],
+      checked: 0,
+      result: null,
+      previewId: null,
+      dayOffNoticeDismissed: false,
+      pinBeforeLock: [],
+      blockSeq: 0,
+      running: false,
+    };
+  }
+  return generatorVisit;
+}
+
 interface GeneratePlansModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -73,23 +119,26 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const plans = useScheduleStore((state) => state.plans);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [query, setQuery] = useState('');
-  const [picked, setPicked] = useState<Set<string>>(() => new Set());
-  const [pinned, setPinned] = useState<Set<string>>(() => new Set());
-  const [prefs, setPrefs] = useState<StoredGeneratorPrefs>(() => loadGeneratorPrefs());
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [blocked, setBlocked] = useState<BlockedDraft[]>([]);
-  const [lockedIds, setLockedIds] = useState<string[]>([]);
-  const [excludedIds, setExcludedIds] = useState<string[]>([]);
-  const [running, setRunning] = useState(false);
-  const [checked, setChecked] = useState(0);
-  const [result, setResult] = useState<GeneratorResult | null>(null);
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const [dayOffNoticeDismissed, setDayOffNoticeDismissed] = useState(false);
-  const blockSeq = useRef(0);
+  const visit = generatorVisitState();
+  const [step, setStep] = useState<1 | 2 | 3>(visit.step);
+  const [query, setQuery] = useState(visit.query);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(visit.picked));
+  const [pinned, setPinned] = useState<Set<string>>(() => new Set(visit.pinned));
+  const [prefs, setPrefs] = useState<StoredGeneratorPrefs>(visit.prefs);
+  const [moreOpen, setMoreOpen] = useState(visit.moreOpen);
+  const [blocked, setBlocked] = useState<BlockedDraft[]>(visit.blocked);
+  const [lockedIds, setLockedIds] = useState<string[]>(visit.lockedIds);
+  const [excludedIds, setExcludedIds] = useState<string[]>(visit.excludedIds);
+  const [running, setRunning] = useState(visit.running);
+  const [checked, setChecked] = useState(visit.checked);
+  const [result, setResult] = useState<GeneratorResult | null>(visit.result);
+  const [previewId, setPreviewId] = useState<string | null>(visit.previewId);
+  const [dayOffNoticeDismissed, setDayOffNoticeDismissed] = useState(visit.dayOffNoticeDismissed);
+  const blockSeq = useRef(visit.blockSeq);
   const cancelRef = useRef<(() => void) | null>(null);
-  const pinBeforeLock = useRef<Map<string, boolean>>(new Map());
+  const pinBeforeLock = useRef<Map<string, boolean>>(new Map(visit.pinBeforeLock));
+  const resultRef = useRef(result);
+  resultRef.current = result;
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
   const filteredGroups = useMemo(
@@ -117,25 +166,49 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     : `Plans between ${creditWindow.min} and ${creditWindow.max} credits`;
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen) return;
+    const pending = cancelRef.current != null;
     cancelRef.current?.();
     cancelRef.current = null;
-    setStep(1);
-    setQuery('');
-    setPicked(new Set());
-    setPinned(new Set());
-    setPrefs(loadGeneratorPrefs());
-    setMoreOpen(false);
-    setBlocked([]);
-    setLockedIds([]);
-    setExcludedIds([]);
+    if (!pending) return;
     setRunning(false);
-    setChecked(0);
-    setResult(null);
-    setPreviewId(null);
-    setDayOffNoticeDismissed(false);
-    pinBeforeLock.current.clear();
+    if (!resultRef.current) setStep(2);
   }, [isOpen]);
+
+  useEffect(() => {
+    const current = generatorVisitState();
+    current.step = step;
+    current.query = query;
+    current.picked = [...picked];
+    current.pinned = [...pinned];
+    current.prefs = prefs;
+    current.moreOpen = moreOpen;
+    current.blocked = blocked;
+    current.lockedIds = lockedIds;
+    current.excludedIds = excludedIds;
+    current.checked = checked;
+    current.result = result;
+    current.previewId = previewId;
+    current.dayOffNoticeDismissed = dayOffNoticeDismissed;
+    current.pinBeforeLock = [...pinBeforeLock.current];
+    current.blockSeq = blockSeq.current;
+    current.running = running;
+  }, [
+    step,
+    query,
+    picked,
+    pinned,
+    prefs,
+    moreOpen,
+    blocked,
+    lockedIds,
+    excludedIds,
+    checked,
+    result,
+    previewId,
+    dayOffNoticeDismissed,
+    running,
+  ]);
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -180,7 +253,14 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     };
   }, [isPhone, isOpen]);
 
-  useEffect(() => () => cancelRef.current?.(), []);
+  useEffect(() => () => {
+    cancelRef.current?.();
+    cancelRef.current = null;
+    const current = generatorVisit;
+    if (!current?.running) return;
+    current.running = false;
+    if (!current.result) current.step = 2;
+  }, []);
 
   const patchPrefs = (patch: Partial<StoredGeneratorPrefs>) => {
     setPrefs((prev) => {
@@ -308,6 +388,22 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       return next;
     });
   };
+
+  useEffect(() => {
+    if (!useScheduleStore.persist.hasHydrated()) return;
+    const keys = new Set(groups.map((group) => group.key));
+    setPicked((prev) => {
+      const next = new Set([...prev].filter((key) => keys.has(key)));
+      return next.size === prev.size ? prev : next;
+    });
+    setPinned((prev) => {
+      const next = new Set([...prev].filter((key) => keys.has(key)));
+      return next.size === prev.size ? prev : next;
+    });
+    for (const key of [...pinBeforeLock.current.keys()]) {
+      if (!keys.has(key)) pinBeforeLock.current.delete(key);
+    }
+  }, [groups]);
 
   const pickedSectionIds = useMemo(
     () => new Set(pickedGroups.flatMap((group) => group.sections.map((section) => section.id))),
