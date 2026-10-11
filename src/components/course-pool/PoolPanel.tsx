@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   Plus,
   Search,
+  Shuffle,
   Upload,
   X,
   Trash2,
@@ -35,6 +36,7 @@ export interface PoolPanelProps {
   onToggleCollapse: () => void;
   onOpenNewCourse: () => void;
   onOpenImport?: () => void;
+  onOpenGenerate?: () => void;
   onEditCourse: (id: string) => void;
   onRequestDelete: (id: string) => void;
   onConfirmDelete: (id: string) => void;
@@ -68,6 +70,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   onToggleCollapse,
   onOpenNewCourse,
   onOpenImport,
+  onOpenGenerate,
   onEditCourse,
   onRequestDelete,
   onConfirmDelete,
@@ -172,7 +175,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex flex-wrap items-center gap-1">
             {onOpenImport && (
               <button
                 type="button"
@@ -197,14 +200,28 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               <Plus className="w-3.5 h-3.5" />
               <span>New</span>
             </button>
+            {onOpenGenerate && (
+              <button
+                type="button"
+                id="btn-pool-generate"
+                onClick={onOpenGenerate}
+                disabled={catalogCount < 2}
+                className="up-pool-generate up-chrome-btn"
+                title={catalogCount < 2 ? 'Add at least two courses to generate plans' : 'Generate plans from your course pool'}
+                aria-label="Generate plans"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>Generate</span>
+              </button>
+            )}
             <button
               type="button"
               id="btn-pool-clear-unused"
               onClick={() => setIsConfirmingClearPool((prev) => !prev)}
               disabled={unusedInAnyPlanCount === 0}
-              className={`up-pool-create up-chrome-btn transition-colors ${
+              className={`up-icon-btn up-chrome-btn up-pool-icon-hit shrink-0 ${
                 isConfirmingClearPool
-                  ? 'bg-rose-600 text-white'
+                  ? 'bg-rose-600 text-white opacity-100'
                   : 'hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400'
               } disabled:opacity-30 disabled:pointer-events-none`}
               title={
@@ -215,7 +232,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               aria-label="Clear unused courses from pool"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear</span>
             </button>
           </div>
         </div>
@@ -324,6 +340,9 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   ? 'All sections in the pool have been added to this plan.'
                   : 'Create a course or import an Excel spreadsheet.'}
               </span>
+              {!searchQuery && filterMode === 'all' && catalogCount < 2 && (
+                <span>Add at least two courses to generate a plan.</span>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 {(!filterMode || filterMode === 'all') && (
                   <>

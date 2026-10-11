@@ -34,11 +34,13 @@ const exportModalModule = loadDialog(import('./components/export/ExportModal').t
 const importModalModule = loadDialog(import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
 const helpModalModule = loadDialog(import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
 const shareImportModalModule = loadDialog(import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
+const generateModalModule = loadDialog(import('./components/generate/GeneratePlansModal').then((m) => ({ default: m.GeneratePlansModal })));
 const CourseModal = lazy(() => courseModalModule);
 const ExportModal = lazy(() => exportModalModule);
 const ImportModal = lazy(() => importModalModule);
 const HelpModal = lazy(() => helpModalModule);
 const ShareImportModal = lazy(() => shareImportModalModule);
+const GeneratePlansModal = lazy(() => generateModalModule);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 function shortcutSurfaceForCourseMode(mode: 'form' | 'quick', editing: boolean): ShortcutSurface | null {
@@ -151,6 +153,7 @@ export default function App() {
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importInitialTab, setImportInitialTab] = useState<ImportTabType>('excel');
+  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
 
   const [isPoolCollapsed, setIsPoolCollapsed] = useState(true);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -407,7 +410,7 @@ export default function App() {
   }, [resetToSample]);
 
   const isAnyModalOpen =
-    isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen;
+    isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen || isGenerateOpen;
 
   useEffect(() => {
     if (!instantDismiss) return;
@@ -433,6 +436,7 @@ export default function App() {
       setIsImportOpen(false);
       setIsHelpOpen(false);
       setIsShareImportOpen(false);
+      setIsGenerateOpen(false);
     };
 
     const current = {
@@ -612,6 +616,7 @@ export default function App() {
             onToggleCollapse={() => setIsPoolCollapsed((prev) => !prev)}
             onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
             onOpenImport={() => handleOpenImport('excel')}
+            onOpenGenerate={() => setIsGenerateOpen(true)}
             onEditCourse={handleEditCourse}
           />
         </div>
@@ -678,6 +683,14 @@ export default function App() {
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShortcuts={handleOpenShortcuts}
           onTabChange={handleHelpTabChange}
+        />
+      </DeferredDialog>
+
+      <DeferredDialog open={isGenerateOpen} onClose={() => setIsGenerateOpen(false)} instantDismiss={instantDismiss}>
+        <GeneratePlansModal
+          isOpen={isGenerateOpen}
+          onClose={() => setIsGenerateOpen(false)}
+          onSaved={(name) => showToast(`Saved as "${name}"`, 'success')}
         />
       </DeferredDialog>
 

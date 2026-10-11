@@ -1,0 +1,657 @@
+import type { ClassSession, Course, DayOfWeek } from '../types/schedule';
+import { DAYS_LIST } from '../types/schedule';
+import { displayCourseTitle } from './courseIdentity';
+import type { GapLimit } from './generatorPrefs';
+import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
+
+export const MAX_CANDIDATES = 12;
+export const MAX_EVALUATIONS = 5000;
+export const MAX_RESULTS = 5;
+export const LUNCH_FREE_MINUTES = 45;
+
+const DAY_LABEL = new Map(DAYS_LIST.map((day) => [day.id, day.label]));
+const WEEKDAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+export interface CourseGroup {
+  key: string;
+  code: string;
+  name: string;
+  color: string;
+  sections: Course[];
+}
+
+export interface BlockedWindow {
+  day: DayOfWeek;
+  startMinutes: number;
+  endMinutes: number;
+}
+
+export interface GeneratorPreferences {
+  mode: 'courses' | 'credits';
+  courseCount: number;
+  creditMin: number;
+  creditMax: number;
+  gapsEnabled: boolean;
+  gapLimit: GapLimit;
+  lunchEnabled: boolean;
+  lunchStart: number;
+  lunchEnd: number;
+  lunchMinutes: number;
+  daysOff: DayOfWeek[];
+  classStart: number | null;
+  classEnd: number | null;
+  blocked: BlockedWindow[];
+  lockedSectionIds: string[];
+  excludedSectionIds: string[];
+}
+
+export interface GeneratorInput {
+  groups: CourseGroup[];
+  pinnedKeys: string[];
+  preferences: GeneratorPreferences;
+}
+
+export interface GeneratedPlan {
+  id: string;
+  courses: Course[];
+  pinnedCodes: string[];
+  includedCodes: string[];
+  skippedCodes: string[];
+  tags: string[];
+  score: number;
+}
+
+export interface GeneratorResult {
+  plans: GeneratedPlan[];
+  evaluated: number;
+  validCount: number;
+  capped: boolean;
+  estimate: number;
+  emptyReason: string | null;
+}
+
+export interface GeneratorSearch {
+  readonly done: boolean;
+  readonly evaluated: number;
+  readonly capped: boolean;
+  readonly estimate: number;
+  advance(limit: number): void;
+  result(): GeneratorResult;
+}
+
+export function courseCodeKey(code: string): string {
+  return (code || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+export function groupCoursesByCode(courses: Course[]): CourseGroup[] {
+  const order: string[] = [];
+  const map = new Map<string, CourseGroup>();
+  for (const course of courses) {
+    const key = courseCodeKey(course.code);
+    if (!key) continue;
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        code: (course.code || '').trim().replace(/\s+/g, ' '),
+        name: displayCourseTitle(course),
+        color: course.color,
+        sections: [],
+      };
+      map.set(key, group);
+      order.push(key);
+    } else if (!group.name) {
+      group.name = displayCourseTitle(course);
+    }
+    group.sections.push(course);
+  }
+  return order.map((key) => map.get(key)!);
+}
+
+export function creditBounds(target: number, pinnedCredits: number): { min: number; max: number } {
+  const max = Math.max(0, Math.round(Math.max(target, pinnedCredits)));
+  const min = Math.min(max, Math.max(0, Math.round(Math.max(pinnedCredits, max - 3))));
+  return { min, max };
+}
+
+export function nextGeneratedPlanName(plans: { name: string }[]): string {
+  let max = 0;
+  for (const plan of plans) {
+    const match = /^Generated (\d+)$/.exec((plan.name || '').trim());
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return `Generated ${max + 1}`;
+}
+
+interface PreparedGroup {
+  key: string;
+  code: string;
+  name: string;
+  sections: Course[];
+  minCredits: number;
+  maxCredits: number;
+}
+
+interface MixJob {
+  groups: PreparedGroup[];
+  indexes: number[];
+  radix: number[];
+  done: boolean;
+}
+
+interface ScoredMix {
+  courses: Course[];
+  score: number;
+  signature: string;
+}
+
+interface Bucket {
+  items: ScoredMix[];
+}
+
+function courseCredits(course: Course): number {
+  return typeof course.credits === 'number' && Number.isFinite(course.credits) ? course.credits : 0;
+}
+
+function sectionSelfClashes(course: Course): boolean {
+  const sessions = course.sessions || [];
+  for (let i = 0; i < sessions.length; i += 1) {
+    for (let j = i + 1; j < sessions.length; j += 1) {
+      if (checkSessionCollision(sessions[i], sessions[j])) return true;
+    }
+  }
+  return false;
+}
+
+function overlapsBlocked(course: Course, blocked: BlockedWindow[]): boolean {
+  for (const block of blocked) {
+    if (block.endMinutes <= block.startMinutes) continue;
+    const phantom: ClassSession = {
+      id: 'blocked',
+      day: block.day,
+      startTime: minutesToTime(block.startMinutes, false),
+      endTime: minutesToTime(block.endMinutes, false),
+    };
+    for (const session of course.sessions || []) {
+      if (checkSessionCollision(session, phantom)) return true;
+    }
+  }
+  return false;
+}
+
+function mixClashes(courses: Course[]): boolean {
+  for (let i = 0; i < courses.length; i += 1) {
+    const left = courses[i].sessions || [];
+    for (let j = i + 1; j < courses.length; j += 1) {
+      const right = courses[j].sessions || [];
+      for (const a of left) {
+        for (const b of right) {
+          if (checkSessionCollision(a, b)) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function pairAlwaysClashes(left: Course[], right: Course[]): boolean {
+  if (left.length === 0 || right.length === 0) return false;
+  for (const a of left) {
+    for (const b of right) {
+      if (!mixClashes([a, b])) return false;
+    }
+  }
+  return true;
+}
+
+function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string | null {
+  const excluded = new Set(prefs.excludedSectionIds);
+  const locked = new Set(prefs.lockedSectionIds);
+  const afterExclude = group.sections.filter((section) => !excluded.has(section.id));
+  if (group.sections.length > 0 && afterExclude.length === 0) {
+    return `${group.code} has no section left after exclusions`;
+  }
+  const groupLocks = afterExclude.filter((section) => locked.has(section.id));
+  const afterLock = groupLocks.length > 0 ? groupLocks : afterExclude;
+  if (afterExclude.length > 0 && afterLock.length === 0) {
+    return `${group.code} has no section matching the lock`;
+  }
+  const afterSelf = afterLock.filter((section) => !sectionSelfClashes(section));
+  if (afterLock.length > 0 && afterSelf.length === 0) {
+    return `${group.code} has overlapping meetings in every section`;
+  }
+  const afterBlock = afterSelf.filter((section) => !overlapsBlocked(section, prefs.blocked));
+  if (afterSelf.length > 0 && afterBlock.length === 0) {
+    return `${group.code} has no section outside your blocked times`;
+  }
+  if (afterBlock.length === 0) return `${group.code} has no usable section`;
+  return null;
+}
+
+function prepareGroup(group: CourseGroup, prefs: GeneratorPreferences): PreparedGroup {
+  const excluded = new Set(prefs.excludedSectionIds);
+  const locked = new Set(prefs.lockedSectionIds);
+  let sections = group.sections.filter((section) => !excluded.has(section.id) && !sectionSelfClashes(section));
+  const lockedSections = sections.filter((section) => locked.has(section.id));
+  if (lockedSections.length > 0) sections = lockedSections;
+  sections = sections.filter((section) => !overlapsBlocked(section, prefs.blocked));
+  const credits = sections.map(courseCredits);
+  return {
+    key: group.key,
+    code: group.code,
+    name: group.name,
+    sections,
+    minCredits: credits.length > 0 ? Math.min(...credits) : 0,
+    maxCredits: credits.length > 0 ? Math.max(...credits) : 0,
+  };
+}
+
+function combinations(items: PreparedGroup[], count: number): PreparedGroup[][] {
+  if (count === 0) return [[]];
+  if (count > items.length || count < 0) return [];
+  const out: PreparedGroup[][] = [];
+  const current: PreparedGroup[] = [];
+  const visit = (start: number) => {
+    if (current.length === count) {
+      out.push(current.slice());
+      return;
+    }
+    const need = count - current.length;
+    for (let index = start; index <= items.length - need; index += 1) {
+      current.push(items[index]);
+      visit(index + 1);
+      current.pop();
+    }
+  };
+  visit(0);
+  return out;
+}
+
+function subsetCreditsOk(groups: PreparedGroup[], prefs: GeneratorPreferences): boolean {
+  if (prefs.mode !== 'credits') return true;
+  const min = groups.reduce((sum, group) => sum + group.minCredits, 0);
+  const max = groups.reduce((sum, group) => sum + group.maxCredits, 0);
+  return min <= prefs.creditMax && max >= prefs.creditMin;
+}
+
+function mixCreditsOk(courses: Course[], prefs: GeneratorPreferences): boolean {
+  if (prefs.mode !== 'credits') return true;
+  const total = courses.reduce((sum, course) => sum + courseCredits(course), 0);
+  return total >= prefs.creditMin && total <= prefs.creditMax;
+}
+
+function mixProduct(groups: PreparedGroup[]): number {
+  let product = 1;
+  for (const group of groups) {
+    product *= group.sections.length;
+    if (product > 1_000_000) return 1_000_000;
+  }
+  return product;
+}
+
+function bump(indexes: number[], radix: number[]): boolean {
+  for (let index = indexes.length - 1; index >= 0; index -= 1) {
+    indexes[index] += 1;
+    if (indexes[index] < radix[index]) return true;
+    indexes[index] = 0;
+  }
+  return false;
+}
+
+function collectDays(courses: Course[]): Map<DayOfWeek, [number, number][]> {
+  const days = new Map<DayOfWeek, [number, number][]>();
+  for (const course of courses) {
+    for (const session of course.sessions || []) {
+      const start = timeToMinutes(session.startTime);
+      const end = timeToMinutes(session.endTime);
+      if (end <= start) continue;
+      const list = days.get(session.day);
+      if (list) list.push([start, end]);
+      else days.set(session.day, [[start, end]]);
+    }
+  }
+  for (const list of days.values()) list.sort((a, b) => a[0] - b[0]);
+  return days;
+}
+
+function dayHasLunch(
+  intervals: [number, number][],
+  windowStart: number,
+  windowEnd: number,
+  needed: number,
+): boolean {
+  if (windowEnd - windowStart < needed) return false;
+  let cursor = windowStart;
+  for (const [start, end] of intervals) {
+    const clipStart = Math.max(start, windowStart);
+    const clipEnd = Math.min(end, windowEnd);
+    if (clipEnd <= clipStart) continue;
+    if (clipStart - cursor >= needed) return true;
+    cursor = Math.max(cursor, clipEnd);
+  }
+  return windowEnd - cursor >= needed;
+}
+
+function formatGap(minutes: number): string {
+  if (minutes <= 0) return 'No gaps';
+  if (minutes < 60) return `Max gap ${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) return `Max gap ${hours}h`;
+  return `Max gap ${hours}h ${rest}m`;
+}
+
+function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: number; tags: string[] } {
+  const days = collectDays(courses);
+  let score = 0;
+  let maxGap = 0;
+  const gaps: number[] = [];
+  for (const intervals of days.values()) {
+    for (let index = 1; index < intervals.length; index += 1) {
+      const gap = intervals[index][0] - intervals[index - 1][1];
+      if (gap <= 0) continue;
+      gaps.push(gap);
+      if (gap > maxGap) maxGap = gap;
+    }
+  }
+  if (prefs.gapsEnabled) {
+    for (const gap of gaps) {
+      if (gap > prefs.gapLimit) score += gap - prefs.gapLimit;
+    }
+  }
+  score += maxGap * 0.01;
+
+  const lunchWindowOk = prefs.lunchEnd - prefs.lunchStart >= prefs.lunchMinutes;
+  let missingLunch = 0;
+  if (prefs.lunchEnabled && lunchWindowOk) {
+    for (const intervals of days.values()) {
+      if (!dayHasLunch(intervals, prefs.lunchStart, prefs.lunchEnd, prefs.lunchMinutes)) missingLunch += 1;
+    }
+    score += missingLunch * 120;
+  }
+
+  const hasClass = (day: DayOfWeek) => days.has(day);
+  for (const day of prefs.daysOff) {
+    if (hasClass(day)) score += 80;
+    else score -= 25;
+  }
+
+  for (const course of courses) {
+    for (const session of course.sessions || []) {
+      const start = timeToMinutes(session.startTime);
+      const end = timeToMinutes(session.endTime);
+      if (end <= start) continue;
+      if (prefs.classStart != null && start < prefs.classStart) score += prefs.classStart - start;
+      if (prefs.classEnd != null && end > prefs.classEnd) score += end - prefs.classEnd;
+    }
+  }
+
+  score += days.size * 0.5;
+
+  const tags: string[] = [];
+  const requestedOff = prefs.daysOff.filter((day) => !hasClass(day));
+  const otherOff = WEEKDAYS.filter((day) => !hasClass(day) && !requestedOff.includes(day));
+  for (const day of [...requestedOff, ...otherOff].slice(0, 2)) {
+    tags.push(`${DAY_LABEL.get(day) ?? day} off`);
+  }
+  tags.push(formatGap(maxGap));
+  if (prefs.lunchEnabled && lunchWindowOk && missingLunch === 0 && days.size > 0) tags.push('Lunch free');
+  return { score, tags };
+}
+
+function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, capped: boolean): string {
+  const ordered = [
+    ...groups.filter((group) => pinned.has(group.key)),
+    ...groups.filter((group) => !pinned.has(group.key)),
+  ];
+  for (let i = 0; i < ordered.length; i += 1) {
+    for (let j = i + 1; j < ordered.length; j += 1) {
+      const left = ordered[i];
+      const right = ordered[j];
+      if (left.sections.length * right.sections.length > 240) continue;
+      if (pairAlwaysClashes(left.sections, right.sections)) {
+        return `${left.code} overlaps every section of ${right.code}.`;
+      }
+    }
+  }
+  if (capped) {
+    return 'Checked 5,000 mixes and none were clash-free. Narrow the list or clear a blocked time.';
+  }
+  return 'No clash-free mix fits these courses and filters.';
+}
+
+function selectVaried(buckets: Map<string, Bucket>): ScoredMix[] {
+  const reps = [...buckets.values()]
+    .map((bucket) => bucket.items[0])
+    .filter((item): item is ScoredMix => Boolean(item))
+    .sort((a, b) => a.score - b.score);
+  const chosen: ScoredMix[] = [];
+  const seen = new Set<string>();
+  for (const rep of reps) {
+    if (chosen.length >= MAX_RESULTS) break;
+    chosen.push(rep);
+    seen.add(rep.signature);
+  }
+  if (chosen.length >= 3) return chosen;
+  const variants = [...buckets.values()]
+    .flatMap((bucket) => bucket.items.slice(1))
+    .sort((a, b) => a.score - b.score);
+  for (const variant of variants) {
+    if (chosen.length >= 3) break;
+    if (seen.has(variant.signature)) continue;
+    seen.add(variant.signature);
+    chosen.push(variant);
+  }
+  return chosen;
+}
+
+class PlanSearch implements GeneratorSearch {
+  done = false;
+  evaluated = 0;
+  capped = false;
+  estimate = 0;
+  validCount = 0;
+  emptyReason: string | null = null;
+  private jobs: MixJob[] = [];
+  private cursor = 0;
+  private buckets = new Map<string, Bucket>();
+  private prefs: GeneratorPreferences;
+  private prepared: PreparedGroup[];
+  private pinned: Set<string>;
+  private pickedOrder: PreparedGroup[];
+
+  constructor(input: GeneratorInput) {
+    this.prefs = input.preferences;
+    this.pinned = new Set(input.pinnedKeys);
+    const picked = input.groups.slice(0, MAX_CANDIDATES);
+    const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
+    const firstProblem = [...pinnedGroups, ...picked.filter((group) => !this.pinned.has(group.key))]
+      .map((group) => unusableReason(group, input.preferences))
+      .find((reason): reason is string => Boolean(reason));
+    this.prepared = picked.map((group) => prepareGroup(group, input.preferences));
+    this.pickedOrder = this.prepared;
+
+    if (picked.length < 2) {
+      this.emptyReason = 'Pick at least 2 courses.';
+      this.done = true;
+      return;
+    }
+    if (firstProblem) {
+      this.emptyReason = firstProblem;
+      this.done = true;
+      return;
+    }
+
+    const usable = new Map(this.prepared.map((group) => [group.key, group]));
+    const pins = pinnedGroups.map((group) => usable.get(group.key)!).filter((group) => group.sections.length > 0);
+    const optional = this.prepared.filter((group) => !this.pinned.has(group.key) && group.sections.length > 0);
+    const subsets = this.buildSubsets(pins, optional);
+    if (subsets.length === 0) {
+      if (!this.emptyReason) {
+        this.emptyReason = this.prefs.mode === 'credits'
+          ? 'No mix of at least 2 courses fits that credit range.'
+          : 'No course set fits that plan size.';
+      }
+      this.done = true;
+      return;
+    }
+
+    let estimate = 0;
+    for (const subset of subsets) {
+      const product = mixProduct(subset);
+      estimate = Math.min(1_000_000, estimate + product);
+      this.jobs.push({
+        groups: subset,
+        indexes: subset.map(() => 0),
+        radix: subset.map((group) => group.sections.length),
+        done: false,
+      });
+    }
+    this.estimate = estimate;
+    if (this.jobs.length === 0) this.done = true;
+  }
+
+  private buildSubsets(pins: PreparedGroup[], optional: PreparedGroup[]): PreparedGroup[][] {
+    if (this.prefs.mode === 'courses') {
+      const extra = this.prefs.courseCount - pins.length;
+      if (extra < 0 || extra > optional.length) {
+        if (pins.length > this.prefs.courseCount) {
+          this.emptyReason = 'This plan size is smaller than your pinned courses.';
+        }
+        return [];
+      }
+      return combinations(optional, extra)
+        .map((extraGroups) => [...pins, ...extraGroups])
+        .filter((subset) => subset.length >= 2 && subsetCreditsOk(subset, this.prefs));
+    }
+
+    const pinMin = pins.reduce((sum, group) => sum + group.minCredits, 0);
+    if (pinMin > this.prefs.creditMax) {
+      const names = pins.map((group) => group.code).join(', ');
+      this.emptyReason = `${names} already total at least ${pinMin} credits, above the ${this.prefs.creditMax} credit limit.`;
+      return [];
+    }
+
+    const subsets: PreparedGroup[][] = [];
+    const current: PreparedGroup[] = [];
+    const visit = (start: number) => {
+      const subset = [...pins, ...current];
+      if (subset.length >= 2 && subsetCreditsOk(subset, this.prefs)) subsets.push(subset);
+      for (let index = start; index < optional.length; index += 1) {
+        current.push(optional[index]);
+        visit(index + 1);
+        current.pop();
+      }
+    };
+    visit(0);
+    return subsets;
+  }
+
+  advance(limit: number): void {
+    if (this.done) return;
+    let steps = 0;
+    let idle = 0;
+    while (steps < limit && this.evaluated < MAX_EVALUATIONS) {
+      if (this.jobs.length === 0) {
+        this.done = true;
+        return;
+      }
+      const job = this.jobs[this.cursor];
+      if (job.done) {
+        idle += 1;
+        this.cursor = (this.cursor + 1) % this.jobs.length;
+        if (idle > this.jobs.length) {
+          this.done = true;
+          return;
+        }
+        continue;
+      }
+      idle = 0;
+      const courses = job.indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
+      this.evaluated += 1;
+      steps += 1;
+      if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) this.consider(courses);
+      job.done = !bump(job.indexes, job.radix);
+      this.cursor = (this.cursor + 1) % this.jobs.length;
+      if (this.evaluated >= MAX_EVALUATIONS) {
+        this.capped = this.jobs.some((item) => !item.done);
+        this.done = true;
+        return;
+      }
+    }
+    if (this.jobs.every((job) => job.done)) this.done = true;
+  }
+
+  private consider(courses: Course[]): void {
+    this.validCount += 1;
+    const setKey = courses.map((course) => courseCodeKey(course.code)).sort().join('|');
+    const signature = courses.map((course) => course.id).join('|');
+    const { score } = scoreMix(courses, this.prefs);
+    let bucket = this.buckets.get(setKey);
+    if (!bucket) {
+      bucket = { items: [] };
+      this.buckets.set(setKey, bucket);
+    }
+    if (bucket.items.some((item) => item.signature === signature)) return;
+    bucket.items.push({ courses, score, signature });
+    bucket.items.sort((a, b) => a.score - b.score);
+    if (bucket.items.length > 4) bucket.items.length = 4;
+  }
+
+  result(): GeneratorResult {
+    const chosen = selectVaried(this.buckets);
+    const order = new Map(this.pickedOrder.map((group, index) => [group.key, index]));
+    const plans = chosen.map((item) => {
+      const sorted = [...item.courses].sort((a, b) => {
+        return (order.get(courseCodeKey(a.code)) ?? 0) - (order.get(courseCodeKey(b.code)) ?? 0);
+      });
+      const chosenKeys = new Set(sorted.map((course) => courseCodeKey(course.code)));
+      const pinnedCodes: string[] = [];
+      const includedCodes: string[] = [];
+      const skippedCodes: string[] = [];
+      for (const group of this.pickedOrder) {
+        if (!chosenKeys.has(group.key)) {
+          skippedCodes.push(group.code);
+          continue;
+        }
+        if (this.pinned.has(group.key)) pinnedCodes.push(group.code);
+        else includedCodes.push(group.code);
+      }
+      const { tags } = scoreMix(sorted, this.prefs);
+      return {
+        id: item.signature,
+        courses: sorted,
+        pinnedCodes,
+        includedCodes,
+        skippedCodes,
+        tags,
+        score: item.score,
+      };
+    });
+
+    let emptyReason = this.emptyReason;
+    if (!emptyReason && plans.length === 0) {
+      emptyReason = explainEmpty(this.prepared, this.pinned, this.capped);
+    }
+
+    return {
+      plans,
+      evaluated: this.evaluated,
+      validCount: this.validCount,
+      capped: this.capped,
+      estimate: this.estimate,
+      emptyReason,
+    };
+  }
+}
+
+export function startGeneratorSearch(input: GeneratorInput): GeneratorSearch {
+  return new PlanSearch(input);
+}
+
+export function generatePlans(input: GeneratorInput): GeneratorResult {
+  const search = startGeneratorSearch(input);
+  while (!search.done) search.advance(400);
+  return search.result();
+}
+

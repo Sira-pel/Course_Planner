@@ -16,6 +16,7 @@ interface CoursePoolSidebarProps {
   onToggleCollapse: () => void;
   onOpenNewCourse: (mode?: 'form' | 'quick') => void;
   onOpenImport?: () => void;
+  onOpenGenerate?: () => void;
   onEditCourse: (courseId: string) => void;
 }
 
@@ -24,6 +25,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   onToggleCollapse,
   onOpenNewCourse,
   onOpenImport,
+  onOpenGenerate,
   onEditCourse,
 }: CoursePoolSidebarProps) {
   const {
@@ -365,6 +367,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       onToggleCollapse={onToggleCollapse}
       onOpenNewCourse={openNewCourse}
       onOpenImport={onOpenImport}
+      onOpenGenerate={onOpenGenerate}
       onEditCourse={onEditCourse}
       onRequestDelete={setConfirmDeleteCourseId}
       onConfirmDelete={handleConfirmDelete}
