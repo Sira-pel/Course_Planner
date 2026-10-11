@@ -2701,8 +2701,8 @@ html.dark .up-mobile-sheet,
   padding: 0 8px;
   border: 0;
   border-radius: 6px;
-  background: var(--up-secondary);
-  color: var(--up-secondary-ink);
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -2711,7 +2711,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-generate:hover {
-  background: color-mix(in srgb, var(--up-secondary) 84%, var(--up-ink));
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
 }
 
 .up-pool-list {
@@ -3920,6 +3920,10 @@ html.dark .up-gen-panel,
   color: var(--up-ink);
   font-size: 13px;
   padding: 0 8px;
+}
+
+.up-gen-input {
+  padding-left: 32px;
 }
 
 .up-gen-select {
