@@ -18,6 +18,7 @@ export interface StoredGeneratorPrefs {
   lunchEnabled: boolean;
   lunchStart: string;
   lunchEnd: string;
+  lunchMinutes: number;
   daysOff: DayOfWeek[];
   classStart: string | null;
   classEnd: string | null;
@@ -32,6 +33,7 @@ export const DEFAULT_GENERATOR_PREFS: StoredGeneratorPrefs = {
   lunchEnabled: true,
   lunchStart: '11:30',
   lunchEnd: '13:30',
+  lunchMinutes: 45,
   daysOff: [],
   classStart: null,
   classEnd: null,
@@ -51,6 +53,16 @@ function clock(value: unknown, fallback: string): string {
 function optionalClock(value: unknown): string | null {
   if (value == null || value === '') return null;
   return typeof value === 'string' && HHMM.test(value) ? value : null;
+}
+
+export const LUNCH_MINUTE_MIN = 15;
+export const LUNCH_MINUTE_MAX = 90;
+export const LUNCH_MINUTE_STEP = 15;
+
+function snapLunchMinutes(value: unknown): number {
+  const snapped = clampInt(value, LUNCH_MINUTE_MIN, LUNCH_MINUTE_MAX, DEFAULT_GENERATOR_PREFS.lunchMinutes);
+  const steps = Math.round((snapped - LUNCH_MINUTE_MIN) / LUNCH_MINUTE_STEP);
+  return LUNCH_MINUTE_MIN + steps * LUNCH_MINUTE_STEP;
 }
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
@@ -75,6 +87,7 @@ export function sanitizeGeneratorPrefs(raw: unknown): StoredGeneratorPrefs {
     lunchEnabled: typeof record.lunchEnabled === 'boolean' ? record.lunchEnabled : DEFAULT_GENERATOR_PREFS.lunchEnabled,
     lunchStart: clock(record.lunchStart, DEFAULT_GENERATOR_PREFS.lunchStart),
     lunchEnd: clock(record.lunchEnd, DEFAULT_GENERATOR_PREFS.lunchEnd),
+    lunchMinutes: snapLunchMinutes(record.lunchMinutes),
     daysOff: [...new Set(daysOff)],
     classStart: optionalClock(record.classStart),
     classEnd: optionalClock(record.classEnd),

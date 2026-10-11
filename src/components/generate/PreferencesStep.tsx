@@ -3,7 +3,13 @@ import type { DayOfWeek } from '../../types/schedule';
 import { DAYS_LIST } from '../../types/schedule';
 import { AnimatedBody } from '../app/AnimatedBody';
 import { ModalTabPill } from '../app/ModalTabPill';
-import type { GapLimit, StoredGeneratorPrefs } from '../../utils/generatorPrefs';
+import {
+  LUNCH_MINUTE_MAX,
+  LUNCH_MINUTE_MIN,
+  LUNCH_MINUTE_STEP,
+  type GapLimit,
+  type StoredGeneratorPrefs,
+} from '../../utils/generatorPrefs';
 import type { CourseGroup } from '../../utils/planGenerator';
 
 export interface BlockedDraft {
@@ -29,12 +35,14 @@ function Stepper({
   value,
   min,
   max,
+  step = 1,
   label,
   onChange,
 }: {
   value: number;
   min: number;
   max: number;
+  step?: number;
   label: string;
   onChange: (value: number) => void;
 }) {
@@ -45,7 +53,7 @@ function Stepper({
         className="up-gen-stepper-btn up-chrome-btn"
         aria-label={`Decrease ${label}`}
         disabled={value <= min}
-        onClick={() => onChange(value - 1)}
+        onClick={() => onChange(Math.max(min, value - step))}
       >
         −
       </button>
@@ -55,12 +63,18 @@ function Stepper({
         className="up-gen-stepper-btn up-chrome-btn"
         aria-label={`Increase ${label}`}
         disabled={value >= max}
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(Math.min(max, value + step))}
       >
         +
       </button>
     </div>
   );
+}
+
+function clockMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+  return hours * 60 + minutes;
 }
 
 function GenSwitch({
@@ -159,6 +173,13 @@ export function PreferencesStep({
         ? `${pinnedCount} pinned ${pinnedCount === 1 ? 'course' : 'courses'}`
         : `${pinnedCount} pinned + ${extra} from your other ${other} picks`;
 
+  const lunchWindow = clockMinutes(prefs.lunchEnd) - clockMinutes(prefs.lunchStart);
+  const lunchHint = !prefs.lunchEnabled
+    ? 'Lunch will not change the ranking'
+    : lunchWindow >= prefs.lunchMinutes
+      ? `Keep ${prefs.lunchMinutes} min free in this window`
+      : `This window is shorter than ${prefs.lunchMinutes} min`;
+
   const sections = groups.flatMap((group) => group.sections.map((section) => ({
     id: section.id,
     label: sectionLabel(group, section.id),
@@ -247,9 +268,17 @@ export function PreferencesStep({
       <section className="up-gen-pref">
         <div className="up-gen-pref-copy">
           <h3>Lunch break</h3>
-          <p>Keep 45 min free in this window</p>
+          <p>{lunchHint}</p>
         </div>
         <div className="up-gen-pref-controls">
+          <Stepper
+            value={prefs.lunchMinutes}
+            min={LUNCH_MINUTE_MIN}
+            max={LUNCH_MINUTE_MAX}
+            step={LUNCH_MINUTE_STEP}
+            label="Lunch minutes"
+            onChange={(lunchMinutes) => onPrefs({ lunchMinutes })}
+          />
           <div className="up-gen-time-pair">
             <input
               type="time"

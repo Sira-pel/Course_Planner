@@ -286,7 +286,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
         lunchEnabled: prefs.lunchEnabled,
         lunchStart,
         lunchEnd,
-        lunchMinutes: 45,
+        lunchMinutes: prefs.lunchMinutes,
         daysOff: prefs.daysOff,
         classStart,
         classEnd,
