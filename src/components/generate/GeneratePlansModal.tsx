@@ -350,8 +350,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
     const lunchStart = timeToMinutes(prefs.lunchStart);
     const lunchEnd = timeToMinutes(prefs.lunchEnd);
-    const classStart = prefs.classStart ? timeToMinutes(prefs.classStart) : null;
-    const classEnd = prefs.classEnd ? timeToMinutes(prefs.classEnd) : null;
+    const classStart = prefs.classHoursEnabled && prefs.classStart ? timeToMinutes(prefs.classStart) : null;
+    const classEnd = prefs.classHoursEnabled && prefs.classEnd ? timeToMinutes(prefs.classEnd) : null;
     const search: GeneratorSearch = startGeneratorSearch({
       groups: pickedGroups,
       pinnedKeys: [...pinned],
@@ -558,7 +558,15 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
               onPrefs={patchPrefs}
               onCourseCount={(value) => patchPrefs({ courseCount: value })}
               onCreditTarget={(value) => patchPrefs({ creditTarget: value })}
-              onMore={setMoreOpen}
+              onMore={(open) => {
+                setMoreOpen(open);
+                if (!open || prefs.classHoursEnabled) return;
+                patchPrefs({
+                  classHoursEnabled: true,
+                  classStart: prefs.classStart ?? '10:00',
+                  classEnd: prefs.classEnd ?? '15:00',
+                });
+              }}
               onAddBlocked={() => {
                 blockSeq.current += 1;
                 setBlocked((prev) => [...prev, {

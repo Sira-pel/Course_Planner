@@ -315,7 +315,7 @@ export function PreferencesStep({
           <ChevronDown className={`up-chevron w-3.5 h-3.5 ${moreOpen ? 'is-open' : ''}`} />
         </button>
         {!moreOpen && (
-          <p className="up-gen-hint">Day off · start/end · blocked times · lock/exclude</p>
+          <p className="up-gen-hint">Day off · class hours · blocked times · lock/exclude</p>
         )}
         <AnimatedBody activeKey={moreOpen ? 'open' : 'closed'} contentClassName="up-gen-more-body">
           {moreOpen && (
@@ -346,14 +346,30 @@ export function PreferencesStep({
                 </div>
               </div>
 
-              <div>
-                <h3>Classes between</h3>
-                <p className="up-gen-hint">Meetings outside this window rank lower.</p>
-                <div className="up-gen-time-pair">
+              <section className="up-gen-pref">
+                <div className="up-gen-pref-copy">
+                  <h3>Preferred class hours</h3>
+                  <p>
+                    {prefs.classHoursEnabled
+                      ? 'Meetings outside this window rank lower'
+                      : 'Off · any time is fine'}
+                  </p>
+                </div>
+                <GenSwitch
+                  on={prefs.classHoursEnabled}
+                  label="Preferred class hours"
+                  onToggle={() => onPrefs({
+                    classHoursEnabled: !prefs.classHoursEnabled,
+                    classStart: prefs.classStart ?? '10:00',
+                    classEnd: prefs.classEnd ?? '15:00',
+                  })}
+                />
+                <div className="up-gen-time-pair up-gen-class-hours">
                   <input
                     type="time"
                     aria-label="Earliest class"
-                    value={prefs.classStart ?? ''}
+                    value={prefs.classStart ?? '10:00'}
+                    disabled={!prefs.classHoursEnabled}
                     onChange={(event) => onPrefs({ classStart: event.target.value || null })}
                     className="up-gen-time"
                   />
@@ -361,12 +377,13 @@ export function PreferencesStep({
                   <input
                     type="time"
                     aria-label="Latest class"
-                    value={prefs.classEnd ?? ''}
+                    value={prefs.classEnd ?? '15:00'}
+                    disabled={!prefs.classHoursEnabled}
                     onChange={(event) => onPrefs({ classEnd: event.target.value || null })}
                     className="up-gen-time"
                   />
                 </div>
-              </div>
+              </section>
 
               <div>
                 <div className="up-gen-inline-head">

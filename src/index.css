@@ -3935,6 +3935,14 @@ html.dark .up-gen-panel,
   font-size: 12px;
 }
 
+.up-gen-class-hours {
+  flex: 1 1 100%;
+}
+
+.up-gen-time:disabled {
+  opacity: 0.55;
+}
+
 .up-gen-time,
 .up-gen-select,
 .up-gen-input {

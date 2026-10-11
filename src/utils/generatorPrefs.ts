@@ -20,6 +20,7 @@ export interface StoredGeneratorPrefs {
   lunchEnd: string;
   lunchMinutes: number;
   daysOff: DayOfWeek[];
+  classHoursEnabled: boolean;
   classStart: string | null;
   classEnd: string | null;
 }
@@ -35,8 +36,9 @@ export const DEFAULT_GENERATOR_PREFS: StoredGeneratorPrefs = {
   lunchEnd: '13:30',
   lunchMinutes: 45,
   daysOff: [],
-  classStart: null,
-  classEnd: null,
+  classHoursEnabled: false,
+  classStart: '10:00',
+  classEnd: '15:00',
 };
 
 const DAY_IDS = new Set<string>(DAYS_LIST.map((day) => day.id));
@@ -89,8 +91,11 @@ export function sanitizeGeneratorPrefs(raw: unknown): StoredGeneratorPrefs {
     lunchEnd: clock(record.lunchEnd, DEFAULT_GENERATOR_PREFS.lunchEnd),
     lunchMinutes: snapLunchMinutes(record.lunchMinutes),
     daysOff: [...new Set(daysOff)],
-    classStart: optionalClock(record.classStart),
-    classEnd: optionalClock(record.classEnd),
+    classHoursEnabled: typeof record.classHoursEnabled === 'boolean'
+      ? record.classHoursEnabled
+      : optionalClock(record.classStart) != null || optionalClock(record.classEnd) != null,
+    classStart: clock(record.classStart, DEFAULT_GENERATOR_PREFS.classStart ?? '10:00'),
+    classEnd: clock(record.classEnd, DEFAULT_GENERATOR_PREFS.classEnd ?? '15:00'),
   };
 }
 
