@@ -23,6 +23,7 @@ import {
   readExcelFile,
   loadSheetData,
   parseExcelRowsToCourses,
+  SpreadsheetRejectedError,
   type ColumnMapping,
   type ExcelWorkbook,
   type ExcelWorkbookData,
@@ -62,12 +63,14 @@ const PRIMARY_FIELDS: FieldDef[] = [
 interface CourseRowProps {
   course: Course;
   isSelected: boolean;
+  issue?: string;
   onToggle: (id: string) => void;
 }
 
-const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, onToggle }) => {
-  const sessionSummary =
-    c.sessions.length > 0
+const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, onToggle }) => {
+  const sessionSummary = issue
+    ? issue
+    : c.sessions.length > 0
       ? `${c.sessions
           .map((s) => s.day.slice(0, 3).toUpperCase())
           .join('/')} ${c.sessions[0].startTime}-${c.sessions[0].endTime}`
@@ -186,7 +189,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const { workbook, sheets } = await readExcelFile(arrayBuffer);
+      const { workbook, sheets } = await readExcelFile(arrayBuffer, file.name);
 
       if (sheets.length === 0) {
         setErrorMessage('The uploaded workbook contains no readable sheets.');
@@ -208,8 +211,12 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
       setSheetData(parsedSheet);
       setActiveMapping(parsedSheet.detectedMapping);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setErrorMessage(`Failed to read Excel file: ${msg}`);
+      if (err instanceof SpreadsheetRejectedError) {
+        setErrorMessage(err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setErrorMessage(`Failed to read Excel file: ${msg}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -236,10 +243,28 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
 
   // Selection must use the same parse as the list. A second parse mints new ids,
   // so every row looks unchecked and Import matches nothing.
-  useEffect(() => {
-    setSelectedCourseIds(new Set((parsedResult?.courses || []).map((c) => c.id)));
-    setWarningsDismissed(false);
+  const blockingIssueIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const issue of parsedResult?.issues || []) {
+      if (issue.blocking) ids.add(issue.courseId);
+    }
+    return ids;
   }, [parsedResult]);
+
+  const issueByCourseId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const issue of parsedResult?.issues || []) {
+      if (issue.blocking) map.set(issue.courseId, issue.message);
+    }
+    return map;
+  }, [parsedResult]);
+
+  useEffect(() => {
+    setSelectedCourseIds(
+      new Set((parsedResult?.courses || []).filter((course) => !blockingIssueIds.has(course.id)).map((c) => c.id))
+    );
+    setWarningsDismissed(false);
+  }, [parsedResult, blockingIssueIds]);
 
   const parseWarnings = parsedResult?.warnings ?? [];
   const filteredCourses = useMemo(() => {
@@ -278,8 +303,8 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setSelectedCourseIds(new Set(allCourses.map((c) => c.id)));
-  }, [allCourses]);
+    setSelectedCourseIds(new Set(allCourses.filter((course) => !blockingIssueIds.has(course.id)).map((c) => c.id)));
+  }, [allCourses, blockingIssueIds]);
 
   const handleDeselectAll = useCallback(() => {
     setSelectedCourseIds(new Set());
@@ -623,6 +648,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 <CourseRow
                   key={c.id}
                   course={c}
+                  issue={issueByCourseId.get(c.id)}
                   isSelected={selectedCourseIds.has(c.id)}
                   onToggle={handleToggleSelectCourse}
                 />

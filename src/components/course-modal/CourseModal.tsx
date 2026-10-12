@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../../types/schedule';
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { parseBulkCourses } from '../../utils/textParser';
+import { parseQuickAdd, type QuickAddTable } from '../../utils/quickAdd';
+import type { ColumnMapping } from '../../utils/excelImport';
 import { nextUnusedCourseColor } from '../../utils/courseColor';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
 import { Plus, Trash2, X } from 'lucide-react';
@@ -146,6 +147,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
 
   const [rawText, setRawText] = useState('');
   const [recognizedItems, setRecognizedItems] = useState<EditableRecognizedItem[]>([]);
+  const [mappingOverride, setMappingOverride] = useState<ColumnMapping | null>(null);
+  const [tableView, setTableView] = useState<QuickAddTable | null>(null);
 
   useEffect(() => {
     const active = document.activeElement;
@@ -167,51 +170,46 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     }
 
     const timer = setTimeout(() => {
-      const parsed = parseBulkCourses(rawText, currentPlan?.courses.length || 0);
+      const parsed = parseQuickAdd(rawText, currentPlan?.courses.length || 0, mappingOverride ?? undefined);
+      setTableView(parsed.table);
       const usedColors = (currentPlan?.courses || []).map((course) => course.color || '');
       let fallbackIndex = usedColors.length;
-      const colors = parsed.map(() => {
+      const colors = parsed.items.map(() => {
         const color = nextUnusedCourseColor(usedColors, fallbackIndex);
         usedColors.push(color);
         fallbackIndex += 1;
         return color;
       });
       setRecognizedItems((prev) => {
-        return parsed.map((res, idx) => {
+        return parsed.items.map((res, idx) => {
           const prevItem = prev[idx];
           const stableId = prevItem?.id || `rec_${idx}`;
-          const isSelected = prevItem ? prevItem.selected : true;
           const isEditing = prevItem ? prevItem.isEditing : false;
           const color = colors[idx];
+          const kept = res.course;
+          const courseId = prevItem?.course?.id || kept?.id || `c_rec_${idx}`;
 
-          if (res.success && res.course) {
+          if (res.success && kept) {
             return {
               id: stableId,
               rawText: res.rawText,
-              course: {
-                ...res.course,
-                id: prevItem?.course?.id || res.course.id || `c_rec_${idx}`,
-                color,
-              },
-              selected: isSelected,
+              course: { ...kept, id: courseId, color },
+              selected: prevItem ? prevItem.selected : true,
               isEditing,
+              warningMessage: res.warnings?.[0],
             };
           }
-          const fallbackCourse: Course = {
-            id: prevItem?.course?.id || `c_fail_${idx}`,
-            code: 'COURSE 101',
-            name: res.rawText.trim().slice(0, 40),
-            credits: 3,
-            color,
-            sessions: [
-              {
-                id: `s_fail_${idx}`,
-                day: 'monday',
-                startTime: '09:00',
-                endTime: '10:30',
-              },
-            ],
-          };
+
+          const fallbackCourse: Course = kept
+            ? { ...kept, id: courseId, color, sessions: kept.sessions }
+            : {
+                id: courseId,
+                code: '',
+                name: res.rawText.trim().slice(0, 40),
+                credits: 3,
+                color,
+                sessions: [],
+              };
           return {
             id: stableId,
             rawText: res.rawText,
@@ -226,7 +224,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [rawText, currentPlan]);
+  }, [rawText, currentPlan, mappingOverride]);
 
   const selectedCourses = useMemo(() => {
     return recognizedItems.filter((item) => item.selected && !item.hasError).map((item) => item.course);
@@ -262,6 +260,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     setShakeField(null);
     setRawText('');
     setRecognizedItems([]);
+    setMappingOverride(null);
+    setTableView(null);
     if (existingCourse) {
       setMode('form');
       setCode(existingCourse.code);
@@ -526,6 +526,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
+        setMappingOverride(null);
         setRawText((prev) => (prev.trim() ? `${prev}\n${text}` : text));
         pasteInputRef.current?.focus();
       }
@@ -724,8 +725,18 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
                   potentialConflicts={potentialConflicts}
                   pasteInputRef={pasteInputRef}
                   onRawTextChange={(v) => {
+                    setMappingOverride(null);
                     setRawText(v);
                     setError(null);
+                  }}
+                  tableColumns={tableView?.columns}
+                  tableMapping={mappingOverride ?? tableView?.mapping ?? null}
+                  onTableMappingChange={(field, columnKey) => {
+                    setMappingOverride((prev) => {
+                      const base = prev ?? tableView?.mapping;
+                      if (!base) return prev;
+                      return { ...base, [field]: columnKey };
+                    });
                   }}
                   onPasteClipboard={handlePasteClipboard}
                   onToggleSelect={handleToggleSelectItem}

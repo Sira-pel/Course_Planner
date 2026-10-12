@@ -16,6 +16,7 @@ interface ShareImportModalProps {
   onCompareWithSchedule: (plan: SchedulePlan) => void;
   onOpenAsActivePlan: (plan: SchedulePlan) => void;
   initialManualPaste?: boolean;
+  externalError?: string | null;
 }
 
 export const ShareImportModal: React.FC<ShareImportModalProps> = ({
@@ -25,6 +26,7 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
   onCompareWithSchedule,
   onOpenAsActivePlan,
   initialManualPaste = false,
+  externalError = null,
 }) => {
   const [pasteInput, setPasteInput] = useState('');
   const [parsedPlan, setParsedPlan] = useState<SchedulePlan | null>(sharedPlan);
@@ -40,9 +42,9 @@ export const ShareImportModal: React.FC<ShareImportModalProps> = ({
       setParsedPlan(null);
       setPlanName('');
       setPasteInput('');
-      setErrorMessage(null);
+      setErrorMessage(externalError);
     }
-  }, [sharedPlan, isOpen]);
+  }, [sharedPlan, isOpen, externalError]);
 
   const handleParseInput = (raw: string) => {
     setPasteInput(raw);

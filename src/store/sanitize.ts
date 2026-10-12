@@ -83,7 +83,9 @@ export function sanitizeCourse(c: any, index: number): Course {
       : typeof c?.credits === 'string' && c.credits.trim() !== ''
         ? Number(c.credits)
         : NaN;
-  const credits = Number.isFinite(rawNum) ? Math.max(0, Math.min(30, rawNum)) : 3;
+  // Keep values found in a file or paste, including unusual ones such as 99.
+  // Only a missing or non-numeric value falls back to 3.
+  const credits = Number.isFinite(rawNum) ? Math.max(0, Math.min(999, rawNum)) : 3;
 
   const sessions: ClassSession[] = Array.isArray(c?.sessions)
     ? c.sessions

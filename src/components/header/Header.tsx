@@ -35,6 +35,7 @@ interface HeaderProps {
   onOpenCatalog: () => void;
   onOpenShare?: (plan?: SchedulePlan) => void;
   onOpenImportShare?: () => void;
+  onLoadDemo: () => void;
   showToast: (text: string, type?: ToastType) => void;
   importExportOpen: boolean;
   onImportExportOpenChange: (open: boolean) => void;
@@ -51,6 +52,7 @@ export const Header = memo(function Header({
   onOpenCatalog,
   onOpenShare,
   onOpenImportShare,
+  onLoadDemo,
   showToast,
   importExportOpen,
   onImportExportOpenChange,
@@ -86,7 +88,6 @@ export const Header = memo(function Header({
     canUndo,
     canRedo,
     resetToBlank,
-    resetToSample,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -117,7 +118,6 @@ export const Header = memo(function Header({
       canUndo: state.past.length > 0,
       canRedo: state.future.length > 0,
       resetToBlank: state.resetToBlank,
-      resetToSample: state.resetToSample,
     }))
   );
 
@@ -526,9 +526,8 @@ export const Header = memo(function Header({
               onOpenHelp();
             }}
             onLoadDemo={() => {
-              resetToSample();
-              showToast('Loaded the demo semester.', 'success');
               setIsSettingsOpen(false);
+              onLoadDemo();
             }}
             onClearAll={() => {
               resetToBlank();

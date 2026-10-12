@@ -48,7 +48,16 @@ function toBase64Url(str: string): string {
     .replace(/=+$/, '');
 }
 
+/** Base64url alphabet used by share links. Percent-encoding is not accepted. */
+const SHARE_TOKEN = /^[A-Za-z0-9_-]+$/;
+
+export const INVALID_SHARE_LINK_MESSAGE =
+  'This share link is invalid. Ask your friend to send it again.';
+
 function fromBase64Url(base64url: string): string {
+  if (!SHARE_TOKEN.test(base64url)) {
+    throw new Error(INVALID_SHARE_LINK_MESSAGE);
+  }
   if (base64url.length > 50_000) {
     throw new Error('Share payload too large');
   }
@@ -103,16 +112,26 @@ export function extractSharePayloadFromUrl(input: string): string | null {
   if (!input) return null;
   const trimmed = input.trim();
 
-  // Match #share=... or ?share=...
-  const match = trimmed.match(/[#?&]share=([^&#\s]+)/);
-  if (match) return decodeURIComponent(match[1]);
+  // Match #share=... or ?share=... The token is already base64url, so it must not
+  // be passed through decodeURIComponent (a truncated escape such as %E0 throws).
+  const match = trimmed.match(/[#?&]share=([^&#\s]*)/);
+  if (match) {
+    return SHARE_TOKEN.test(match[1]) ? match[1] : null;
+  }
 
-  // If input looks like raw base64url payload
-  if (/^[A-Za-z0-9_-]{10,}$/.test(trimmed)) {
+  if (SHARE_TOKEN.test(trimmed) && trimmed.length >= 10) {
     return trimmed;
   }
 
   return null;
+}
+
+/** Removes #share= from the address bar without reloading. */
+export function clearShareHash(): void {
+  if (typeof window === 'undefined') return;
+  const { hash, pathname, search } = window.location;
+  if (!hash.includes('share=')) return;
+  window.history.replaceState(null, '', pathname + search);
 }
 
 /**
@@ -184,9 +203,8 @@ export function decodePlanFromSharePayload(payload: string): {
 
     return { success: true, plan: sanitizedPlan };
   } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Failed to decode shared plan.',
-    };
+    const message = err instanceof Error ? err.message : '';
+    const friendly = message === 'Share payload too large' ? 'This share link is too large to open.' : INVALID_SHARE_LINK_MESSAGE;
+    return { success: false, error: friendly };
   }
 }

@@ -169,8 +169,26 @@ function parseDescriptionFields(raw: string | undefined): { instructor?: string;
   const credits = creditsMatch ? Number(creditsMatch[1]) : undefined;
   return {
     instructor: instructor ? instructor : undefined,
-    credits: credits !== undefined && Number.isFinite(credits) ? Math.max(0, Math.min(30, credits)) : undefined,
+    credits: credits !== undefined && Number.isFinite(credits) && credits >= 0 ? credits : undefined,
   };
+}
+
+function parseIcsSummary(summary: string): { code: string; section?: string; name: string } {
+  const codeMatch = summary.match(/^([A-Za-z]{2,6})\s*[-_.:]?\s*(\d{2,4}[A-Za-z]?)/);
+  if (!codeMatch) {
+    const fallback = summary.split(/[-:]/)[0]?.trim().slice(0, 12).toUpperCase() || 'COURSE';
+    return { code: fallback, name: summary };
+  }
+  const code = `${codeMatch[1].toUpperCase()} ${codeMatch[2].toUpperCase()}`;
+  let rest = summary.slice(codeMatch[0].length).trim();
+  let section: string | undefined;
+  const sectionMatch = rest.match(/^[-–—]\s*([0-9A-Za-z]{1,4})\b[:\s-]*/);
+  if (sectionMatch) {
+    section = sectionMatch[1];
+    rest = rest.slice(sectionMatch[0].length).trim();
+  }
+  rest = rest.replace(/^[:\-–—]+\s*/, '').trim();
+  return { code, section, name: rest };
 }
 
 function matchIcsProperty(evStr: string, name: string): { params: string; value: string } | null {
@@ -218,7 +236,7 @@ export function parseIcsContent(icsContent: string): Course[] {
       let eventColor = colorMatch ? colorMatch[1].trim() : undefined;
 
       // Check for color emoji prefix e.g. 🔵 CS101 or 🟢 MATH201
-      const emojiMatch = rawSummary.match(/^([🔴🟠🟡🟢🩵🔵🟣🩷🟤⚪⚫]|[\uD800-\uDBFF][\uDC00-\uDFFF])\s*(.+)$/u);
+      const emojiMatch = rawSummary.match(/^(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)\s*(.+)$/u);
       let summary = rawSummary;
       if (emojiMatch) {
         summary = emojiMatch[2].trim();
@@ -300,27 +318,13 @@ export function parseIcsContent(icsContent: string): Course[] {
         });
       }
       
-      // Attempt to extract code and section from summary e.g. "CS101-01 - Intro" -> code: "CS101", section: "01"
-      let code = summary.substring(0, 8);
-      let section: string | undefined = undefined;
+      const parsedSummary = parseIcsSummary(summary);
 
-      const codeMatch = summary.match(/^([A-Z]{2,4}\s*\d{3,4}[A-Z]?)/i);
-      if (codeMatch) {
-        code = codeMatch[1].trim().toUpperCase();
-      } else if (summary.split(/[-: ]/).length > 1) {
-        code = summary.split(/[-:]/)[0].trim().substring(0, 10).toUpperCase();
-      }
-
-      const secMatch = summary.match(/(?:sec(?:tion)?\.?\s*|–\s*sec\s*|,\s*\(?[A-Z0-9]?\)?\s*)([0-9]{1,4}[A-Z]?)/i) || summary.match(/-([0-9]{2,4})/);
-      if (secMatch) {
-        section = secMatch[1].trim();
-      }
-      
       courses.push({
         id: prefixedId('c'),
-        code,
-        name: summary,
-        section,
+        code: parsedSummary.code,
+        name: parsedSummary.name,
+        section: parsedSummary.section,
         instructor: descFields.instructor,
         credits: descFields.credits ?? 3,
         color:

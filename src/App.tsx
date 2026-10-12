@@ -22,7 +22,9 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { DayOfWeek, SchedulePlan } from './types/schedule';
 import { applyDomTheme, persistTheme, resolveTheme } from './utils/theme';
 import { revealingTheme, runThemeReveal } from './utils/themeTransition';
-import { extractSharePayloadFromUrl, decodePlanFromSharePayload } from './utils/shareLink';
+import { extractSharePayloadFromUrl, decodePlanFromSharePayload, clearShareHash, INVALID_SHARE_LINK_MESSAGE } from './utils/shareLink';
+import { shouldConfirmLoadDemo } from './utils/loadDemo';
+import { LoadDemoDialog } from './components/header/LoadDemoDialog';
 
 // Start these with the app shell so the first open does not wait on a download.
 function loadDialog<T>(loader: Promise<T>): Promise<T> {
@@ -161,6 +163,8 @@ export default function App() {
 
   const [isShareImportOpen, setIsShareImportOpen] = useState(false);
   const [sharedPlan, setSharedPlan] = useState<SchedulePlan | null>(null);
+  const [shareImportError, setShareImportError] = useState<string | null>(null);
+  const [confirmDemo, setConfirmDemo] = useState(false);
   const [initialManualPaste, setInitialManualPaste] = useState(false);
 
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
@@ -252,9 +256,8 @@ export default function App() {
       importPlan(plan, true);
       setIsShareImportOpen(false);
       setSharedPlan(null);
-      if (window.location.hash.includes('share=')) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+      setShareImportError(null);
+      clearShareHash();
     },
     [importPlan]
   );
@@ -264,12 +267,18 @@ export default function App() {
       importPlan(plan, false);
       setIsShareImportOpen(false);
       setSharedPlan(null);
-      if (window.location.hash.includes('share=')) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+      setShareImportError(null);
+      clearShareHash();
     },
     [importPlan]
   );
+
+  const handleCloseShareImport = useCallback(() => {
+    setIsShareImportOpen(false);
+    setSharedPlan(null);
+    setShareImportError(null);
+    clearShareHash();
+  }, []);
 
   const handleOpenImportShare = useCallback(() => {
     setSharedPlan(null);
@@ -325,13 +334,20 @@ export default function App() {
       if (!hash) return;
       if (hash.includes('share=')) {
         const payload = extractSharePayloadFromUrl(hash);
-        if (payload) {
-          const res = decodePlanFromSharePayload(payload);
-          if (res.success && res.plan) {
-            setSharedPlan(res.plan);
-            setInitialManualPaste(false);
-            setIsShareImportOpen(true);
-          }
+        const res = payload
+          ? decodePlanFromSharePayload(payload)
+          : { success: false as const, error: INVALID_SHARE_LINK_MESSAGE };
+        if (res.success && res.plan) {
+          setShareImportError(null);
+          setSharedPlan(res.plan);
+          setInitialManualPaste(false);
+          setIsShareImportOpen(true);
+        } else {
+          setSharedPlan(null);
+          setShareImportError(res.error || INVALID_SHARE_LINK_MESSAGE);
+          setInitialManualPaste(false);
+          setIsShareImportOpen(true);
+          clearShareHash();
         }
       } else if (hash === '#add') {
         handleOpenNewCourse('monday', '09:00', 'form');
@@ -405,9 +421,24 @@ export default function App() {
     closeMoreMenu();
   }, [resetToBlank, closeMoreMenu]);
 
-  const handleLoadDemo = useCallback(() => {
+  const applyLoadDemo = useCallback(() => {
     resetToSample();
-  }, [resetToSample]);
+    showToast('Loaded the demo semester.', 'success');
+  }, [resetToSample, showToast]);
+
+  const requestLoadDemo = useCallback(() => {
+    const state = useScheduleStore.getState();
+    if (shouldConfirmLoadDemo(state.plans, state.catalogCourses.length)) {
+      setConfirmDemo(true);
+      return;
+    }
+    applyLoadDemo();
+  }, [applyLoadDemo]);
+
+  const confirmLoadDemo = useCallback(() => {
+    setConfirmDemo(false);
+    applyLoadDemo();
+  }, [applyLoadDemo]);
 
   const isAnyModalOpen =
     isCourseModalOpen || isExportOpen || isImportOpen || isHelpOpen || isShareImportOpen || isGenerateOpen;
@@ -569,7 +600,7 @@ export default function App() {
     onCloseExport: handleCloseExport,
     onCloseImport: handleCloseImport,
     onCloseHelp: handleCloseHelp,
-    onCloseShareImport: () => setIsShareImportOpen(false),
+    onCloseShareImport: handleCloseShareImport,
     onCollapsePool: handleCollapsePool,
   });
 
@@ -587,6 +618,7 @@ export default function App() {
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShare={handleOpenShareModal}
           onOpenImportShare={handleOpenImportShare}
+          onLoadDemo={requestLoadDemo}
           showToast={showToast}
           importExportOpen={importExportOpen}
           onImportExportOpenChange={setImportExportOpen}
@@ -603,10 +635,7 @@ export default function App() {
               onAddCourseAtTime={handleAddCourseAtTime}
               onOpenNewCourse={handleOpenCalendarCourse}
               onOpenImport={() => handleOpenImport('excel')}
-              onLoadDemo={() => {
-                resetToSample();
-                showToast('Loaded the demo semester.', 'success');
-              }}
+              onLoadDemo={requestLoadDemo}
             />
           </div>
 
@@ -630,7 +659,7 @@ export default function App() {
         onToggleMore={handleToggleMore}
         onTogglePool={() => setIsPoolCollapsed((prev) => !prev)}
         onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
-        onLoadDemo={handleLoadDemo}
+        onLoadDemo={requestLoadDemo}
         onOpenShortcuts={handleOpenShortcuts}
         onOpenHelp={() => handleOpenHelp('workflow')}
         onOpenExport={() => setImportExportOpen(true)}
@@ -705,16 +734,22 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isShareImportOpen} onClose={() => setIsShareImportOpen(false)} instantDismiss={instantDismiss}>
+      <DeferredDialog open={isShareImportOpen} onClose={handleCloseShareImport} instantDismiss={instantDismiss}>
         <ShareImportModal
           isOpen={isShareImportOpen}
-          onClose={() => setIsShareImportOpen(false)}
+          onClose={handleCloseShareImport}
           sharedPlan={sharedPlan}
+          externalError={shareImportError}
           onCompareWithSchedule={handleCompareWithSharedPlan}
           onOpenAsActivePlan={handleOpenSharedPlanAsActive}
           initialManualPaste={initialManualPaste}
         />
       </DeferredDialog>
+      <LoadDemoDialog
+        open={confirmDemo}
+        onCancel={() => setConfirmDemo(false)}
+        onConfirm={confirmLoadDemo}
+      />
       </DialogReplaceAppearContext.Provider>
       </SuppressFocusRestoreContext.Provider>
 

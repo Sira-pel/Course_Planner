@@ -1,7 +1,7 @@
 import type { WorkBook, WorkSheet } from 'xlsx';
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS } from '../types/schedule';
 import { prefixedId } from './id';
-import { parseTimeRange, parseSingleTimeToken, normalizeDays, explicitMeridian } from './textParser';
+import { parseTimeRange, parseSingleTimeToken, normalizeDays, explicitMeridian, interpretCredits } from './textParser';
 import { timeToMinutes } from './timeUtils';
 
 type XlsxModule = typeof import('xlsx');
@@ -64,13 +64,28 @@ export interface ExcelWorkbookData {
   detectedMapping: ColumnMapping;
 }
 
+export interface ImportRowIssue {
+  courseId: string;
+  message: string;
+  /** Invalid or missing time. The row is shown, but it has no invented meeting. */
+  blocking: boolean;
+}
+
 export interface ExcelParseResult {
   success: boolean;
   courses: Course[];
   totalRows: number;
   skippedRows: number;
   warnings: string[];
+  issues: ImportRowIssue[];
   error?: string;
+}
+
+export interface TabularAnalysis {
+  columns: ColumnOption[];
+  rawRows: (string | number | undefined)[][];
+  dataStartRow: number;
+  detectedMapping: ColumnMapping;
 }
 
 /**
@@ -172,10 +187,10 @@ export function extractTimeRange(raw: unknown): { start: string; end: string } |
     const sM = militaryMatch[1].slice(2, 4);
     const eH = militaryMatch[2].slice(0, 2);
     const eM = militaryMatch[2].slice(2, 4);
-    return {
-      start: `${sH}:${sM}`,
-      end: `${eH}:${eM}`,
-    };
+    const start = `${sH}:${sM}`;
+    const end = `${eH}:${eM}`;
+    if (timeToMinutes(start) >= timeToMinutes(end)) return null;
+    return { start, end };
   }
 
   return parseTimeRange(cleanStr);
@@ -248,8 +263,8 @@ export function isOnlineOrTBA(val: unknown): boolean {
  */
 export function parseScheduleString(raw: unknown): {
   days: DayOfWeek[];
-  startTime: string;
-  endTime: string;
+  startTime: string | null;
+  endTime: string | null;
 } | null {
   if (raw === null || raw === undefined) return null;
   let str = sanitizeString(raw, 100);
@@ -265,23 +280,13 @@ export function parseScheduleString(raw: unknown): {
   // 3. Extract time range
   const timeResult = extractTimeRange(str);
 
-  if (timeResult) {
-    return {
-      days: days.length > 0 ? days : ['monday'],
-      startTime: timeResult.start,
-      endTime: timeResult.end,
-    };
-  }
+  if (!timeResult && days.length === 0) return null;
 
-  if (days.length > 0) {
-    return {
-      days,
-      startTime: '09:00',
-      endTime: '10:15',
-    };
-  }
-
-  return null;
+  return {
+    days,
+    startTime: timeResult ? timeResult.start : null,
+    endTime: timeResult ? timeResult.end : null,
+  };
 }
 
 /**
@@ -297,10 +302,66 @@ export function getVisibleSheetNames(workbook: WorkBook): string[] {
 /**
  * Reads workbook file from ArrayBuffer and inspects sheet structure.
  */
-export async function readExcelFile(data: ArrayBuffer): Promise<{
+export class SpreadsheetRejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SpreadsheetRejectedError';
+  }
+}
+
+const SPREADSHEET_EXTENSIONS = new Set(['xlsx', 'xlsm', 'xls', 'csv', 'tsv']);
+
+function startsWith(bytes: Uint8Array, signature: number[]): boolean {
+  if (bytes.length < signature.length) return false;
+  return signature.every((byte, index) => bytes[index] === byte);
+}
+
+/** Reject images, PDFs, and other files that are not Excel or CSV/TSV. */
+export function spreadsheetRejectionReason(fileName: string, data: ArrayBuffer): string | null {
+  const bytes = new Uint8Array(data.byteLength > 16 ? data.slice(0, 16) : data);
+  const sample = new Uint8Array(data.byteLength > 4096 ? data.slice(0, 4096) : data);
+  const isZip = startsWith(bytes, [0x50, 0x4b]);
+  const isOle = startsWith(bytes, [0xd0, 0xcf, 0x11, 0xe0]);
+  const isImageOrPdf =
+    startsWith(bytes, [0x89, 0x50, 0x4e, 0x47]) ||
+    startsWith(bytes, [0xff, 0xd8, 0xff]) ||
+    startsWith(bytes, [0x47, 0x49, 0x46]) ||
+    startsWith(bytes, [0x25, 0x50, 0x44, 0x46]) ||
+    (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && sample.length > 11 && sample[8] === 0x57);
+
+  if (isImageOrPdf) {
+    return 'This file is not a spreadsheet. Upload an Excel, CSV, or TSV file.';
+  }
+
+  const ext = fileName.includes('.') ? fileName.split('.').pop()?.toLowerCase() || '' : '';
+  if (!fileName) return null;
+  if (!SPREADSHEET_EXTENSIONS.has(ext)) {
+    return 'This file is not a spreadsheet. Upload an Excel, CSV, or TSV file.';
+  }
+  if ((ext === 'xlsx' || ext === 'xlsm') && !isZip) {
+    return 'This file is not a valid Excel workbook.';
+  }
+  if (ext === 'xls' && !isOle && !isZip) {
+    return 'This file is not a valid Excel workbook.';
+  }
+  if (ext === 'csv' || ext === 'tsv') {
+    if (isZip || isOle || sample.includes(0)) {
+      return 'This file is not a CSV spreadsheet.';
+    }
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(sample).replace(/^\uFEFF/, '').trimStart();
+    if (text.startsWith('<')) {
+      return 'This file is not a spreadsheet. Upload an Excel, CSV, or TSV file.';
+    }
+  }
+  return null;
+}
+
+export async function readExcelFile(data: ArrayBuffer, fileName = ''): Promise<{
   workbook: WorkBook;
   sheets: string[];
 }> {
+  const rejected = spreadsheetRejectionReason(fileName, data);
+  if (rejected) throw new SpreadsheetRejectedError(rejected);
   const XLSX = await loadXlsx();
   const workbook = XLSX.read(data, {
     type: 'array',
@@ -397,10 +458,27 @@ export function loadSheetData(workbook: WorkBook, sheetName: string): ExcelWorkb
     };
   }
 
-  // Find max column index with actual non-empty content
+  const analyzed = analyzeTabularRows(rawRows);
+  return {
+    sheets: getVisibleSheetNames(workbook),
+    currentSheet: sheetName,
+    ...analyzed,
+  };
+}
+
+export function analyzeTabularRows(inputRows: (string | number | undefined)[][]): TabularAnalysis {
+  if (!inputRows || inputRows.length === 0) {
+    return {
+      columns: [],
+      rawRows: [],
+      dataStartRow: 0,
+      detectedMapping: getEmptyMapping(),
+    };
+  }
+
   let maxColIndexWithData = -1;
-  for (let r = 0; r < rawRows.length; r++) {
-    const row = rawRows[r];
+  for (let r = 0; r < inputRows.length; r++) {
+    const row = inputRows[r];
     if (!row) continue;
     for (let c = row.length - 1; c > maxColIndexWithData; c--) {
       const val = row[c];
@@ -412,25 +490,19 @@ export function loadSheetData(workbook: WorkBook, sheetName: string): ExcelWorkb
   }
 
   const maxCols = Math.min(Math.max(maxColIndexWithData + 1, 1), 60);
-
-  // Normalize rows to have consistent length
-  const trimmedRows = rawRows.map((row) => {
-    const trimmed = row.slice(0, maxCols);
-    while (trimmed.length < maxCols) {
-      trimmed.push('');
-    }
+  const trimmedRows = inputRows.map((row) => {
+    const trimmed = (row || []).slice(0, maxCols);
+    while (trimmed.length < maxCols) trimmed.push('');
     return trimmed;
   });
 
   const sampleScanRows = Math.min(trimmedRows.length, 300);
-
-  // Detect header row index
   let headerRowIndex = -1;
   const HEADER_KEYWORDS = [
     'course', 'code', 'subject', 'subj', 'title', 'name', 'section', 'sec',
     'instructor', 'professor', 'prof', 'faculty', 'day', 'days', 'time', 'times',
     'start', 'end', 'room', 'bldg', 'classroom', 'location', 'credit', 'credits', 'unit', 'units', 'schedule',
-    'crn', 'catalog', 'crse', 'descr', 'nbr', 'dept'
+    'crn', 'catalog', 'crse', 'descr', 'nbr', 'dept',
   ];
 
   for (let r = 0; r < Math.min(trimmedRows.length, 12); r++) {
@@ -439,13 +511,9 @@ export function loadSheetData(workbook: WorkBook, sheetName: string): ExcelWorkb
     let matchCount = 0;
     for (const cell of row) {
       const rawText = sanitizeString(cell).toLowerCase().trim();
-      if (!rawText) continue;
-      if (rawText.length <= 40) {
-        const words = rawText.split(/[\s_\-/\\:]+/).filter(Boolean);
-        if (words.some((w) => HEADER_KEYWORDS.includes(w))) {
-          matchCount++;
-        }
-      }
+      if (!rawText || rawText.length > 40) continue;
+      const words = rawText.split(/[\s_\-/\\:]+/).filter(Boolean);
+      if (words.some((word) => HEADER_KEYWORDS.includes(word))) matchCount++;
     }
     if (matchCount >= 2) {
       headerRowIndex = r;
@@ -453,68 +521,41 @@ export function loadSheetData(workbook: WorkBook, sheetName: string): ExcelWorkb
     }
   }
 
-  // Determine data start row
   let dataStartRow = headerRowIndex >= 0 ? headerRowIndex + 1 : 0;
   if (headerRowIndex < 0) {
     for (let r = 0; r < sampleScanRows; r++) {
       const row = trimmedRows[r];
-      const hasContent = row && row.some((c) => sanitizeString(c) !== '');
-      if (hasContent) {
+      if (row && row.some((cell) => sanitizeString(cell) !== '')) {
         dataStartRow = r;
         break;
       }
     }
   }
 
-  // Build ColumnOption descriptors
   const columns: ColumnOption[] = [];
   for (let c = 0; c < maxCols; c++) {
     const letter = getColumnLetter(c);
     const key = `col_${c}`;
-
-    const rawHeader = headerRowIndex >= 0 && trimmedRows[headerRowIndex] ? sanitizeString(trimmedRows[headerRowIndex][c], 40) : '';
-
-    // Collect sample values
+    const rawHeader = headerRowIndex >= 0 && trimmedRows[headerRowIndex]
+      ? sanitizeString(trimmedRows[headerRowIndex][c], 40)
+      : '';
     const samples: string[] = [];
     for (let r = dataStartRow; r < sampleScanRows && samples.length < 3; r++) {
-      const row = trimmedRows[r];
-      if (!row) continue;
-      const val = sanitizeString(row[c], 40);
-      if (val && !samples.includes(val)) {
-        samples.push(val);
-      }
+      const val = sanitizeString(trimmedRows[r]?.[c], 40);
+      if (val && !samples.includes(val)) samples.push(val);
     }
-
     let label = `Col ${letter}`;
-    if (rawHeader) {
-      label += ` [${rawHeader}]`;
-    } else if (samples.length > 0) {
-      const preview = samples.slice(0, 2).join(', ');
-      label += ` (${preview})`;
-    } else {
-      label += ` (Empty)`;
-    }
-
-    columns.push({
-      key,
-      index: c,
-      letter,
-      headerText: rawHeader,
-      label,
-      samples,
-    });
+    if (rawHeader) label += ` [${rawHeader}]`;
+    else if (samples.length > 0) label += ` (${samples.slice(0, 2).join(', ')})`;
+    else label += ' (Empty)';
+    columns.push({ key, index: c, letter, headerText: rawHeader, label, samples });
   }
 
-  // Content-based and header-based intelligent column detection
-  const detectedMapping = autoDetectColumns(trimmedRows, dataStartRow, columns);
-
   return {
-    sheets: getVisibleSheetNames(workbook),
-    currentSheet: sheetName,
     columns,
     rawRows: trimmedRows,
     dataStartRow,
-    detectedMapping,
+    detectedMapping: autoDetectColumns(trimmedRows, dataStartRow, columns),
   };
 }
 
@@ -695,7 +736,7 @@ export function autoDetectColumns(
 
       // Schedule (Day + Time combined) e.g. "(DD) 01:45PM - 03:15PM TF", "(A) 08:30AM - 10:00AM MW"
       const hasTime = /\d{1,2}[:.]\d{2}|\b[012]\d[0-5]\d\b/.test(val);
-      const hasDays = /(?:MWF|TTH|TF|WF|MW|TR|TUFR|MTH|MTWRF|MON|TUE|WED|THU|FRI|\bTH\b|\bTF\b|\bMW\b|\bWF\b)/i.test(val);
+      const hasDays = extractDays(val).length > 0;
 
       if (hasTime && hasDays) {
         scheduleMatches++;
@@ -864,6 +905,7 @@ export function parseExcelRowsToCourses(
 ): ExcelParseResult {
   const courses: Course[] = [];
   const warnings: string[] = [];
+  const issues: ImportRowIssue[] = [];
   let skippedRows = 0;
 
   const getCell = (row: (string | number | undefined)[], colKey: string | undefined): string => {
@@ -937,128 +979,41 @@ export function parseExcelRowsToCourses(
     }
 
     // Parse Schedule Sessions for current row
-    let rowSessions: ClassSession[] = [];
     const safeTag = (code || name || `item_${r}`).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
     const courseId = prefixedId(`c_${safeTag}`);
+    const label = code || name || `Row ${r + 1}`;
+    const resolved = resolveRowMeetings(row, mapping, getCell);
+    const rowSessions: ClassSession[] = resolved.meetings.map((meeting, sIdx) => ({
+      id: `s_${courseId}_${sIdx}`,
+      day: meeting.day,
+      startTime: meeting.start,
+      endTime: meeting.end,
+      room: room || undefined,
+    }));
+    let rowIssue: ImportRowIssue | undefined;
 
-    // Path 1: Combined schedule column e.g. "(DD) 01:45PM - 03:15PM TF"
-    if (mapping.schedule) {
-      const scheduleRaw = getCell(row, mapping.schedule);
-      if (scheduleRaw) {
-        // Support multi-meeting schedule strings separated by semicolon, newline, pipe, or double-slash
-        const segments = scheduleRaw.split(/[;\n|]+|\s*\/\/\s*/).map((s) => s.trim()).filter(Boolean);
-        for (const seg of segments) {
-          const scheduleParsed = parseScheduleString(seg);
-          if (scheduleParsed) {
-            for (const day of scheduleParsed.days) {
-              rowSessions.push({
-                id: `s_${courseId}_${rowSessions.length}`,
-                day,
-                startTime: scheduleParsed.startTime,
-                endTime: scheduleParsed.endTime,
-                room: room || undefined,
-              });
-            }
-          }
-        }
-      }
+    if (resolved.problem) {
+      const message = `Row ${r + 1}: "${label}" ${resolved.problem}`;
+      warnings.push(message);
+      rowIssue = { courseId, message: resolved.problem, blocking: true };
+    } else if (rowSessions.length === 0 && resolved.online) {
+      warnings.push(`Row ${r + 1}: "${label}" marked as Online / Asynchronous (no calendar meetings assigned)`);
     }
 
-    // Path 2: Separate Days and Time column (or StartTime + EndTime)
-    if (rowSessions.length === 0 && (mapping.days || mapping.time || mapping.startTime || mapping.endTime)) {
-      const daysRaw = getCell(row, mapping.days);
-      const timeRaw = getCell(row, mapping.time);
-      const startRaw = getCell(row, mapping.startTime);
-      const endRaw = getCell(row, mapping.endTime);
-
-      const parsedDays = extractDays(daysRaw);
-      if (parsedDays.length > 0 || timeRaw || startRaw || endRaw) {
-        const finalDays: DayOfWeek[] = parsedDays.length > 0 ? parsedDays : ['monday', 'wednesday', 'friday'];
-        let startTime = '09:00';
-        let endTime = '10:15';
-
-        let timesValid = true;
-        if (timeRaw) {
-          const timeParsed = extractTimeRange(timeRaw);
-          if (timeParsed) {
-            startTime = timeParsed.start;
-            endTime = timeParsed.end;
-          }
-        } else if (startRaw || endRaw) {
-          const pad = (n: number) => String(n).padStart(2, '0');
-          let parsedStart = startRaw ? parseCellTime(startRaw) : null;
-          let parsedEnd = endRaw ? parseCellTime(endRaw) : null;
-          const startExplicit = explicitMeridian(startRaw) !== null;
-          const endExplicit = explicitMeridian(endRaw) !== null;
-
-          // "7:00" / "9:00" parses as 19:00 and 09:00. Move the end forward
-          // before giving up, so the session stays on the same afternoon.
-          if (parsedStart && parsedEnd) {
-            let startMinutes = parsedStart.h * 60 + parsedStart.m;
-            let endMinutes = parsedEnd.h * 60 + parsedEnd.m;
-            if (startMinutes >= endMinutes && parsedEnd.h < 12 && !endExplicit) {
-              parsedEnd = { ...parsedEnd, h: parsedEnd.h + 12 };
-              endMinutes = parsedEnd.h * 60 + parsedEnd.m;
-            }
-            if (startMinutes >= endMinutes && parsedStart.h >= 12 && !startExplicit) {
-              parsedStart = { ...parsedStart, h: parsedStart.h - 12 };
-              startMinutes = parsedStart.h * 60 + parsedStart.m;
-            }
-          }
-
-          if (parsedStart) {
-            startTime = `${pad(parsedStart.h)}:${pad(parsedStart.m)}`;
-          }
-          if (parsedEnd) {
-            endTime = `${pad(parsedEnd.h)}:${pad(parsedEnd.m)}`;
-          } else if (parsedStart && parsedStart.h < 23) {
-            endTime = `${pad(parsedStart.h + 1)}:${pad(parsedStart.m)}`;
-          }
-        }
-
-        if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
-          timesValid = false;
-          warnings.push(
-            `Row ${r + 1}: "${code || name}" has an invalid time range (${startRaw || startTime}-${endRaw || endTime})`
-          );
-        }
-
-        if (timesValid) {
-          rowSessions = finalDays.map((day, sIdx) => ({
-            id: `s_${courseId}_${sIdx}`,
-            day,
-            startTime,
-            endTime,
-            room: room || undefined,
-          }));
-        }
-      }
-    }
-
-    // Credits
-    let credits = 3;
-    if (creditsStr) {
-      const parsedNum = parseFloat(creditsStr);
-      if (!isNaN(parsedNum) && parsedNum >= 0 && parsedNum <= 12) {
-        credits = parsedNum;
-      }
-    }
-
-    // Path 3: Fallback if no sessions parsed (e.g. online/async or unmapped schedule)
-    if (rowSessions.length === 0) {
-      const scheduleRaw = getCell(row, mapping.schedule);
-      const isOnline = isOnlineOrTBA(scheduleRaw) || isOnlineOrTBA(room);
-      if (isOnline) {
-        warnings.push(`Row ${r + 1}: "${code || name}" marked as Online / Asynchronous (no calendar meetings assigned)`);
-      } else if (scheduleRaw) {
-        warnings.push(`Row ${r + 1}: "${code || name}" has unparseable schedule "${scheduleRaw}"`);
-      }
+    const readCredits = interpretCredits(creditsStr);
+    const credits = readCredits.credits;
+    if (readCredits.unrealistic) {
+      const message = `Unusual credit value ${readCredits.credits}`;
+      warnings.push(`Row ${r + 1}: "${label}" has an ${message.charAt(0).toLowerCase()}${message.slice(1)}`);
+      if (!rowIssue) rowIssue = { courseId, message, blocking: false };
     }
 
     const colorIdx = (startColorIndex + courses.length) % COURSE_COLORS.length;
     const color = COURSE_COLORS[colorIdx];
 
-    const finalCode = code || (name ? name.slice(0, 10).toUpperCase() : 'COURSE');
+    const finalCode = code
+      ? code.replace(/\s+/g, ' ').toUpperCase()
+      : (name ? name.slice(0, 10).toUpperCase() : 'COURSE');
     const finalName = name || '';
 
     const course: Course = {
@@ -1072,6 +1027,7 @@ export function parseExcelRowsToCourses(
       sessions: rowSessions,
     };
 
+    if (rowIssue) issues.push(rowIssue);
     courses.push(course);
   }
 
@@ -1081,5 +1037,205 @@ export function parseExcelRowsToCourses(
     totalRows: rawRows.length - dataStartRow,
     skippedRows,
     warnings,
+    issues,
   };
+}
+
+interface ResolvedMeeting {
+  day: DayOfWeek;
+  start: string;
+  end: string;
+}
+
+function clockFromParts(parsed: { h: number; m: number } | null): string | null {
+  if (!parsed) return null;
+  if (parsed.h < 0 || parsed.h > 23 || parsed.m < 0 || parsed.m > 59) return null;
+  return `${String(parsed.h).padStart(2, '0')}:${String(parsed.m).padStart(2, '0')}`;
+}
+
+function combineStartAndEnd(startRaw: string, endRaw: string): { start: string; end: string } | null {
+  if (!startRaw || !endRaw) return null;
+  let parsedStart = parseCellTime(startRaw);
+  let parsedEnd = parseCellTime(endRaw);
+  if (!parsedStart || !parsedEnd) return null;
+  const startExplicit = explicitMeridian(startRaw) !== null;
+  const endExplicit = explicitMeridian(endRaw) !== null;
+  let startMinutes = parsedStart.h * 60 + parsedStart.m;
+  let endMinutes = parsedEnd.h * 60 + parsedEnd.m;
+  if (startMinutes >= endMinutes && parsedEnd.h < 12 && !endExplicit) {
+    parsedEnd = { ...parsedEnd, h: parsedEnd.h + 12 };
+    endMinutes = parsedEnd.h * 60 + parsedEnd.m;
+  }
+  if (startMinutes >= endMinutes && parsedStart.h >= 12 && !startExplicit) {
+    parsedStart = { ...parsedStart, h: parsedStart.h - 12 };
+    startMinutes = parsedStart.h * 60 + parsedStart.m;
+  }
+  const start = clockFromParts(parsedStart);
+  const end = clockFromParts(parsedEnd);
+  if (!start || !end || timeToMinutes(start) >= timeToMinutes(end)) return null;
+  return { start, end };
+}
+
+function looksLikeClock(raw: string): boolean {
+  return /\d{1,2}\s*:\s*\d{2}/.test(raw) || /\b\d{3,4}\s*[-–/]\s*\d{3,4}\b/.test(raw);
+}
+
+/**
+ * Days and times stay in their own columns. A time-only schedule cell must not
+ * invent Monday, and a missing or impossible clock must not become 09:00-10:15.
+ */
+function resolveRowMeetings(
+  row: (string | number | undefined)[],
+  mapping: ColumnMapping,
+  getCell: (row: (string | number | undefined)[], colKey: string | undefined) => string
+): { meetings: ResolvedMeeting[]; problem?: string; online?: boolean } {
+  const daysRaw = mapping.days ? getCell(row, mapping.days) : '';
+  const timeRaw = mapping.time ? getCell(row, mapping.time) : '';
+  const startRaw = mapping.startTime ? getCell(row, mapping.startTime) : '';
+  const endRaw = mapping.endTime ? getCell(row, mapping.endTime) : '';
+  const scheduleRaw = mapping.schedule ? getCell(row, mapping.schedule) : '';
+  const explicitDays = daysRaw ? extractDays(daysRaw) : [];
+
+  const pushDays = (days: DayOfWeek[], start: string, end: string, into: ResolvedMeeting[]) => {
+    for (const day of days) into.push({ day, start, end });
+  };
+
+  if (timeRaw || startRaw || endRaw) {
+    let range: { start: string; end: string } | null = null;
+    if (timeRaw) range = extractTimeRange(timeRaw);
+    else range = combineStartAndEnd(startRaw, endRaw);
+    const days = explicitDays.length > 0 ? explicitDays : extractDays(timeRaw);
+    if (!range) {
+      const shown = timeRaw || `${startRaw}-${endRaw}`;
+      return { meetings: [], problem: `has an invalid time (${shown})` };
+    }
+    if (days.length === 0) {
+      return { meetings: [], problem: 'is missing days' };
+    }
+    const meetings: ResolvedMeeting[] = [];
+    pushDays(days, range.start, range.end, meetings);
+    return { meetings };
+  }
+
+  if (scheduleRaw) {
+    if (isOnlineOrTBA(scheduleRaw) && !looksLikeClock(scheduleRaw)) {
+      return { meetings: [], online: true };
+    }
+    const segments = scheduleRaw.split(/[;\n|]+|\s*\/\/\s*/).map((part) => part.trim()).filter(Boolean);
+    const meetings: ResolvedMeeting[] = [];
+    for (const segment of segments) {
+      const parsed = parseScheduleString(segment);
+      const days = parsed && parsed.days.length > 0 ? parsed.days : explicitDays;
+      if (!parsed || !parsed.startTime || !parsed.endTime) {
+        if (looksLikeClock(segment) || explicitDays.length > 0 || (parsed && parsed.days.length > 0)) {
+          return { meetings: [], problem: `has an invalid time (${segment})` };
+        }
+        continue;
+      }
+      if (days.length === 0) {
+        return { meetings: [], problem: 'is missing days' };
+      }
+      pushDays(days, parsed.startTime, parsed.endTime, meetings);
+    }
+    if (meetings.length > 0) return { meetings };
+    if (explicitDays.length > 0) return { meetings: [], problem: 'is missing a class time' };
+    return { meetings: [], problem: `has an unparseable schedule "${scheduleRaw}"` };
+  }
+
+  if (explicitDays.length > 0) {
+    return { meetings: [], problem: 'is missing a class time' };
+  }
+
+  return { meetings: [] };
+}
+
+export interface DelimitedTable extends TabularAnalysis {
+  sis: boolean;
+}
+
+function splitCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+/** School SIS rows: term, code, section, title, instructor, room, days+time. Later columns are ignored. */
+export function looksLikeSisRow(cols: string[]): boolean {
+  if (cols.length < 7) return false;
+  const term = cols[0].trim();
+  const code = cols[1].trim();
+  const section = cols[2].trim();
+  const when = cols[6].trim();
+  if (!/^(?:fall|spring|summer|winter|autumn)\s+\d{4}$/i.test(term)) return false;
+  if (!/^[A-Za-z]{2,6}\s+\d{2,4}[A-Za-z]?$/.test(code)) return false;
+  if (!/^[0-9A-Za-z]{1,4}$/.test(section)) return false;
+  if (!/\d{1,2}\s*:\s*\d{2}/.test(when)) return false;
+  return extractDays(when).length > 0;
+}
+
+/**
+ * Split a paste on tabs or commas. Returns null when the text is not a table,
+ * so freeform course lines stay on the line parser.
+ */
+export function parseDelimitedText(text: string): DelimitedTable | null {
+  if (!text || !text.trim()) return null;
+  const nonEmpty = text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim());
+  if (nonEmpty.length === 0) return null;
+
+  const tabLines = nonEmpty.filter((line) => line.includes('\t'));
+  let rows: string[][] | null = null;
+  if (tabLines.length / nonEmpty.length >= 0.8 && tabLines.some((line) => line.split('\t').length >= 2)) {
+    rows = nonEmpty.map((line) => line.split('\t').map((cell) => cell.trim()));
+  } else if (tabLines.length === 0) {
+    const csvRows = nonEmpty.map(splitCsvLine);
+    const width = csvRows[0]?.length ?? 0;
+    if (width >= 2 && csvRows.every((row) => row.length === width)) rows = csvRows;
+  }
+  if (!rows) return null;
+
+  const sisHits = rows.filter(looksLikeSisRow).length;
+  const sis = sisHits >= Math.max(1, Math.ceil(rows.length * 0.6));
+  const limited = sis ? rows.map((row) => row.slice(0, 7)) : rows;
+  const analyzed = analyzeTabularRows(limited);
+  if (sis) {
+    analyzed.detectedMapping = {
+      ...getEmptyMapping(),
+      code: 'col_1',
+      section: 'col_2',
+      name: 'col_3',
+      instructor: 'col_4',
+      room: 'col_5',
+      schedule: 'col_6',
+    };
+  }
+  return { ...analyzed, sis };
 }

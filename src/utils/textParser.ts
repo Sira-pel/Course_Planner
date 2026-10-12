@@ -110,7 +110,24 @@ const TIME_RANGE_GLOBAL_REGEX = new RegExp(TIME_RANGE_REGEX.source, 'gi');
 const BRACKET_ROOM_REGEX = /\[\s*([A-Za-z0-9\s-]+)\s*\]/;
 const EXPLICIT_SECTION_REGEX = /\b(?:sec(?:tion)?)\b\.?\s*[-_:#]?\s*([0-9A-Za-z]{1,5})\b/i;
 const LECTURE_SECTION_REGEX = /\b(?:lec(?:ture)?|lab(?:oratory)?|rec(?:itation)?|disc(?:ussion)?)\b\.?\s*[-_:#]?\s*([0-9A-Za-z]{1,5})\b/i;
-const CREDITS_REGEX = /\b([1-6](?:\.[05])?)\s*(?:credits?|cr\.?|units?|hrs?\.?)\b/i;
+const CREDITS_REGEX = /\b(\d+(?:\.\d+)?)\s*(?:credits?|cr\.?|units?|hrs?\.?)\b/i;
+
+/** Realistic course credits. Values outside this range are kept and flagged. */
+export const REALISTIC_CREDIT_MAX = 12;
+
+export function interpretCredits(raw: string): { credits: number; detected: boolean; unrealistic: boolean } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { credits: 3, detected: false, unrealistic: false };
+  const match = trimmed.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return { credits: 3, detected: false, unrealistic: false };
+  const credits = Number(match[1]);
+  if (!Number.isFinite(credits)) return { credits: 3, detected: false, unrealistic: false };
+  return {
+    credits,
+    detected: true,
+    unrealistic: credits < 0 || credits > REALISTIC_CREDIT_MAX,
+  };
+}
 const ROOM_REGEX = /\b(?:room|rm|hall|auditorium|aud|bldg|center|ctr)\b\.?\s*([A-Za-z0-9#-]+)\b/i;
 const TITLE_START_WORDS = new Set([
   'INTRO', 'INTRODUCTION', 'PRINCIPLES', 'FUNDAMENTALS', 'FOUNDATIONS',
@@ -442,7 +459,7 @@ export function parseSingleTimeToken(
     const parts = stripped.split(':');
     let h = parseInt(parts[0], 10);
     const m = parts[1] ? parseInt(parts[1], 10) : 0;
-    if (isNaN(h) || isNaN(m) || m > 59 || h > 24) return null;
+    if (isNaN(h) || isNaN(m) || m > 59 || h > 23) return null;
 
     if (isExplicitPM) {
       if (h < 12) h += 12;
@@ -530,6 +547,15 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
 
   const endMeridian = explicitMeridian(rawEnd);
   const startMeridian = explicitMeridian(rawStart);
+  const writtenHour = (raw: string): number | null => {
+    const stripped = raw.trim().toLowerCase().replace(/[ap]\.?m\.?/g, '').trim();
+    const head = stripped.match(/^(\d{1,2})/);
+    if (!head) return null;
+    const hour = parseInt(head[1], 10);
+    return Number.isFinite(hour) ? hour : null;
+  };
+  // 15:00-09:00 is an impossible range. 7:00-8:30 is still an afternoon class.
+  const startIs24h = (writtenHour(rawStart) ?? 0) >= 13;
   const endHasPM = endMeridian === 'pm';
   const startHasPM = startMeridian === 'pm';
   const endHasAM = endMeridian === 'am';
@@ -550,17 +576,17 @@ export function parseTimeRange(timeStr: string): { start: string; end: string } 
 
   // 7:00-8:30 has no meridian: 7 becomes 19:00 and 8 stays 08:00.
   // Move the end into the same afternoon before pulling the start back to morning.
-  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM) {
+  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM && !startIs24h) {
     endParsed.h += 12;
     endMinutes = endParsed.h * 60 + endParsed.m;
   }
 
-  if (startMinutes >= endMinutes && startParsed.h >= 12 && !startHasPM && !startHasAM) {
+  if (startMinutes >= endMinutes && startParsed.h >= 12 && !startHasPM && !startHasAM && !startIs24h) {
     startParsed.h -= 12;
     startMinutes = startParsed.h * 60 + startParsed.m;
   }
 
-  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM) {
+  if (startMinutes >= endMinutes && endParsed.h < 12 && !endHasAM && !endHasPM && !startIs24h) {
     endParsed.h += 12;
     endMinutes = endParsed.h * 60 + endParsed.m;
   }
@@ -754,7 +780,7 @@ function parseScheduleSegment(
 function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | null {
   const cols = line
     .split('\t')
-    .map((c) => decodeHtmlEntities(c).trim())
+    .map((c) => decodeHtmlEntities(c).replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-').trim())
     .filter(Boolean);
   if (cols.length < 2) return null;
 
@@ -764,6 +790,7 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
   let instructor: string | undefined = undefined;
   let room: string | undefined = undefined;
   let credits = 3;
+  let creditWarning: string | undefined;
   let scheduleCol = '';
 
   const unusedCols: string[] = [];
@@ -784,6 +811,10 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
     }
 
     if (TIME_RANGE_REGEX.test(col)) {
+      if (!section) {
+        const leadingSection = col.match(/^sec(?:tion)?\.?\s*[-_:#]?\s*([0-9A-Za-z]+)\b/i);
+        if (leadingSection) section = leadingSection[1];
+      }
       scheduleCol = scheduleCol ? `${scheduleCol}; ${col}` : col;
       continue;
     }
@@ -796,15 +827,19 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
       }
     }
 
-    // Bare 1–6 (and .0/.5) is a credit value. Check it before the generic
-    // numeric section rule, which would otherwise treat "3" or "4" as a section.
-    // Leading zeros ("001", "02") stay sections.
-    if (/^(?:[1-6](?:\.[05])?)\s*(?:credits?|cr\.?|units?|hrs?\.?)?$/i.test(col)) {
-      const m = col.match(/^([1-6](?:\.[05])?)/);
-      if (m) {
-        credits = parseFloat(m[1]);
-        continue;
-      }
+    // "4 cr" / "99 credits" is a credit value. A bare 1–6 (and .0/.5) is too,
+    // checked before the generic numeric section rule so "3" is not a section.
+    // Leading zeros ("001", "02") stay sections. Unrealistic values are kept.
+    const creditWithUnit = col.match(/^(\d+(?:\.\d+)?)\s*(?:credits?|cr\.?|units?|hrs?\.?)$/i);
+    if (creditWithUnit) {
+      const read = interpretCredits(creditWithUnit[0]);
+      credits = read.credits;
+      if (read.unrealistic) creditWarning = `Unusual credit value ${read.credits}`;
+      continue;
+    }
+    if (/^(?:[1-6](?:\.[05])?)$/i.test(col)) {
+      credits = parseFloat(col);
+      continue;
     }
     if (!section && /^[0-9]{1,4}[A-Za-z]?$/.test(col) && col.length <= 4) {
       section = col;
@@ -835,9 +870,10 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
   }
 
   if (code || scheduleCol || name) {
-    const finalCode = code || generateCodeFromTitle(name || 'Course');
+    const finalCode = code || (scheduleCol ? generateCodeFromTitle(name || 'Course') : '');
     const finalName = name || '';
     const courseId = prefixedId('c');
+    const warnings: string[] = [];
 
     const parsedSessionsList: { days: DayOfWeek[]; startTime: string; endTime: string }[] = [];
     if (scheduleCol) {
@@ -849,6 +885,7 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
     }
 
     if (parsedSessionsList.length === 0) {
+      warnings.push('No schedule detected, defaulted to Mon, Wed, Fri 09:00-10:15 AM');
       parsedSessionsList.push({
         days: ['monday', 'wednesday', 'friday'],
         startTime: '09:00',
@@ -877,10 +914,13 @@ function parseTabDelimitedLine(line: string, colorIndex: number): ParseResult | 
       sessions,
     };
 
+    if (creditWarning) warnings.push(creditWarning);
+
     return {
       success: true,
       rawText: line,
       course,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
@@ -1000,11 +1040,12 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
           }
         }
 
-        // Title from remainder of leftWorking
+        // Title from remainder of leftWorking. Parentheses come off first so
+        // "CS 101 (Section 001) - Title" does not keep the separating dash.
         const cleanTitle = leftWorking
-          .replace(/^[:;,\-–—\s]+|[:;,\-–—\s]+$/g, '')
           .replace(/[()[\]{}]+/g, ' ')
           .replace(/\s+/g, ' ')
+          .replace(/^[:;,\-–—\s]+|[:;,\-–—\s]+$/g, '')
           .trim();
 
         if (cleanTitle) {
@@ -1157,10 +1198,15 @@ export function parseCourseLine(line: string, colorIndex: number = 0): ParseResu
       // Single/Double-letter cohort codes in parentheses like (A), (B), (DD), (L)
       lineWorking = lineWorking.replace(/\(\s*[A-Z]{1,3}\s*\)/g, ' ');
 
-      // Extract Credits if present (e.g. 3 credits, 4.0 cr, 3 units)
+      // Extract Credits if present (e.g. 3 credits, 4.0 cr, 99 credits).
+      // The number in the text is kept; unusual values are flagged, not rewritten.
       const creditsMatch = lineWorking.match(CREDITS_REGEX);
       if (creditsMatch) {
-        credits = parseFloat(creditsMatch[1]);
+        const read = interpretCredits(creditsMatch[0]);
+        if (read.detected) {
+          credits = read.credits;
+          if (read.unrealistic) warnings.push(`Unusual credit value ${read.credits}`);
+        }
         lineWorking = lineWorking.replace(creditsMatch[0], ' ');
       }
 
@@ -1359,13 +1405,31 @@ export function parseBulkCourses(text: string, existingCourseCount: number = 0):
       }
 
       if (courseLine || timeLine) {
-        const combined = `${courseLine} | ${timeLine}${roomLine ? ` [${roomLine}]` : ''}${instructorLine ? ` - ${instructorLine}` : ''}${creditsLine ? ` ${creditsLine} cr` : ''}`;
+        const combined = `${courseLine}${timeLine ? ` | ${timeLine}` : ''}`;
         const parsed = parseCourseLine(combined, existingCourseCount + results.length);
-        if (parsed.success) {
+        if (parsed.success && parsed.course) {
+          if (instructorLine) parsed.course.instructor = instructorLine;
+          if (roomLine) {
+            parsed.course.sessions = parsed.course.sessions.map((session) => ({
+              ...session,
+              room: roomLine,
+            }));
+          }
+          if (creditsLine) {
+            const read = interpretCredits(creditsLine);
+            if (read.detected) {
+              parsed.course.credits = read.credits;
+              if (read.unrealistic) {
+                parsed.warnings = [...(parsed.warnings || []), `Unusual credit value ${read.credits}`];
+              }
+            }
+          }
           results.push({
             ...parsed,
             rawText: trimmedBlock,
           });
+        } else if (!parsed.success) {
+          results.push({ ...parsed, rawText: trimmedBlock });
         }
       }
     }

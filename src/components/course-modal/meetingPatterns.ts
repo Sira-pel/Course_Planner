@@ -18,6 +18,7 @@ export interface EditableRecognizedItem {
   isEditing: boolean;
   hasError?: boolean;
   errorMessage?: string;
+  warningMessage?: string;
 }
 
 const DAY_ORDER = DAYS_LIST.map((d) => d.id);

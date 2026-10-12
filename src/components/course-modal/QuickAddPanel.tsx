@@ -1,9 +1,10 @@
 import React, { type Ref } from 'react';
 import { AlertTriangle, ClipboardPaste, Pencil, Trash2 } from 'lucide-react';
-import { Course, DAYS_LIST, DayOfWeek } from '../../types/schedule';
+import { ClassSession, Course, DAYS_LIST, DayOfWeek } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import { timeToMinutes } from '../../utils/timeUtils';
+import type { ColumnMapping, ColumnOption } from '../../utils/excelImport';
 import {
   DURATION_CHIPS,
   SAMPLE_CHIPS,
@@ -32,6 +33,38 @@ export interface QuickAddPanelProps {
   onUpdateItemCourse: (id: string, updates: Partial<Course>) => void;
   onUpdateItemSessionDays: (id: string, days: DayOfWeek[]) => void;
   onUpdateItemTimes: (id: string, startTime: string, endTime: string) => void;
+  tableColumns?: ColumnOption[];
+  tableMapping?: ColumnMapping | null;
+  onTableMappingChange?: (field: keyof ColumnMapping, columnKey: string) => void;
+}
+
+const MAPPING_FIELDS: { field: keyof ColumnMapping; label: string }[] = [
+  { field: 'code', label: 'Code' },
+  { field: 'name', label: 'Title' },
+  { field: 'section', label: 'Section' },
+  { field: 'days', label: 'Days' },
+  { field: 'time', label: 'Time' },
+  { field: 'schedule', label: 'Schedule' },
+  { field: 'instructor', label: 'Instructor' },
+  { field: 'credits', label: 'Credits' },
+  { field: 'room', label: 'Room' },
+];
+
+function summarizeSessions(sessions: ClassSession[]): string {
+  if (sessions.length === 0) return '';
+  const groups = new Map<string, { days: DayOfWeek[]; start: string; end: string; room?: string }>();
+  for (const session of sessions) {
+    const key = `${session.startTime}|${session.endTime}|${session.room || ''}`;
+    const group = groups.get(key) ?? { days: [], start: session.startTime, end: session.endTime, room: session.room };
+    group.days.push(session.day);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map((group) => {
+      const room = group.room ? ` ${group.room}` : '';
+      return `${formatDaysShort(group.days)} ${group.start}-${group.end}${room}`;
+    })
+    .join(' · ');
 }
 
 export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
@@ -49,7 +82,11 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
   onUpdateItemCourse,
   onUpdateItemSessionDays,
   onUpdateItemTimes,
+  tableColumns,
+  tableMapping,
+  onTableMappingChange,
 }) => {
+  const showMapping = Boolean(tableColumns && tableColumns.length > 0 && tableMapping && onTableMappingChange);
   return (
     <div ref={incomingRef} className="space-y-3 pr-0.5">
       <div>
@@ -95,6 +132,36 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
         </div>
       </div>
 
+      {showMapping && tableMapping && tableColumns && onTableMappingChange && (
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-2">
+          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Columns
+          </p>
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
+            {MAPPING_FIELDS.map((field) => (
+              <label key={field.field} className="block min-w-0">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                  {field.label}
+                </span>
+                <select
+                  aria-label={field.label}
+                  value={tableMapping[field.field] || ''}
+                  onChange={(event) => onTableMappingChange(field.field, event.target.value)}
+                  className="w-full min-w-0 text-xs px-2 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Skip</option>
+                  {tableColumns.map((column) => (
+                    <option key={column.key} value={column.key}>
+                      {column.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {recognizedItems.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
@@ -116,8 +183,18 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                 day: 'monday' as DayOfWeek,
               };
               const currentDays = c.sessions.map((s) => s.day);
-              const duration = timeToMinutes(session0.endTime) - timeToMinutes(session0.startTime);
+              const distinctTimes = new Set(c.sessions.map((session) => `${session.startTime}-${session.endTime}-${session.room || ''}`));
+              const singleWindow = c.sessions.length > 0 && distinctTimes.size === 1;
+              const duration = c.sessions.length > 0
+                ? timeToMinutes(session0.endTime) - timeToMinutes(session0.startTime)
+                : 0;
               const visibleTitle = displayCourseTitle(c);
+              const meetingSummary = summarizeSessions(c.sessions);
+              const meta = [
+                meetingSummary,
+                c.instructor,
+                c.credits ? `${c.credits} cr` : '',
+              ].filter(Boolean).join(' · ');
 
               return (
                 <div
@@ -143,7 +220,8 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                       <span className="min-w-0">
                         <span className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono font-semibold text-xs text-slate-900 dark:text-white">
-                            {c.code}
+                            {c.code || 'No code'}
+                            {c.section ? `-${c.section}` : ''}
                           </span>
                           {visibleTitle ? (
                             <span className="text-xs text-slate-600 dark:text-slate-300 truncate">{visibleTitle}</span>
@@ -151,9 +229,10 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                             <span className="text-xs text-slate-400 dark:text-slate-500 truncate">Add a title (optional)</span>
                           )}
                         </span>
-                        <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                          {formatDaysShort(currentDays)} {session0.startTime}-{session0.endTime}
-                          {item.hasError ? ` · ${item.errorMessage}` : ''}
+                        <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 break-words">
+                          {meta}
+                          {item.hasError ? `${meta ? ' · ' : ''}${item.errorMessage}` : ''}
+                          {!item.hasError && item.warningMessage ? ` · ${item.warningMessage}` : ''}
                         </span>
                       </span>
                     </label>
@@ -208,47 +287,57 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex gap-1" role="group" aria-label="Meeting days">
-                          {DAYS_LIST.map((d) => {
-                            const isSelected = currentDays.includes(d.id);
-                            return (
-                              <button
-                                key={d.id}
-                                type="button"
-                                aria-pressed={isSelected}
-                                onClick={() => {
-                                  const newDays = isSelected
-                                    ? currentDays.filter((cd) => cd !== d.id)
-                                    : [...currentDays, d.id];
-                                  onUpdateItemSessionDays(item.id, newDays);
-                                }}
-                                className={`course-day up-choice flex-1 rounded-md text-[11px] font-semibold ${
-                                  isSelected
-                                    ? 'is-on'
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                                }`}
-                              >
-                                {d.short === 'TH' ? 'Th' : d.short === 'SA' ? 'Sa' : d.short === 'SU' ? 'Su' : d.short}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {singleWindow ? (
+                          <div className="flex gap-1" role="group" aria-label="Meeting days">
+                            {DAYS_LIST.map((d) => {
+                              const isSelected = currentDays.includes(d.id);
+                              return (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  aria-pressed={isSelected}
+                                  onClick={() => {
+                                    const newDays = isSelected
+                                      ? currentDays.filter((cd) => cd !== d.id)
+                                      : [...currentDays, d.id];
+                                    onUpdateItemSessionDays(item.id, newDays);
+                                  }}
+                                  className={`course-day up-choice flex-1 rounded-md text-[11px] font-semibold ${
+                                    isSelected
+                                      ? 'is-on'
+                                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                                  }`}
+                                >
+                                  {d.short === 'TH' ? 'Th' : d.short === 'SA' ? 'Sa' : d.short === 'SU' ? 'Su' : d.short}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : meetingSummary ? (
+                          <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 break-words">
+                            {meetingSummary}
+                          </p>
+                        ) : null}
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          <input
-                            type="time"
-                            aria-label="Start time"
-                            value={session0.startTime}
-                            onChange={(e) => onUpdateItemTimes(item.id, e.target.value, session0.endTime)}
-                            className={`${inputClass} font-mono px-2 sm:px-3`}
-                          />
-                          <input
-                            type="time"
-                            aria-label="End time"
-                            value={session0.endTime}
-                            onChange={(e) => onUpdateItemTimes(item.id, session0.startTime, e.target.value)}
-                            className={`${inputClass} font-mono px-2 sm:px-3`}
-                          />
+                        <div className={`grid gap-2 ${singleWindow ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+                          {singleWindow && (
+                            <>
+                              <input
+                                type="time"
+                                aria-label="Start time"
+                                value={session0.startTime}
+                                onChange={(e) => onUpdateItemTimes(item.id, e.target.value, session0.endTime)}
+                                className={`${inputClass} font-mono px-2 sm:px-3`}
+                              />
+                              <input
+                                type="time"
+                                aria-label="End time"
+                                value={session0.endTime}
+                                onChange={(e) => onUpdateItemTimes(item.id, session0.startTime, e.target.value)}
+                                className={`${inputClass} font-mono px-2 sm:px-3`}
+                              />
+                            </>
+                          )}
                           <input
                             type="text"
                             aria-label="Section"
@@ -269,7 +358,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
-                            {DURATION_CHIPS.map((chip) => (
+                            {singleWindow && DURATION_CHIPS.map((chip) => (
                               <button
                                 key={chip.label}
                                 type="button"
