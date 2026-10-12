@@ -14,13 +14,12 @@ import {
 } from '../../utils/generatorPrefs';
 import {
   holdGeneratorSearch,
+  mergeDeeperPlans,
   nextShownCount,
   persistedGeneratorStep,
   readGeneratorSearch,
   readGeneratorSession,
   reopenGeneratorStep,
-  retainPreviewId,
-  shownCountAfterSearch,
   stampPickedCourses,
   withCourseFreshness,
   writeGeneratorSession,
@@ -279,20 +278,16 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const paintSearch = (search: GeneratorSearch, revealNew: boolean) => {
     const next = search.result();
     const previous = resultRef.current?.plans;
-    const nextShown = revealNew
-      ? shownCountAfterSearch(shownCountRef.current, previous?.length ?? 0, next.plans.length)
-      : shownCountRef.current;
-    if (nextShown !== shownCountRef.current) {
-      shownCountRef.current = nextShown;
-      setShownCount(nextShown);
+    const merged = revealNew
+      ? mergeDeeperPlans(previous, shownCountRef.current, next.plans)
+      : { plans: next.plans, shownCount: shownCountRef.current };
+    if (merged.shownCount !== shownCountRef.current) {
+      shownCountRef.current = merged.shownCount;
+      setShownCount(merged.shownCount);
     }
-    const preview = retainPreviewId(previous, next.plans, previewIdRef.current);
-    if (preview !== previewIdRef.current) {
-      previewIdRef.current = preview;
-      setPreviewId(preview);
-    }
-    resultRef.current = next;
-    setResult(next);
+    const painted = merged.plans === next.plans ? next : { ...next, plans: merged.plans };
+    resultRef.current = painted;
+    setResult(painted);
     setChecked(search.evaluated);
   };
 
@@ -595,7 +590,6 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     && !running
     && liveSearch
     && (liveSearch.capped || !liveSearch.done)
-    && shownCount >= result.plans.length
   );
 
   const footer = (
@@ -642,10 +636,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
           <span className="up-gen-foot-meta">
             {running
               ? `Checking ${checked.toLocaleString()}…`
-              : result
-                ? result.plans.length > 0
-                  ? `${result.validCount.toLocaleString()} clash-free · top ${visibleCount}`
-                  : '0 clash-free'
+              : result && result.plans.length > 0
+                ? `top ${visibleCount}`
                 : ''}
           </span>
         </>

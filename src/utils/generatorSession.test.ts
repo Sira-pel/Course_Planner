@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import type { GeneratorResult } from './planGenerator';
+import type { GeneratedPlan, GeneratorResult } from './planGenerator';
 import {
   holdGeneratorSearch,
+  mergeDeeperPlans,
   nextShownCount,
   readGeneratorSession,
   reopenGeneratorStep,
-  retainPreviewId,
-  shownCountAfterSearch,
   stampPickedCourses,
   withCourseFreshness,
   writeGeneratorSession,
@@ -39,6 +38,19 @@ function session(patch: Partial<GeneratorSession> = {}): GeneratorSession {
     courseStamp: null,
     outdated: false,
     ...patch,
+  };
+}
+
+function plan(id: string, groupKey: string, score: number): GeneratedPlan {
+  return {
+    id,
+    groupKey,
+    score,
+    courses: [],
+    pinnedCodes: [],
+    includedCodes: [],
+    skippedCodes: [],
+    tags: [],
   };
 }
 
@@ -86,22 +98,31 @@ describe('generator session', () => {
     assert.equal(nextShownCount(12, 12), 12);
   });
 
-  it('keeps every shown plan when a deeper search adds groups', () => {
-    assert.equal(shownCountAfterSearch(5, 0, 20), 5);
-    assert.equal(shownCountAfterSearch(5, 12, 15), 5);
-    assert.equal(shownCountAfterSearch(12, 12, 15), 15);
-    assert.equal(shownCountAfterSearch(3, 3, 3), 3);
+  it('keeps shown plans and adds a better section mix beside them', () => {
+    const previous = [
+      plan('old', 'A|B', 10),
+      plan('second', 'A|C', 20),
+      plan('hidden', 'A|D', 40),
+    ];
+    const next = [
+      plan('better', 'A|B', 5),
+      plan('second', 'A|C', 20),
+      plan('hidden', 'A|D', 40),
+    ];
+    const merged = mergeDeeperPlans(previous, 2, next);
+    assert.deepEqual(merged.plans.map((item) => item.id), ['better', 'old', 'second', 'hidden']);
+    assert.equal(merged.plans[1].score, 10);
+    assert.equal(merged.shownCount, 3);
   });
 
-  it('keeps the preview on the same group when a better section mix replaces it', () => {
-    const previous = [{ id: 'old', groupKey: 'CS 101|MATH 221' }];
-    const next = [
-      { id: 'better', groupKey: 'CS 101|MATH 221' },
-      { id: 'other', groupKey: 'CS 101|ENGL 110' },
-    ];
-    assert.equal(retainPreviewId(previous, next, 'old'), 'better');
-    assert.equal(retainPreviewId(previous, next, 'missing'), 'missing');
-    assert.equal(retainPreviewId(previous, next, null), null);
+  it('reveals new plans when every current plan is already on screen', () => {
+    const previous = [plan('old', 'A|B', 10)];
+    const next = [plan('better', 'A|B', 4), plan('fresh', 'C|D', 30)];
+    const merged = mergeDeeperPlans(previous, 5, next);
+    assert.deepEqual(merged.plans.map((item) => item.id), ['better', 'old', 'fresh']);
+    assert.equal(merged.shownCount, 3);
+    assert.deepEqual(mergeDeeperPlans(undefined, 5, next).plans.map((item) => item.id), ['better', 'fresh']);
+    assert.equal(mergeDeeperPlans(undefined, 5, next).shownCount, 5);
   });
 
   it('marks remembered results outdated when a picked course is edited or deleted', () => {

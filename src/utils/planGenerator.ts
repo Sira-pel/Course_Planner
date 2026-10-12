@@ -57,7 +57,7 @@ export interface GeneratorInput {
 
 export interface GeneratedPlan {
   id: string;
-  /** Same course codes, so section variants of one mix stay in one group. */
+  /** Course codes in this mix. Section variants of the same courses share this key. */
   groupKey: string;
   courses: Course[];
   pinnedCodes: string[];
@@ -530,12 +530,34 @@ function byBestFit(a: ScoredMix, b: ScoredMix): number {
   return a.score - b.score || (a.signature < b.signature ? -1 : a.signature > b.signature ? 1 : 0);
 }
 
+const MIN_VARIED_RESULTS = 3;
+
 /** Best section mix of each course group, best fit first. */
 function rankedGroups(buckets: Map<string, Bucket>): ScoredMix[] {
   return [...buckets.values()]
     .map((bucket) => bucket.items[0])
     .filter((item): item is ScoredMix => Boolean(item))
     .sort(byBestFit);
+}
+
+/**
+ * One plan per course group. When fewer than three groups exist, add the
+ * next-best section mixes until the list reaches three.
+ */
+function rankedPlans(buckets: Map<string, Bucket>): ScoredMix[] {
+  const chosen = rankedGroups(buckets);
+  if (chosen.length >= MIN_VARIED_RESULTS) return chosen;
+  const seen = new Set(chosen.map((item) => item.signature));
+  const variants = [...buckets.values()]
+    .flatMap((bucket) => bucket.items.slice(1))
+    .sort(byBestFit);
+  for (const variant of variants) {
+    if (chosen.length >= MIN_VARIED_RESULTS) break;
+    if (seen.has(variant.signature)) continue;
+    seen.add(variant.signature);
+    chosen.push(variant);
+  }
+  return chosen;
 }
 
 class PlanSearch implements GeneratorSearch {
@@ -710,7 +732,7 @@ class PlanSearch implements GeneratorSearch {
   }
 
   result(): GeneratorResult {
-    const chosen = rankedGroups(this.buckets);
+    const chosen = rankedPlans(this.buckets);
     const order = new Map(this.pickedOrder.map((group, index) => [group.key, index]));
     const plans = chosen.map((item) => {
       const sorted = [...item.courses].sort((a, b) => {

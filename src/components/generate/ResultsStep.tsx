@@ -15,32 +15,25 @@ function SearchProgress({ checked }: { checked: number }) {
   );
 }
 
-function FollowActions({
-  showMore,
-  remaining,
-  showDeeper,
-  onShowMore,
+function DeeperPrompt({
+  capped,
+  evaluated,
   onSearchDeeper,
 }: {
-  showMore: boolean;
-  remaining: number;
-  showDeeper: boolean;
-  onShowMore: () => void;
+  capped: boolean;
+  evaluated: number;
   onSearchDeeper: () => void;
 }) {
-  if (!showMore && !showDeeper) return null;
   return (
-    <div className="up-gen-follow">
-      {showMore && (
-        <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onShowMore}>
-          {`Show more (${remaining} left)`}
-        </button>
+    <div className="up-gen-deeper">
+      {capped && (
+        <p className="up-gen-hint">
+          {`Checked ${evaluated.toLocaleString('en-US')} mixes. There may be better plans`}
+        </p>
       )}
-      {showDeeper && (
-        <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onSearchDeeper}>
-          Search deeper
-        </button>
-      )}
+      <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onSearchDeeper}>
+        Search deeper
+      </button>
     </div>
   );
 }
@@ -90,17 +83,11 @@ export function ResultsStep({
 
   const remaining = Math.max(0, result.plans.length - shownCount);
   const showMore = !running && !outdated && remaining > 0;
-  const showDeeper = !running && !outdated && remaining === 0 && canSearchDeeper;
+  const showDeeper = !running && !outdated && canSearchDeeper;
   const visiblePlans = result.plans.slice(0, shownCount);
-  const follow = (
-    <FollowActions
-      showMore={showMore}
-      remaining={remaining}
-      showDeeper={showDeeper}
-      onShowMore={onShowMore}
-      onSearchDeeper={onSearchDeeper}
-    />
-  );
+  const deeper = showDeeper ? (
+    <DeeperPrompt capped={result.capped} evaluated={result.evaluated} onSearchDeeper={onSearchDeeper} />
+  ) : null;
 
   if (result.plans.length === 0) {
     return (
@@ -113,11 +100,11 @@ export function ResultsStep({
             </div>
           </div>
         )}
+        {deeper}
         <div className="up-gen-reason" role="status">
           <h3>Nothing fits</h3>
           <p>{result.emptyReason || 'No clash-free mix fits these courses and filters.'}</p>
         </div>
-        {follow}
       </div>
     );
   }
@@ -155,17 +142,13 @@ export function ResultsStep({
         </div>
       )}
       {running && <SearchProgress checked={checked} />}
-      {result.capped && !running && !outdated && (
-        <p className="up-gen-hint">
-          {`Stopped after ${result.evaluated.toLocaleString('en-US')} mixes so this stays responsive.`}
-        </p>
-      )}
+      {deeper}
       <div className="up-gen-results">
         {visiblePlans.map((plan, index) => {
           const savedPlan = savedByKey.get(sectionSetKey(plan.courses));
           const open = previewId === plan.id;
           return (
-            <article key={plan.groupKey} className="up-gen-card">
+            <article key={plan.id} className="up-gen-card">
               <header className="up-gen-card-head">
                 <h3>Option {index + 1}</h3>
                 {index === 0 && <span className="up-gen-best">Best fit</span>}
@@ -237,7 +220,13 @@ export function ResultsStep({
           );
         })}
       </div>
-      {follow}
+      {showMore && (
+        <div className="up-gen-follow">
+          <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onShowMore}>
+            {`Show more (${remaining} left)`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -3941,8 +3941,11 @@ html.dark .up-gen-panel,
   gap: 8px;
 }
 
+.up-gen-deeper,
 .up-gen-follow {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .up-gen-follow-btn {

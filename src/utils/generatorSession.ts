@@ -1,5 +1,11 @@
 import type { DayOfWeek } from '../types/schedule';
-import { courseCodeKey, MAX_RESULTS, type GeneratorResult, type GeneratorSearch } from './planGenerator';
+import {
+  courseCodeKey,
+  MAX_RESULTS,
+  type GeneratedPlan,
+  type GeneratorResult,
+  type GeneratorSearch,
+} from './planGenerator';
 
 export interface RememberedBlock {
   id: string;
@@ -29,7 +35,7 @@ export interface GeneratorSession {
   blocked: RememberedBlock[];
   result: GeneratorResult | null;
   previewId: string | null;
-  /** How many ranked groups were on screen. Reopening keeps this instead of dropping to 5. */
+  /** How many plans were on screen. Reopening keeps this instead of dropping to 5. */
   shownCount: number;
   /** Picked sections at generation time. A mismatch means the result is outdated. */
   courseStamp: string | null;
@@ -102,23 +108,40 @@ export function nextShownCount(shown: number, total: number): number {
   return Math.min(total, shown + MAX_RESULTS);
 }
 
-/**
- * When every current group is already on screen, keep those plans and make room
- * for new ones. A first result stays on the first page.
- */
-export function shownCountAfterSearch(shown: number, previousTotal: number, nextTotal: number): number {
-  if (previousTotal > 0 && shown >= previousTotal) return Math.max(shown, nextTotal);
-  return shown;
+function comparePlans(a: { score: number; id: string }, b: { score: number; id: string }): number {
+  return a.score - b.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
 
-export function retainPreviewId(
-  previous: { id: string; groupKey: string }[] | undefined,
-  next: { id: string; groupKey: string }[],
-  previewId: string | null,
-): string | null {
-  if (!previewId) return null;
-  if (next.some((plan) => plan.id === previewId)) return previewId;
-  const previousPlan = previous?.find((plan) => plan.id === previewId);
-  if (!previousPlan) return previewId;
-  return next.find((plan) => plan.groupKey === previousPlan.groupKey)?.id ?? previewId;
+/**
+ * Keep plans already on screen. A better section mix of a shown group is added
+ * beside it, in best-fit order, and does not replace it.
+ */
+export function mergeDeeperPlans(
+  previous: GeneratedPlan[] | undefined,
+  shown: number,
+  next: GeneratedPlan[],
+): { plans: GeneratedPlan[]; shownCount: number } {
+  if (!previous || previous.length === 0) {
+    return { plans: next, shownCount: shown };
+  }
+  const visible = Math.min(Math.max(shown, 0), previous.length);
+  const frozen = previous.slice(0, visible);
+  const frozenIds = new Set(frozen.map((plan) => plan.id));
+  const previousIds = new Set(previous.map((plan) => plan.id));
+  const newcomers = next.filter((plan) => !previousIds.has(plan.id)).sort(comparePlans);
+  const hidden = next.filter((plan) => !frozenIds.has(plan.id) && previousIds.has(plan.id));
+
+  const onScreen: GeneratedPlan[] = [];
+  let added = 0;
+  for (const plan of frozen) {
+    while (added < newcomers.length && comparePlans(newcomers[added], plan) < 0) {
+      onScreen.push(newcomers[added]);
+      added += 1;
+    }
+    onScreen.push(plan);
+  }
+  const tail = [...newcomers.slice(added), ...hidden].sort(comparePlans);
+  const plans = [...onScreen, ...tail];
+  const shownCount = shown >= previous.length ? plans.length : onScreen.length;
+  return { plans, shownCount };
 }

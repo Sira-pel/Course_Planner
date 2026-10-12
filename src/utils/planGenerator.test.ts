@@ -78,6 +78,36 @@ describe('plan generator', () => {
     assert.deepEqual(scores, [...scores].sort((a, b) => a - b));
     assert.deepEqual(result.plans[0].courses.map((course) => course.code).sort(), ['A', 'B']);
     assert.equal(result.plans[0].groupKey, 'A|B');
+    assert.equal(new Set(result.plans.map((plan) => plan.groupKey)).size, 15);
+  });
+
+  it('fills out to 3 plans with section mixes when fewer than 3 course groups exist', () => {
+    const sectionsA = [
+      section('a1', 'A', '09:00', '10:00', '001'),
+      section('a2', 'A', '08:00', '09:00', '002'),
+      section('a3', 'A', '07:00', '08:00', '003'),
+      section('a4', 'A', '06:00', '07:00', '004'),
+    ];
+    const result = generatePlans({
+      groups: [group('A', sectionsA), group('B', [section('b1', 'B', '10:00', '11:00')])],
+      pinnedKeys: [],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 3);
+    assert.deepEqual(result.plans.map((plan) => plan.groupKey), ['A|B', 'A|B', 'A|B']);
+    assert.deepEqual(
+      result.plans.map((plan) => plan.courses.find((course) => course.code === 'A')?.section),
+      ['001', '002', '003'],
+    );
+    const onlyOne = generatePlans({
+      groups: [
+        group('A', [section('a', 'A', '09:00', '10:00')]),
+        group('B', [section('b', 'B', '11:00', '12:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences(),
+    });
+    assert.equal(onlyOne.plans.length, 1);
   });
 
   it('raises the mix limit and continues without restarting', () => {
@@ -96,7 +126,8 @@ describe('plan generator', () => {
     const first = search.result();
     assert.equal(search.evaluated, MAX_EVALUATIONS);
     assert.equal(search.capped, true);
-    assert.equal(first.plans.length, 1);
+    assert.equal(first.plans.length, 3);
+    assert.equal(new Set(first.plans.map((plan) => plan.id)).size, 3);
     assert.equal(first.validCount, MAX_EVALUATIONS);
     const firstId = first.plans[0].id;
 
@@ -108,7 +139,7 @@ describe('plan generator', () => {
     assert.equal(search.evaluated, MAX_EVALUATIONS * 2);
     assert.equal(search.capped, false);
     assert.equal(second.validCount, MAX_EVALUATIONS * 2);
-    assert.equal(second.plans.length, 1);
+    assert.equal(second.plans.length, 3);
     assert.equal(second.plans[0].id, firstId);
     assert.equal(second.plans[0].groupKey, first.plans[0].groupKey);
 
