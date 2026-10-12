@@ -13,6 +13,11 @@ import {
   type StoredGeneratorPrefs,
 } from '../../utils/generatorPrefs';
 import {
+  readGeneratorSession,
+  reopenGeneratorStep,
+  writeGeneratorSession,
+} from '../../utils/generatorSession';
+import {
   SHEET_CLOSE_TRANSITION,
   SHEET_OPEN_TRANSITION,
   useModalMotion,
@@ -73,19 +78,20 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const plans = useScheduleStore((state) => state.plans);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const remembered = readGeneratorSession();
+  const [step, setStep] = useState<1 | 2 | 3>(() => reopenGeneratorStep(remembered));
   const [query, setQuery] = useState('');
-  const [picked, setPicked] = useState<Set<string>>(() => new Set());
-  const [pinned, setPinned] = useState<Set<string>>(() => new Set());
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(remembered?.picked ?? []));
+  const [pinned, setPinned] = useState<Set<string>>(() => new Set(remembered?.pinned ?? []));
   const [prefs, setPrefs] = useState<StoredGeneratorPrefs>(() => loadGeneratorPrefs());
   const [moreOpen, setMoreOpen] = useState(false);
-  const [blocked, setBlocked] = useState<BlockedDraft[]>([]);
-  const [lockedIds, setLockedIds] = useState<string[]>([]);
-  const [excludedIds, setExcludedIds] = useState<string[]>([]);
+  const [blocked, setBlocked] = useState<BlockedDraft[]>(() => remembered?.blocked ?? []);
+  const [lockedIds, setLockedIds] = useState<string[]>(() => remembered?.lockedIds ?? []);
+  const [excludedIds, setExcludedIds] = useState<string[]>(() => remembered?.excludedIds ?? []);
   const [running, setRunning] = useState(false);
   const [checked, setChecked] = useState(0);
-  const [result, setResult] = useState<GeneratorResult | null>(null);
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [result, setResult] = useState<GeneratorResult | null>(() => remembered?.result ?? null);
+  const [previewId, setPreviewId] = useState<string | null>(() => remembered?.previewId ?? null);
   const [dayOffNoticeDismissed, setDayOffNoticeDismissed] = useState(false);
   const blockSeq = useRef(0);
   const cancelRef = useRef<(() => void) | null>(null);
@@ -117,24 +123,21 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     : `Plans between ${creditWindow.min} and ${creditWindow.max} credits`;
 
   useEffect(() => {
+    writeGeneratorSession({
+      step: step === 3 && !result && !running ? 2 : step,
+      picked: [...picked],
+      pinned: [...pinned],
+      lockedIds,
+      excludedIds,
+      blocked,
+      result,
+      previewId,
+    });
+  }, [step, picked, pinned, lockedIds, excludedIds, blocked, result, previewId, running]);
+
+  useEffect(() => {
     if (!isOpen) return;
-    cancelRef.current?.();
-    cancelRef.current = null;
-    setStep(1);
     setQuery('');
-    setPicked(new Set());
-    setPinned(new Set());
-    setPrefs(loadGeneratorPrefs());
-    setMoreOpen(false);
-    setBlocked([]);
-    setLockedIds([]);
-    setExcludedIds([]);
-    setRunning(false);
-    setChecked(0);
-    setResult(null);
-    setPreviewId(null);
-    setDayOffNoticeDismissed(false);
-    pinBeforeLock.current.clear();
   }, [isOpen]);
 
   const onCloseRef = useRef(onClose);
