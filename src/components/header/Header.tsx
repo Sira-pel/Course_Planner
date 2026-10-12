@@ -133,7 +133,6 @@ export const Header = memo(function Header({
   useEffect(() => {
     if (conflictModalOpen) setConflictModalMounted(true);
   }, [conflictModalOpen]);
-  const [planIdConfirmDelete, setPlanIdConfirmDelete] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const lastSettingsToggleAt = useRef<number>(0);
   const ghostDropdownRef = useRef<HTMLDivElement>(null);
@@ -207,7 +206,7 @@ export const Header = memo(function Header({
     function handleClickOutside(e: MouseEvent) {
       if (isPhone) return;
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor')) return;
+      if (target?.closest('.up-menu') || target?.closest('.up-settings-anchor') || target?.closest('.up-plan-row-menu')) return;
       if (document.documentElement.classList.contains('is-theme-revealing')) return;
       if (ghostDropdownRef.current && !ghostDropdownRef.current.contains(e.target as Node)) {
         onCompareOpenChange(false);
@@ -495,7 +494,6 @@ export const Header = memo(function Header({
             editingName={editingName}
             newPlanInputName={newPlanInputName}
             nextSuggestedName={nextSuggestedName}
-            planIdConfirmDelete={planIdConfirmDelete}
             plansDropdownRef={plansDropdownRef}
             onToggleOpen={() => {
               setNewPlanInputName('');
@@ -514,12 +512,7 @@ export const Header = memo(function Header({
             onSaveRename={handleSaveRename}
             onCancelRename={() => setEditingPlanId(null)}
             onNewPlan={handleNewPlan}
-            onRequestDelete={setPlanIdConfirmDelete}
-            onConfirmDelete={(planId) => {
-              deletePlan(planId);
-              setPlanIdConfirmDelete(null);
-            }}
-            onCancelDelete={() => setPlanIdConfirmDelete(null)}
+            onDelete={deletePlan}
             onSharePlan={(plan) => onOpenShare?.(plan)}
           />
 

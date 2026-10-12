@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { TargetAndTransition, Transition } from 'motion/react';
 import {
   Trash2,
-  Edit2,
+  Pencil,
   Check,
   X,
   ChevronDown,
   FolderPlus,
   Folder,
   FolderKanban,
+  MoreHorizontal,
   Share2,
 } from 'lucide-react';
 import type { SchedulePlan } from '../../types/schedule';
@@ -33,7 +34,6 @@ interface PlansMenuProps {
   editingName: string;
   newPlanInputName: string;
   nextSuggestedName: string;
-  planIdConfirmDelete: string | null;
   plansDropdownRef: React.RefObject<HTMLDivElement | null>;
   onToggleOpen: () => void;
   onSelectPlan: (planId: string) => void;
@@ -43,9 +43,7 @@ interface PlansMenuProps {
   onSaveRename: () => void;
   onCancelRename: () => void;
   onNewPlan: (input: { name: string; mode: 'blank' | 'duplicate' }) => void;
-  onRequestDelete: (planId: string) => void;
-  onConfirmDelete: (planId: string) => void;
-  onCancelDelete: () => void;
+  onDelete: (planId: string) => void;
   onSharePlan?: (plan: SchedulePlan) => void;
 }
 
@@ -63,7 +61,6 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   editingName,
   newPlanInputName,
   nextSuggestedName,
-  planIdConfirmDelete,
   plansDropdownRef,
   onToggleOpen,
   onSelectPlan,
@@ -73,21 +70,86 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   onSaveRename,
   onCancelRename,
   onNewPlan,
-  onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
+  onDelete,
   onSharePlan,
 }) => {
   const reduceMotion = useReducedMotion();
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<'blank' | 'duplicate'>('blank');
+  const [rowMenuPlanId, setRowMenuPlanId] = useState<string | null>(null);
+  const rowMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const rowMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!plansMenuOpen) {
       setComposerOpen(false);
       setComposerMode('blank');
+      setRowMenuPlanId(null);
     }
   }, [plansMenuOpen]);
+
+  useEffect(() => {
+    if (rowMenuPlanId && !plans.some((plan) => plan.id === rowMenuPlanId)) {
+      setRowMenuPlanId(null);
+    }
+  }, [plans, rowMenuPlanId]);
+
+  useEffect(() => {
+    if (!rowMenuPlanId) return;
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (rowMenuRef.current?.contains(target)) return;
+      if (rowMenuButtonRef.current?.contains(target)) return;
+      setRowMenuPlanId(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setRowMenuPlanId(null);
+    };
+    document.addEventListener('mousedown', onPointer);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [rowMenuPlanId]);
+
+  useLayoutEffect(() => {
+    if (!rowMenuPlanId) return;
+    const menu = rowMenuRef.current;
+    const button = rowMenuButtonRef.current;
+    if (!menu || !button) return;
+
+    const place = () => {
+      if (!button.isConnected) {
+        setRowMenuPlanId(null);
+        return;
+      }
+      const rect = button.getBoundingClientRect();
+      const width = menu.offsetWidth;
+      const height = menu.offsetHeight;
+      const gap = 4;
+      let top = rect.bottom + gap;
+      if (top + height > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - gap - height);
+      }
+      let left = rect.right - width;
+      left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+      menu.style.top = `${top}px`;
+      menu.style.left = `${left}px`;
+      menu.style.visibility = 'visible';
+    };
+
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [rowMenuPlanId, plans.length]);
 
   const submitNewPlan = () => {
     onNewPlan({ name: newPlanInputName, mode: composerMode });
@@ -145,8 +207,14 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   value={editingName}
                   onChange={(e) => onEditingNameChange(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') onSaveRename();
-                    if (e.key === 'Escape') onCancelRename();
+                    if (e.key === 'Enter') {
+                      e.stopPropagation();
+                      onSaveRename();
+                    }
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      onCancelRename();
+                    }
                   }}
                   autoFocus
                   className="flex-1 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -173,39 +241,10 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
             );
           }
 
-          if (planIdConfirmDelete === plan.id) {
-            return (
-              <div
-                key={plan.id}
-                className="flex items-center justify-between p-2 rounded-md bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50"
-              >
-                <span className="text-[11px] text-rose-700 dark:text-rose-300 font-medium truncate mr-1">
-                  Delete "{plan.name}"?
-                </span>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onConfirmDelete(plan.id)}
-                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-semibold up-chrome-btn"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCancelDelete}
-                    className="px-1.5 py-0.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-[10px] up-chrome-btn"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
           return (
             <div
               key={plan.id}
-              className={`group flex items-center justify-between px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`flex items-center justify-between px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
                 isActive
                   ? 'up-selected border'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
@@ -226,54 +265,24 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                 </span>
               </div>
 
-              <div
-                className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 ml-1.5 shrink-0"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                className="up-plan-row-btn up-chrome-btn"
+                aria-haspopup="menu"
+                aria-expanded={rowMenuPlanId === plan.id}
+                aria-label={`Actions for ${plan.name}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (rowMenuPlanId === plan.id) {
+                    setRowMenuPlanId(null);
+                    return;
+                  }
+                  rowMenuButtonRef.current = event.currentTarget;
+                  setRowMenuPlanId(plan.id);
+                }}
               >
-                {onSharePlan && (
-                  <button
-                    type="button"
-                    onClick={() => onSharePlan(plan)}
-                    className={`p-1 rounded transition-colors up-chrome-btn ${
-                      isActive
-                        ? 'hover:bg-white/40 dark:hover:bg-white/10'
-                        : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700'
-                    }`}
-                    title={`Share ${plan.name}`}
-                    aria-label={`Share ${plan.name}`}
-                  >
-                    <Share2 className="w-3 h-3" />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onStartRename(plan.id, plan.name)}
-                  className={`p-1 rounded transition-colors up-chrome-btn ${
-                    isActive
-                      ? 'hover:bg-white/40 dark:hover:bg-white/10'
-                      : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700'
-                  }`}
-                  title="Rename plan"
-                  aria-label={`Rename ${plan.name}`}
-                >
-                  <Edit2 className="w-3 h-3" />
-                </button>
-                {plans.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRequestDelete(plan.id)}
-                    className={`p-1 rounded transition-colors up-chrome-btn ${
-                      isActive
-                        ? 'hover:text-rose-600 dark:hover:text-rose-300 hover:bg-white/40 dark:hover:bg-white/10'
-                        : 'text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700'
-                    }`}
-                    title="Delete plan"
-                    aria-label={`Delete ${plan.name}`}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
             </div>
           );
         })}
@@ -352,6 +361,62 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
       </div>
     </>
   );
+
+  const menuPlan = plans.find((plan) => plan.id === rowMenuPlanId);
+  const canDelete = plans.length > 1;
+  const rowMenu = plansMenuOpen && menuPlan && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        ref={rowMenuRef}
+        role="menu"
+        aria-label={`${menuPlan.name} actions`}
+        className="up-plan-row-menu"
+      >
+        {onSharePlan && (
+          <button
+            type="button"
+            role="menuitem"
+            className="up-plan-row-item up-chrome-btn"
+            onClick={() => {
+              setRowMenuPlanId(null);
+              onSharePlan(menuPlan);
+            }}
+          >
+            <Share2 className="w-4 h-4" />
+            Share
+          </button>
+        )}
+        <button
+          type="button"
+          role="menuitem"
+          className="up-plan-row-item up-chrome-btn"
+          onClick={() => {
+            setRowMenuPlanId(null);
+            onStartRename(menuPlan.id, menuPlan.name);
+          }}
+        >
+          <Pencil className="w-4 h-4" />
+          Rename
+        </button>
+        {canDelete && <div className="up-plan-row-rule" role="separator" />}
+        {canDelete && (
+          <button
+            type="button"
+            role="menuitem"
+            className="up-plan-row-item up-plan-row-item-danger up-chrome-btn"
+            onClick={() => {
+              setRowMenuPlanId(null);
+              onDelete(menuPlan.id);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete plan
+          </button>
+        )}
+      </div>,
+      document.body,
+    )
+    : null;
 
   return (
     <div className="up-plans-anchor relative" ref={plansDropdownRef}>
@@ -450,6 +515,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
           )}
         </AnimatePresence>
       )}
+      {rowMenu}
     </div>
   );
 };
