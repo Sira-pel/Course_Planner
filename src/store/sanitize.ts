@@ -11,47 +11,59 @@ function safeTrim(value: unknown, maxLength: number): string | undefined {
   return trimmed.slice(0, maxLength);
 }
 
-function parseTimeToMinutes(timeStr: unknown, defaultMinutes: number): { minutes: number; formatted: string } {
-  if (typeof timeStr !== 'string' || !timeStr.trim()) {
-    const hours = Math.floor(defaultMinutes / 60);
-    const mins = defaultMinutes % 60;
-    return {
-      minutes: defaultMinutes,
-      formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
-    };
-  }
-
-  const trimmed = timeStr.trim();
-  const parsed = parseSessionTime(trimmed);
-  if (parsed) {
-    const minutes = parsed.hours * 60 + parsed.minutes;
-    return {
-      minutes,
-      formatted: `${parsed.hours.toString().padStart(2, '0')}:${parsed.minutes.toString().padStart(2, '0')}`,
-    };
-  }
-
-  // Handle military time without colon: 3 or 4 digits (e.g., "0900", "900", "1430")
-  const militaryMatch = /^(\d{1,2})(\d{2})$/.exec(trimmed);
-  if (militaryMatch) {
-    const hours = Number(militaryMatch[1]);
-    const mins = Number(militaryMatch[2]);
-    if (hours >= 0 && hours <= 23 && mins >= 0 && mins <= 59) {
-      const minutes = hours * 60 + mins;
-      return {
-        minutes,
-        formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
-      };
-    }
-  }
-
-  // Fallback to default
-  const hours = Math.floor(defaultMinutes / 60);
-  const mins = defaultMinutes % 60;
+function clockFromParts(hours: number, minutes: number): { minutes: number; formatted: string } | null {
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
   return {
-    minutes: defaultMinutes,
-    formatted: `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`,
+    minutes: hours * 60 + minutes,
+    formatted: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
   };
+}
+
+/**
+ * Read a clock exactly. "09:00", "9:00 AM", "09:00:00", and "0900" all become
+ * "09:00". Unrecognized values return null so the caller can fall back.
+ */
+function parseClock(timeStr: unknown): { minutes: number; formatted: string } | null {
+  if (typeof timeStr === 'number' && Number.isFinite(timeStr) && timeStr >= 0 && timeStr < 1) {
+    const total = Math.round(timeStr * 24 * 60) % (24 * 60);
+    return clockFromParts(Math.floor(total / 60), total % 60);
+  }
+  if (typeof timeStr !== 'string') return null;
+  const trimmed = timeStr.trim().replace(/[\uFF1A\u2236]/g, ':');
+  if (!trimmed) return null;
+
+  const ampm = /^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*([ap])\.?m\.?$/i.exec(trimmed);
+  if (ampm) {
+    let hours = Number(ampm[1]);
+    const minutes = ampm[2] == null ? 0 : Number(ampm[2]);
+    const pm = ampm[3].toLowerCase() === 'p';
+    if (hours > 12) return null;
+    if (pm && hours < 12) hours += 12;
+    else if (!pm && hours === 12) hours = 0;
+    return clockFromParts(hours, minutes);
+  }
+
+  const withSeconds = /^(\d{1,2}):(\d{2}):\d{2}$/.exec(trimmed);
+  if (withSeconds) return clockFromParts(Number(withSeconds[1]), Number(withSeconds[2]));
+
+  const parsed = parseSessionTime(trimmed);
+  if (parsed) return clockFromParts(parsed.hours, parsed.minutes);
+
+  const dotted = /^(\d{1,2})\.(\d{2})$/.exec(trimmed);
+  if (dotted) return clockFromParts(Number(dotted[1]), Number(dotted[2]));
+
+  // Military time without a colon: "0900", "900", "1430".
+  const military = /^(\d{3,4})$/.exec(trimmed);
+  if (military) {
+    const digits = military[1].padStart(4, '0');
+    return clockFromParts(Number(digits.slice(0, 2)), Number(digits.slice(2)));
+  }
+  return null;
+}
+
+function parseTimeToMinutes(timeStr: unknown, defaultMinutes: number): { minutes: number; formatted: string } {
+  return parseClock(timeStr) ?? clockFromParts(Math.floor(defaultMinutes / 60), defaultMinutes % 60)!;
 }
 
 export function sanitizeCourse(c: any, index: number): Course {

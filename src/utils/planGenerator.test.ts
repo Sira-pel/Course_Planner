@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Course, DayOfWeek } from '../types/schedule';
+import { timeToMinutes } from './timeUtils';
+import { nextShownCount } from './generatorSession';
 import {
+  gapFallbackNotice,
   generatePlans,
   MAX_EVALUATIONS,
   startGeneratorSearch,
@@ -44,7 +47,7 @@ function preferences(patch: Partial<GeneratorPreferences> = {}): GeneratorPrefer
     courseCount: 2,
     creditMin: 0,
     creditMax: 30,
-    gapsEnabled: true,
+    gapsEnabled: false,
     gapLimit: 60,
     lunchEnabled: false,
     lunchStart: 11 * 60 + 30,
@@ -164,5 +167,109 @@ describe('plan generator', () => {
     assert.equal(result.plans.length, 0);
     assert.equal(result.capped, true);
     assert.equal(result.emptyReason, 'Checked 5,000 mixes and none were clash-free. Narrow the list or clear a blocked time.');
+    assert.equal(result.gapNotice, null);
+  });
+
+  it('drops plans whose longest gap is over the limit and keeps the max-gap tie break', () => {
+    const chain = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((code, index) => {
+      const start = 8 * 60 + index * 60;
+      return group(code, [section(code.toLowerCase(), code, clock(start), clock(start + 30))]);
+    });
+    const far = group('H', [section('h', 'H', '20:00', '21:00')]);
+    const result = generatePlans({
+      groups: [...chain, far],
+      pinnedKeys: [],
+      preferences: preferences({ gapsEnabled: true, gapLimit: 60, courseCount: 2 }),
+    });
+    assert.equal(result.gapNotice, null);
+    assert.equal(result.plans.length, 6);
+    assert.ok(result.plans.every((plan) => longestGap(plan.courses) <= 60));
+    assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'H')), false);
+    assert.equal(nextShownCount(5, result.plans.length), 6);
+    assert.ok(longestGap(result.plans[5].courses) <= 60);
+
+    const ranked = generatePlans({
+      groups: [
+        group('A', [section('a', 'A', '09:00', '10:00')]),
+        group('B', [section('b', 'B', '10:00', '11:00')]),
+        group('C', [section('c', 'C', '12:00', '13:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences({ gapsEnabled: true, gapLimit: 60, courseCount: 2 }),
+    });
+    assert.deepEqual(ranked.plans[0].courses.map((course) => course.code).sort(), ['A', 'B']);
+    assert.equal(longestGap(ranked.plans[0].courses), 0);
+    assert.ok(ranked.plans.every((plan) => longestGap(plan.courses) <= 60));
+    assert.equal(ranked.plans.some((plan) => plan.groupKey === 'A|C'), false);
+  });
+
+  it('falls back to the closest matches when no plan meets the gap limit', () => {
+    const result = generatePlans({
+      groups: [
+        group('A', [section('a', 'A', '09:00', '10:00')]),
+        group('B', [section('b', 'B', '12:00', '13:00')]),
+        group('C', [section('c', 'C', '15:00', '16:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences({ gapsEnabled: true, gapLimit: 60, courseCount: 2 }),
+    });
+    assert.equal(result.gapNotice, gapFallbackNotice(60));
+    assert.equal(result.gapNotice, 'No plans fit a 1h gap limit; showing closest matches.');
+    assert.equal(result.plans.length, 3);
+    assert.equal(longestGap(result.plans[0].courses), 120);
+    assert.equal(longestGap(result.plans[result.plans.length - 1].courses), 300);
+  });
+
+  it('replaces the gap fallback after a deeper search finds a plan that fits', () => {
+    const sectionsA = Array.from({ length: 100 }, (_, index) => (
+      index < 50
+        ? section(`a${index}`, 'A', '09:00', '10:00', String(index + 1).padStart(3, '0'))
+        : section(`a${index}`, 'A', '13:00', '14:00', String(index + 1).padStart(3, '0'))
+    ));
+    const sectionsB = Array.from({ length: 100 }, (_, index) => (
+      section(`b${index}`, 'B', '14:00', '15:00', String(index + 1).padStart(3, '0'))
+    ));
+    const search = startGeneratorSearch({
+      groups: [group('A', sectionsA), group('B', sectionsB)],
+      pinnedKeys: [],
+      preferences: preferences({ gapsEnabled: true, gapLimit: 60 }),
+    });
+    while (!search.done) search.advance(500);
+    const first = search.result();
+    assert.equal(first.gapNotice, 'No plans fit a 1h gap limit; showing closest matches.');
+    assert.ok(first.plans.length > 0);
+    assert.ok(first.plans.every((plan) => longestGap(plan.courses) > 60));
+
+    search.raiseLimit(MAX_EVALUATIONS);
+    while (!search.done) search.advance(500);
+    const second = search.result();
+    assert.equal(second.gapNotice, null);
+    assert.ok(second.plans.length > 0);
+    assert.ok(second.plans.every((plan) => longestGap(plan.courses) <= 60));
+    assert.equal(search.capped, false);
   });
 });
+
+function clock(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+function longestGap(courses: Course[]): number {
+  const byDay = new Map<string, { start: number; end: number }[]>();
+  for (const course of courses) {
+    for (const session of course.sessions || []) {
+      const list = byDay.get(session.day) ?? [];
+      list.push({ start: timeToMinutes(session.startTime), end: timeToMinutes(session.endTime) });
+      byDay.set(session.day, list);
+    }
+  }
+  let max = 0;
+  for (const list of byDay.values()) {
+    list.sort((a, b) => a.start - b.start);
+    for (let index = 1; index < list.length; index += 1) {
+      const gap = list[index].start - list[index - 1].end;
+      if (gap > max) max = gap;
+    }
+  }
+  return max;
+}

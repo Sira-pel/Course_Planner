@@ -103,6 +103,24 @@ export function withCourseFreshness(session: GeneratorSession, courses: StampedC
   return { ...session, outdated };
 }
 
+/**
+ * Fresh results replace the list. Search deeper keeps plans already on screen,
+ * except when a gap-limit fallback is replaced by plans that actually fit.
+ */
+export function mergeSearchResults(
+  previous: GeneratorResult | null,
+  next: GeneratorResult,
+  shownCount: number,
+  revealNew: boolean,
+): { plans: GeneratedPlan[]; shownCount: number } {
+  const leftFallback = Boolean(previous?.gapNotice) && next.gapNotice == null;
+  if (!revealNew || !previous || leftFallback) {
+    const count = leftFallback ? Math.min(MAX_RESULTS, next.plans.length) : shownCount;
+    return { plans: next.plans, shownCount: count };
+  }
+  return mergeDeeperPlans(previous.plans, shownCount, next.plans);
+}
+
 export function nextShownCount(shown: number, total: number): number {
   if (total <= shown) return shown;
   return Math.min(total, shown + MAX_RESULTS);

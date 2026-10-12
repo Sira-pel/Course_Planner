@@ -238,7 +238,7 @@ export function PreferencesStep({
       <section className="up-gen-pref">
         <div className="up-gen-pref-copy">
           <h3>Keep gaps short</h3>
-          <p>{prefs.gapsEnabled ? `Prefer ≤ ${gapPhrase(prefs.gapLimit)} between classes` : 'Gaps will not change the ranking'}</p>
+          <p>{prefs.gapsEnabled ? `At most ${gapPhrase(prefs.gapLimit)} between classes` : 'Gaps will not change the ranking'}</p>
         </div>
         <div className="up-gen-pref-controls">
           <div className="up-segment up-gen-segment" role="tablist" aria-label="Gap limit">

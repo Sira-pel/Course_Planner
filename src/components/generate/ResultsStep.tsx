@@ -117,6 +117,13 @@ export function ResultsStep({
 
   return (
     <div className="up-gen-step-body">
+      {result.gapNotice && (
+        <div className="up-gen-notice" role="status">
+          <div className="up-gen-notice-copy">
+            <p>{result.gapNotice}</p>
+          </div>
+        </div>
+      )}
       {notices.length > 0 && !noticeDismissed && (
         <div className="up-gen-notice" role="status">
           <div className="up-gen-notice-copy">

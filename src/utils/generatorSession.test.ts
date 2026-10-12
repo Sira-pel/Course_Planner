@@ -4,6 +4,7 @@ import type { GeneratedPlan, GeneratorResult } from './planGenerator';
 import {
   holdGeneratorSearch,
   mergeDeeperPlans,
+  mergeSearchResults,
   nextShownCount,
   readGeneratorSession,
   reopenGeneratorStep,
@@ -22,6 +23,7 @@ const emptyResult: GeneratorResult = {
   estimate: 0,
   emptyReason: null,
   dayOffNotices: [],
+  gapNotice: null,
 };
 
 function session(patch: Partial<GeneratorSession> = {}): GeneratorSession {
@@ -154,4 +156,47 @@ describe('generator session', () => {
     const restored = withCourseFreshness(edited, courses);
     assert.equal(restored.outdated, false);
   });
+
+  it('drops fallback plans when a deeper search finds mixes inside the gap limit', () => {
+    const fallback = {
+      ...emptyResult,
+      plans: [generated('wide', 40)],
+      gapNotice: 'No plans fit a 1h gap limit; showing closest matches.',
+    };
+    const fitted = {
+      ...emptyResult,
+      plans: [generated('tight', 1), generated('tighter', 2)],
+      gapNotice: null,
+    };
+    const merged = mergeSearchResults(fallback, fitted, 5, true);
+    assert.deepEqual(merged.plans.map((plan) => plan.id), ['tight', 'tighter']);
+    assert.equal(merged.shownCount, 2);
+  });
+
+  it('still keeps plans already on screen when search deeper stays in the same list', () => {
+    const previous = {
+      ...emptyResult,
+      plans: [generated('a', 1), generated('b', 2)],
+    };
+    const next = {
+      ...emptyResult,
+      plans: [generated('a', 1), generated('b', 2), generated('c', 3)],
+    };
+    const merged = mergeSearchResults(previous, next, 1, true);
+    assert.deepEqual(merged.plans.map((plan) => plan.id), ['a', 'b', 'c']);
+    assert.equal(merged.shownCount, 1);
+  });
 });
+
+function generated(id: string, score: number): GeneratedPlan {
+  return {
+    id,
+    groupKey: id,
+    courses: [],
+    pinnedCodes: [],
+    includedCodes: [],
+    skippedCodes: [],
+    tags: [],
+    score,
+  };
+}

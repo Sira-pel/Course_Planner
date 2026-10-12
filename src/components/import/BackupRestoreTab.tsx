@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Database, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useScheduleStore } from '../../store/useScheduleStore';
+import { backupReplaceMessage, countCourses, loadBackup } from '../../utils/backupRestore';
+import { BackupRestoreDialog } from './BackupRestoreDialog';
 
 interface BackupRestoreTabProps {
   onSuccess: () => void;
@@ -8,9 +10,11 @@ interface BackupRestoreTabProps {
 
 export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess }) => {
   const importFullState = useScheduleStore((state) => state.importFullState);
+  const plans = useScheduleStore((state) => state.plans);
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,6 +41,19 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
       setImportError('Please paste or upload a valid JSON backup');
       return;
     }
+    const loaded = loadBackup(importJson);
+    if (loaded.ok === false) {
+      setImportError(loaded.error);
+      return;
+    }
+    setConfirmMessage(backupReplaceMessage(
+      { plans: plans.length, courses: countCourses(plans) },
+      { plans: loaded.backup.plans.length, courses: countCourses(loaded.backup.plans) },
+    ));
+  };
+
+  const handleConfirmRestore = () => {
+    setConfirmMessage(null);
     const res = importFullState(importJson);
     if (res.success) {
       setImportSuccess(true);
@@ -44,7 +61,7 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
         onSuccess();
       }, 1200);
     } else {
-      setImportError(res.error || 'Failed to parse JSON backup');
+      setImportError(res.error || 'This backup could not be read. Use a Uniplan JSON backup and try again.');
     }
   };
 
@@ -112,6 +129,12 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
           Apply Backup & Restore
         </button>
       </div>
+      <BackupRestoreDialog
+        open={confirmMessage != null}
+        message={confirmMessage ?? ''}
+        onCancel={() => setConfirmMessage(null)}
+        onConfirm={handleConfirmRestore}
+      />
     </div>
   );
 };

@@ -14,7 +14,7 @@ import {
 } from '../../utils/generatorPrefs';
 import {
   holdGeneratorSearch,
-  mergeDeeperPlans,
+  mergeSearchResults,
   nextShownCount,
   persistedGeneratorStep,
   readGeneratorSearch,
@@ -277,10 +277,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const paintSearch = (search: GeneratorSearch, revealNew: boolean) => {
     const next = search.result();
-    const previous = resultRef.current?.plans;
-    const merged = revealNew
-      ? mergeDeeperPlans(previous, shownCountRef.current, next.plans)
-      : { plans: next.plans, shownCount: shownCountRef.current };
+    const merged = mergeSearchResults(resultRef.current, next, shownCountRef.current, revealNew);
     if (merged.shownCount !== shownCountRef.current) {
       shownCountRef.current = merged.shownCount;
       setShownCount(merged.shownCount);

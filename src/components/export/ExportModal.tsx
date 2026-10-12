@@ -26,6 +26,8 @@ import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
 import { BackupTab } from './BackupTab';
+import { BackupRestoreDialog } from '../import/BackupRestoreDialog';
+import { backupReplaceMessage, countCourses, loadBackup } from '../../utils/backupRestore';
 
 export type ExportTabType = 'text' | 'share' | 'ics' | 'image' | 'backup';
 
@@ -183,6 +185,7 @@ const ExportModalBody: React.FC<{
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
 
   // Memoize generated text so it only recalculates when activePlan or textFormat changes
   const generatedText = useMemo(() => {
@@ -291,6 +294,19 @@ const ExportModalBody: React.FC<{
       setImportError('Please paste or upload a valid JSON backup string');
       return;
     }
+    const loaded = loadBackup(importJson);
+    if (loaded.ok === false) {
+      setImportError(loaded.error);
+      return;
+    }
+    setConfirmMessage(backupReplaceMessage(
+      { plans: plans.length, courses: countCourses(plans) },
+      { plans: loaded.backup.plans.length, courses: countCourses(loaded.backup.plans) },
+    ));
+  };
+
+  const handleConfirmRestore = () => {
+    setConfirmMessage(null);
     const res = importFullState(importJson);
     if (res.success) {
       setImportSuccess(true);
@@ -298,7 +314,7 @@ const ExportModalBody: React.FC<{
         onClose();
       }, 1200);
     } else {
-      setImportError(res.error || 'Failed to parse JSON backup');
+      setImportError(res.error || 'This backup could not be read. Use a Uniplan JSON backup and try again.');
     }
   };
 
@@ -474,6 +490,12 @@ const ExportModalBody: React.FC<{
                   onApplyImport={handleApplyImport}
                 />
               )}
+              <BackupRestoreDialog
+                open={confirmMessage != null}
+                message={confirmMessage ?? ''}
+                onCancel={() => setConfirmMessage(null)}
+                onConfirm={handleConfirmRestore}
+              />
             </motion.div>
         </AnimatedBody>
       </motion.div>

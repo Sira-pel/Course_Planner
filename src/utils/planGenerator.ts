@@ -76,6 +76,8 @@ export interface GeneratorResult {
   emptyReason: string | null;
   /** Requested days off that no mix can honor, with the course or locked section that blocks them. */
   dayOffNotices: string[];
+  /** Set when the gap limit ruled out every mix and the list is the closest soft-scored plans. */
+  gapNotice: string | null;
 }
 
 export interface GeneratorSearch {
@@ -375,7 +377,21 @@ function formatGap(minutes: number): string {
   return `Max gap ${hours}h ${rest}m`;
 }
 
-function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: number; tags: string[] } {
+function gapLimitPhrase(limit: number): string {
+  if (limit > 0 && limit % 60 === 0) {
+    const hours = limit / 60;
+    if (hours === 1) return '1h';
+    if (hours === 2) return '2h';
+    return `${hours}h`;
+  }
+  return `${limit}m`;
+}
+
+export function gapFallbackNotice(limit: number): string {
+  return `No plans fit a ${gapLimitPhrase(limit)} gap limit; showing closest matches.`;
+}
+
+function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: number; tags: string[]; maxGap: number } {
   const days = collectDays(courses);
   let score = 0;
   let maxGap = 0;
@@ -431,7 +447,7 @@ function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: numb
   tags.push(formatGap(maxGap));
   if (prefs.dailyCap != null) tags.push(`Max ${prefs.dailyCap} a day`);
   if (prefs.lunchEnabled && lunchWindowOk && missingLunch === 0 && days.size > 0) tags.push('Lunch free');
-  return { score, tags };
+  return { score, tags, maxGap };
 }
 
 function lockedSectionLabel(code: string, section: Course): string {
@@ -572,6 +588,8 @@ class PlanSearch implements GeneratorSearch {
   private jobs: MixJob[] = [];
   private cursor = 0;
   private buckets = new Map<string, Bucket>();
+  /** Soft-scored mixes that miss the gap limit, used only when nothing fits. */
+  private relaxed = new Map<string, Bucket>();
   private prefs: GeneratorPreferences;
   private prepared: PreparedGroup[];
   private pinned: Set<string>;
@@ -715,24 +733,34 @@ class PlanSearch implements GeneratorSearch {
     if (this.jobs.every((job) => job.done)) this.done = true;
   }
 
-  private consider(courses: Course[]): void {
-    this.validCount += 1;
-    const setKey = courses.map((course) => courseCodeKey(course.code)).sort().join('|');
-    const signature = courses.map((course) => course.id).join('|');
-    const { score } = scoreMix(courses, this.prefs);
-    let bucket = this.buckets.get(setKey);
+  private remember(buckets: Map<string, Bucket>, setKey: string, item: ScoredMix): void {
+    let bucket = buckets.get(setKey);
     if (!bucket) {
       bucket = { items: [] };
-      this.buckets.set(setKey, bucket);
+      buckets.set(setKey, bucket);
     }
-    if (bucket.items.some((item) => item.signature === signature)) return;
-    bucket.items.push({ courses, score, signature });
+    if (bucket.items.some((existing) => existing.signature === item.signature)) return;
+    bucket.items.push(item);
     bucket.items.sort((a, b) => a.score - b.score);
     if (bucket.items.length > 4) bucket.items.length = 4;
   }
 
+  private consider(courses: Course[]): void {
+    this.validCount += 1;
+    const setKey = courses.map((course) => courseCodeKey(course.code)).sort().join('|');
+    const signature = courses.map((course) => course.id).join('|');
+    const { score, maxGap } = scoreMix(courses, this.prefs);
+    const item = { courses, score, signature };
+    const overGap = this.prefs.gapsEnabled && maxGap > this.prefs.gapLimit;
+    if (overGap) this.remember(this.relaxed, setKey, item);
+    else this.remember(this.buckets, setKey, item);
+  }
+
   result(): GeneratorResult {
-    const chosen = rankedPlans(this.buckets);
+    const strict = rankedPlans(this.buckets);
+    const gapFallback = this.prefs.gapsEnabled && strict.length === 0 && this.relaxed.size > 0;
+    const chosen = gapFallback ? rankedPlans(this.relaxed) : strict;
+    const gapNotice = gapFallback ? gapFallbackNotice(this.prefs.gapLimit) : null;
     const order = new Map(this.pickedOrder.map((group, index) => [group.key, index]));
     const plans = chosen.map((item) => {
       const sorted = [...item.courses].sort((a, b) => {
@@ -785,6 +813,7 @@ class PlanSearch implements GeneratorSearch {
       estimate: this.estimate,
       emptyReason,
       dayOffNotices: plans.length > 0 ? dayOffNotices(this.prepared, this.pinned, this.prefs) : [],
+      gapNotice,
     };
   }
 }
