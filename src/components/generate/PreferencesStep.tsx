@@ -195,7 +195,7 @@ export function PreferencesStep({
           <p>{perPlanHint}</p>
         </div>
         <div className="up-gen-pref-controls">
-          <div className="up-segment up-segment-2 up-gen-segment" role="tablist" aria-label="Plan size">
+          <div className="up-gen-mode" role="tablist" aria-label="Plan size">
             {(['courses', 'credits'] as const).map((mode) => {
               const on = prefs.mode === mode;
               return (
@@ -208,7 +208,11 @@ export function PreferencesStep({
                   onClick={() => onPrefs({ mode })}
                 >
                   {on && <ModalTabPill layoutId="generate-per-plan" />}
-                  <span className="relative z-10">{mode === 'courses' ? 'Courses' : 'Credits'}</span>
+                  <span className="up-gen-mode-face">
+                    <span className="relative z-10">{mode === 'courses' ? 'Courses' : 'Credits'}</span>
+                    <span className="up-gen-mode-sizer" aria-hidden="true">Courses</span>
+                    <span className="up-gen-mode-sizer" aria-hidden="true">Credits</span>
+                  </span>
                 </button>
               );
             })}

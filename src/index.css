@@ -3887,6 +3887,55 @@ html.dark .up-gen-panel,
   width: auto;
 }
 
+/* Per-plan Courses / Credits. Track matches the stepper's outer 34px. */
+.up-gen-mode {
+  display: inline-grid;
+  grid-template-columns: repeat(2, max-content);
+  align-items: stretch;
+  height: 34px;
+  padding: 3px;
+  gap: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
+}
+
+.up-gen-mode .up-segment-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: 100%;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--up-muted);
+}
+
+.up-gen-mode .up-segment-btn[aria-selected='true'] {
+  color: var(--up-secondary-ink);
+}
+
+.up-gen-mode .up-tab-pill {
+  border-radius: 7px;
+}
+
+.up-gen-mode-face {
+  display: inline-grid;
+  justify-items: center;
+  align-items: center;
+}
+
+.up-gen-mode-face > * {
+  grid-area: 1 / 1;
+}
+
+.up-gen-mode-sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .up-gen-stepper {
   display: inline-flex;
   align-items: center;
@@ -4337,6 +4386,15 @@ html.dark .up-gen-panel,
   .up-gen-more-btn,
   .up-gen-segment .up-segment-btn {
     min-height: 44px;
+  }
+
+  .up-gen-mode {
+    height: auto;
+  }
+
+  .up-gen-mode .up-segment-btn {
+    min-height: 44px;
+    font-size: 13px;
   }
 
   .up-gen-pin {
