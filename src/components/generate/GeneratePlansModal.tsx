@@ -13,8 +13,16 @@ import {
   type StoredGeneratorPrefs,
 } from '../../utils/generatorPrefs';
 import {
+  holdGeneratorSearch,
+  nextShownCount,
+  persistedGeneratorStep,
+  readGeneratorSearch,
   readGeneratorSession,
   reopenGeneratorStep,
+  retainPreviewId,
+  shownCountAfterSearch,
+  stampPickedCourses,
+  withCourseFreshness,
   writeGeneratorSession,
 } from '../../utils/generatorSession';
 import {
@@ -28,6 +36,8 @@ import {
   creditBounds,
   groupCoursesByCode,
   MAX_CANDIDATES,
+  MAX_EVALUATIONS,
+  MAX_RESULTS,
   nextGeneratedPlanName,
   startGeneratorSearch,
   type CourseGroup,
@@ -78,24 +88,42 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const setActivePlan = useScheduleStore((state) => state.setActivePlan);
   const plans = useScheduleStore((state) => state.plans);
 
-  const remembered = readGeneratorSession();
-  const [step, setStep] = useState<1 | 2 | 3>(() => reopenGeneratorStep(remembered));
+  const [sessionSeed] = useState(() => {
+    const stored = readGeneratorSession();
+    if (!stored) return null;
+    const next = withCourseFreshness(stored, useScheduleStore.getState().catalogCourses);
+    if (next !== stored) writeGeneratorSession(next);
+    return next;
+  });
+  const [step, setStep] = useState<1 | 2 | 3>(() => reopenGeneratorStep(sessionSeed));
   const [query, setQuery] = useState('');
-  const [picked, setPicked] = useState<Set<string>>(() => new Set(remembered?.picked ?? []));
-  const [pinned, setPinned] = useState<Set<string>>(() => new Set(remembered?.pinned ?? []));
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(sessionSeed?.picked ?? []));
+  const [pinned, setPinned] = useState<Set<string>>(() => new Set(sessionSeed?.pinned ?? []));
   const [prefs, setPrefs] = useState<StoredGeneratorPrefs>(() => loadGeneratorPrefs());
   const [moreOpen, setMoreOpen] = useState(false);
-  const [blocked, setBlocked] = useState<BlockedDraft[]>(() => remembered?.blocked ?? []);
-  const [lockedIds, setLockedIds] = useState<string[]>(() => remembered?.lockedIds ?? []);
-  const [excludedIds, setExcludedIds] = useState<string[]>(() => remembered?.excludedIds ?? []);
+  const [blocked, setBlocked] = useState<BlockedDraft[]>(() => sessionSeed?.blocked ?? []);
+  const [lockedIds, setLockedIds] = useState<string[]>(() => sessionSeed?.lockedIds ?? []);
+  const [excludedIds, setExcludedIds] = useState<string[]>(() => sessionSeed?.excludedIds ?? []);
   const [running, setRunning] = useState(false);
   const [checked, setChecked] = useState(0);
-  const [result, setResult] = useState<GeneratorResult | null>(() => remembered?.result ?? null);
-  const [previewId, setPreviewId] = useState<string | null>(() => remembered?.previewId ?? null);
+  const [result, setResult] = useState<GeneratorResult | null>(() => sessionSeed?.result ?? null);
+  const [previewId, setPreviewId] = useState<string | null>(() => sessionSeed?.previewId ?? null);
+  const [shownCount, setShownCount] = useState(() => sessionSeed?.shownCount ?? MAX_RESULTS);
+  const [courseStamp, setCourseStamp] = useState<string | null>(() => sessionSeed?.courseStamp ?? null);
+  const [outdated, setOutdated] = useState(() => sessionSeed?.outdated ?? false);
   const [dayOffNoticeDismissed, setDayOffNoticeDismissed] = useState(false);
   const blockSeq = useRef(0);
   const cancelRef = useRef<(() => void) | null>(null);
   const pinBeforeLock = useRef<Map<string, boolean>>(new Map());
+  const searchRef = useRef<GeneratorSearch | null>(readGeneratorSearch());
+  const resultRef = useRef(result);
+  const shownCountRef = useRef(shownCount);
+  const previewIdRef = useRef(previewId);
+  const stepRef = useRef(step);
+  resultRef.current = result;
+  shownCountRef.current = shownCount;
+  previewIdRef.current = previewId;
+  stepRef.current = step;
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
   const filteredGroups = useMemo(
@@ -123,8 +151,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     : `Plans between ${creditWindow.min} and ${creditWindow.max} credits`;
 
   useEffect(() => {
-    writeGeneratorSession({
-      step: step === 3 && !result && !running ? 2 : step,
+    const draft = {
+      step: persistedGeneratorStep(step, result),
       picked: [...picked],
       pinned: [...pinned],
       lockedIds,
@@ -132,12 +160,59 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       blocked,
       result,
       previewId,
-    });
-  }, [step, picked, pinned, lockedIds, excludedIds, blocked, result, previewId, running]);
+      shownCount,
+      courseStamp,
+      outdated,
+    };
+    const next = withCourseFreshness(draft, catalogCourses);
+    writeGeneratorSession(next);
+    if (next.outdated !== outdated) setOutdated(next.outdated);
+  }, [
+    step,
+    picked,
+    pinned,
+    lockedIds,
+    excludedIds,
+    blocked,
+    result,
+    previewId,
+    shownCount,
+    courseStamp,
+    outdated,
+    catalogCourses,
+  ]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    setQuery('');
+    if (!courseStamp) return;
+    const changed = stampPickedCourses(catalogCourses, [...picked]) !== courseStamp;
+    if (!changed) return;
+    cancelRef.current?.();
+    cancelRef.current = null;
+    setRunning(false);
+    if (resultRef.current) {
+      setOutdated(true);
+      return;
+    }
+    searchRef.current = null;
+    holdGeneratorSearch(null);
+    setCourseStamp(null);
+    setStep(2);
+  }, [catalogCourses, courseStamp, picked]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuery('');
+      return;
+    }
+    cancelRef.current?.();
+    cancelRef.current = null;
+    setRunning(false);
+    if (!resultRef.current && stepRef.current === 3) {
+      searchRef.current = null;
+      holdGeneratorSearch(null);
+      setCourseStamp(null);
+      setStep(2);
+    }
   }, [isOpen]);
 
   const onCloseRef = useRef(onClose);
@@ -185,13 +260,83 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   useEffect(() => () => cancelRef.current?.(), []);
 
+  const clearResults = () => {
+    cancelRef.current?.();
+    cancelRef.current = null;
+    searchRef.current = null;
+    holdGeneratorSearch(null);
+    resultRef.current = null;
+    previewIdRef.current = null;
+    shownCountRef.current = MAX_RESULTS;
+    setRunning(false);
+    setResult(null);
+    setPreviewId(null);
+    setOutdated(false);
+    setCourseStamp(null);
+    setShownCount(MAX_RESULTS);
+  };
+
+  const paintSearch = (search: GeneratorSearch, revealNew: boolean) => {
+    const next = search.result();
+    const previous = resultRef.current?.plans;
+    const nextShown = revealNew
+      ? shownCountAfterSearch(shownCountRef.current, previous?.length ?? 0, next.plans.length)
+      : shownCountRef.current;
+    if (nextShown !== shownCountRef.current) {
+      shownCountRef.current = nextShown;
+      setShownCount(nextShown);
+    }
+    const preview = retainPreviewId(previous, next.plans, previewIdRef.current);
+    if (preview !== previewIdRef.current) {
+      previewIdRef.current = preview;
+      setPreviewId(preview);
+    }
+    resultRef.current = next;
+    setResult(next);
+    setChecked(search.evaluated);
+  };
+
+  const runSearch = (search: GeneratorSearch, mode: 'fresh' | 'deeper') => {
+    let timer = 0;
+    let frame = 0;
+    let cancelled = false;
+    let lastPaint = 0;
+    const tick = () => {
+      if (cancelled) return;
+      const started = performance.now();
+      while (!search.done && performance.now() - started < 12) search.advance(60);
+      if (cancelled) return;
+      setChecked(search.evaluated);
+      const now = performance.now();
+      if (search.done || (mode === 'deeper' && now - lastPaint >= 100)) {
+        paintSearch(search, mode === 'deeper');
+        lastPaint = now;
+      }
+      if (search.done) {
+        setRunning(false);
+        cancelRef.current = null;
+        return;
+      }
+      timer = window.setTimeout(tick, 0);
+    };
+    cancelRef.current = () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+    // Paint the progress indicator before the first slice of work.
+    frame = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(tick, 0);
+    });
+  };
+
   const patchPrefs = (patch: Partial<StoredGeneratorPrefs>) => {
     setPrefs((prev) => {
       const next = { ...prev, ...patch };
       saveGeneratorPrefs(next);
       return next;
     });
-    setResult(null);
+    clearResults();
   };
 
   const togglePicked = (key: string) => {
@@ -210,7 +355,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       }
       return next;
     });
-    setResult(null);
+    clearResults();
   };
 
   const lockedGroupKeys = useMemo(() => {
@@ -260,7 +405,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   };
 
   const togglePin = (key: string) => {
-    setResult(null);
+    clearResults();
     if (pinned.has(key)) {
       if (lockedGroupKeys.has(key)) return;
       setPinned((prev) => {
@@ -288,7 +433,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const selectAll = () => {
     const visible = filteredGroups.map((group) => group.key);
     const allOn = visible.length > 0 && visible.every((key) => picked.has(key));
-    setResult(null);
+    clearResults();
     if (allOn) {
       setPicked((prev) => {
         const next = new Set(prev);
@@ -343,12 +488,14 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   };
 
   const handleGenerate = () => {
-    stopSearch();
+    clearResults();
     setStep(3);
-    setPreviewId(null);
     setDayOffNoticeDismissed(false);
     setChecked(0);
-    setResult(null);
+    const stamp = stampPickedCourses(catalogCourses, [...picked]);
+    setCourseStamp(stamp);
+    setShownCount(MAX_RESULTS);
+    shownCountRef.current = MAX_RESULTS;
     setRunning(true);
 
     const lunchStart = timeToMinutes(prefs.lunchStart);
@@ -382,29 +529,26 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
         excludedSectionIds: excludedIds,
       },
     });
+    searchRef.current = search;
+    holdGeneratorSearch(search);
+    runSearch(search, 'fresh');
+  };
 
-    let timer = 0;
-    let cancelled = false;
-    const tick = () => {
-      if (cancelled) return;
-      const started = performance.now();
-      while (!search.done && performance.now() - started < 12) search.advance(60);
-      if (cancelled) return;
-      if (search.done) {
-        setChecked(search.evaluated);
-        setResult(search.result());
-        setRunning(false);
-        cancelRef.current = null;
-        return;
-      }
-      setChecked(search.evaluated);
-      timer = window.setTimeout(tick, 0);
-    };
-    cancelRef.current = () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-    timer = window.setTimeout(tick, 0);
+  const handleShowMore = () => {
+    setShownCount((count) => {
+      const next = nextShownCount(count, resultRef.current?.plans.length ?? count);
+      shownCountRef.current = next;
+      return next;
+    });
+  };
+
+  const handleSearchDeeper = () => {
+    const search = searchRef.current;
+    if (!search || running || outdated) return;
+    if (search.capped || search.done) search.raiseLimit(MAX_EVALUATIONS);
+    if (search.done) return;
+    setRunning(true);
+    runSearch(search, 'deeper');
   };
 
   const handleSave = (plan: GeneratedPlan) => {
@@ -443,6 +587,16 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const lunch = prefs.lunchEnabled
     ? { start: timeToMinutes(prefs.lunchStart), end: timeToMinutes(prefs.lunchEnd) }
     : null;
+  const visibleCount = result ? Math.min(shownCount, result.plans.length) : 0;
+  const liveSearch = searchRef.current;
+  const canSearchDeeper = Boolean(
+    result
+    && !outdated
+    && !running
+    && liveSearch
+    && (liveSearch.capped || !liveSearch.done)
+    && shownCount >= result.plans.length
+  );
 
   const footer = (
     <div className="up-gen-foot">
@@ -490,7 +644,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
               ? `Checking ${checked.toLocaleString()}…`
               : result
                 ? result.plans.length > 0
-                  ? `${result.validCount.toLocaleString()} clash-free · top ${result.plans.length}`
+                  ? `${result.validCount.toLocaleString()} clash-free · top ${visibleCount}`
                   : '0 clash-free'
                 : ''}
           </span>
@@ -579,29 +733,29 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
                   start: '09:00',
                   end: '10:00',
                 }]);
-                setResult(null);
+                clearResults();
               }}
               onChangeBlocked={(id, patch) => {
                 setBlocked((prev) => prev.map((block) => (block.id === id ? { ...block, ...patch } : block)));
-                setResult(null);
+                clearResults();
               }}
               onRemoveBlocked={(id) => {
                 setBlocked((prev) => prev.filter((block) => block.id !== id));
-                setResult(null);
+                clearResults();
               }}
               onLock={(id) => {
                 const group = groupForSection(id);
                 setLockedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
                 setExcludedIds((prev) => prev.filter((item) => item !== id));
                 if (group) rememberAndPin(group.key);
-                setResult(null);
+                clearResults();
               }}
               onUnlock={(id) => {
                 const group = groupForSection(id);
                 const next = lockedIds.filter((item) => item !== id);
                 setLockedIds(next);
                 if (group) restoreIfReleased(group.key, next);
-                setResult(null);
+                clearResults();
               }}
               onExclude={(id) => {
                 const group = groupForSection(id);
@@ -609,11 +763,11 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
                 setExcludedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
                 setLockedIds(nextLocks);
                 if (group) restoreIfReleased(group.key, nextLocks);
-                setResult(null);
+                clearResults();
               }}
               onUnexclude={(id) => {
                 setExcludedIds((prev) => prev.filter((item) => item !== id));
-                setResult(null);
+                clearResults();
               }}
             />
           )}
@@ -625,11 +779,22 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
               lunch={lunch}
               previewId={previewId}
               plans={plans}
-              onTogglePreview={(id) => setPreviewId((prev) => (prev === id ? null : id))}
+              onTogglePreview={(id) => {
+                setPreviewId((prev) => {
+                  const next = prev === id ? null : id;
+                  previewIdRef.current = next;
+                  return next;
+                });
+              }}
               onSave={handleSave}
               onOpen={handleOpenSaved}
               noticeDismissed={dayOffNoticeDismissed}
               onDismissNotice={() => setDayOffNoticeDismissed(true)}
+              shownCount={shownCount}
+              outdated={outdated}
+              canSearchDeeper={canSearchDeeper}
+              onShowMore={handleShowMore}
+              onSearchDeeper={handleSearchDeeper}
             />
           )}
         </motion.div>

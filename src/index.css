@@ -3941,6 +3941,14 @@ html.dark .up-gen-panel,
   gap: 8px;
 }
 
+.up-gen-follow {
+  display: flex;
+}
+
+.up-gen-follow-btn {
+  width: 100%;
+}
+
 .up-gen-course {
   display: flex;
   align-items: stretch;

@@ -4,6 +4,47 @@ import { sectionSetKey } from '../../utils/courseIdentity';
 import type { GeneratedPlan, GeneratorResult } from '../../utils/planGenerator';
 import { MiniWeekPreview } from './MiniWeekPreview';
 
+function SearchProgress({ checked }: { checked: number }) {
+  return (
+    <>
+      <p className="up-gen-status" role="status" aria-live="polite">
+        Checking course and section mixes…
+      </p>
+      <p className="up-gen-hint">{checked.toLocaleString()} checked</p>
+    </>
+  );
+}
+
+function FollowActions({
+  showMore,
+  remaining,
+  showDeeper,
+  onShowMore,
+  onSearchDeeper,
+}: {
+  showMore: boolean;
+  remaining: number;
+  showDeeper: boolean;
+  onShowMore: () => void;
+  onSearchDeeper: () => void;
+}) {
+  if (!showMore && !showDeeper) return null;
+  return (
+    <div className="up-gen-follow">
+      {showMore && (
+        <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onShowMore}>
+          {`Show more (${remaining} left)`}
+        </button>
+      )}
+      {showDeeper && (
+        <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onSearchDeeper}>
+          Search deeper
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ResultsStep({
   running,
   checked,
@@ -16,6 +57,11 @@ export function ResultsStep({
   onOpen,
   noticeDismissed,
   onDismissNotice,
+  shownCount,
+  outdated,
+  canSearchDeeper,
+  onShowMore,
+  onSearchDeeper,
 }: {
   running: boolean;
   checked: number;
@@ -28,25 +74,50 @@ export function ResultsStep({
   onOpen: (planId: string) => void;
   noticeDismissed: boolean;
   onDismissNotice: () => void;
+  shownCount: number;
+  outdated: boolean;
+  canSearchDeeper: boolean;
+  onShowMore: () => void;
+  onSearchDeeper: () => void;
 }) {
-  if (running || !result) {
+  if (!result) {
     return (
       <div className="up-gen-step-body">
-        <p className="up-gen-status" role="status" aria-live="polite">
-          Checking course and section mixes…
-        </p>
-        <p className="up-gen-hint">{checked.toLocaleString()} checked</p>
+        <SearchProgress checked={checked} />
       </div>
     );
   }
 
+  const remaining = Math.max(0, result.plans.length - shownCount);
+  const showMore = !running && !outdated && remaining > 0;
+  const showDeeper = !running && !outdated && remaining === 0 && canSearchDeeper;
+  const visiblePlans = result.plans.slice(0, shownCount);
+  const follow = (
+    <FollowActions
+      showMore={showMore}
+      remaining={remaining}
+      showDeeper={showDeeper}
+      onShowMore={onShowMore}
+      onSearchDeeper={onSearchDeeper}
+    />
+  );
+
   if (result.plans.length === 0) {
     return (
       <div className="up-gen-step-body">
+        {running && <SearchProgress checked={checked} />}
+        {outdated && (
+          <div className="up-gen-notice" role="status">
+            <div className="up-gen-notice-copy">
+              <p>A course was edited or deleted, so these results are out of date.</p>
+            </div>
+          </div>
+        )}
         <div className="up-gen-reason" role="status">
           <h3>Nothing fits</h3>
           <p>{result.emptyReason || 'No clash-free mix fits these courses and filters.'}</p>
         </div>
+        {follow}
       </div>
     );
   }
@@ -76,15 +147,25 @@ export function ResultsStep({
           </button>
         </div>
       )}
-      {result.capped && (
-        <p className="up-gen-hint">Stopped after 5,000 mixes so this stays responsive.</p>
+      {outdated && (
+        <div className="up-gen-notice" role="status">
+          <div className="up-gen-notice-copy">
+            <p>A course was edited or deleted, so these results are out of date.</p>
+          </div>
+        </div>
+      )}
+      {running && <SearchProgress checked={checked} />}
+      {result.capped && !running && !outdated && (
+        <p className="up-gen-hint">
+          {`Stopped after ${result.evaluated.toLocaleString('en-US')} mixes so this stays responsive.`}
+        </p>
       )}
       <div className="up-gen-results">
-        {result.plans.map((plan, index) => {
+        {visiblePlans.map((plan, index) => {
           const savedPlan = savedByKey.get(sectionSetKey(plan.courses));
           const open = previewId === plan.id;
           return (
-            <article key={plan.id} className="up-gen-card">
+            <article key={plan.groupKey} className="up-gen-card">
               <header className="up-gen-card-head">
                 <h3>Option {index + 1}</h3>
                 {index === 0 && <span className="up-gen-best">Best fit</span>}
@@ -156,6 +237,7 @@ export function ResultsStep({
           );
         })}
       </div>
+      {follow}
     </div>
   );
 }

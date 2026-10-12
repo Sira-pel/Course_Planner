@@ -5,7 +5,9 @@ import type { GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
 export const MAX_CANDIDATES = 12;
+/** Mixes evaluated before a search pauses. The same search can raise this and continue. */
 export const MAX_EVALUATIONS = 5000;
+/** Course groups revealed at a time. The search keeps every group it has ranked. */
 export const MAX_RESULTS = 5;
 export const LUNCH_FREE_MINUTES = 45;
 
@@ -55,6 +57,8 @@ export interface GeneratorInput {
 
 export interface GeneratedPlan {
   id: string;
+  /** Same course codes, so section variants of one mix stay in one group. */
+  groupKey: string;
   courses: Course[];
   pinnedCodes: string[];
   includedCodes: string[];
@@ -80,6 +84,8 @@ export interface GeneratorSearch {
   readonly capped: boolean;
   readonly estimate: number;
   advance(limit: number): void;
+  /** Keep going from the current mix. Does not restart or drop mixes already ranked. */
+  raiseLimit(extra?: number): void;
   result(): GeneratorResult;
 }
 
@@ -448,7 +454,17 @@ function lockedSectionsIn(groups: PreparedGroup[], prefs: GeneratorPreferences):
   return found;
 }
 
-function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, prefs: GeneratorPreferences, capped: boolean): string {
+function formatCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
+function explainEmpty(
+  groups: PreparedGroup[],
+  pinned: Set<string>,
+  prefs: GeneratorPreferences,
+  capped: boolean,
+  evaluated: number,
+): string {
   const locks = lockedSectionsIn(groups, prefs);
   for (let i = 0; i < locks.length; i += 1) {
     for (let j = i + 1; j < locks.length; j += 1) {
@@ -482,7 +498,7 @@ function explainEmpty(groups: PreparedGroup[], pinned: Set<string>, prefs: Gener
     }
   }
   if (capped) {
-    return 'Checked 5,000 mixes and none were clash-free. Narrow the list or clear a blocked time.';
+    return `Checked ${formatCount(evaluated)} mixes and none were clash-free. Narrow the list or clear a blocked time.`;
   }
   return 'No clash-free mix fits these courses and filters.';
 }
@@ -510,29 +526,16 @@ function dayOffNotices(groups: PreparedGroup[], pinned: Set<string>, prefs: Gene
   return notices;
 }
 
-function selectVaried(buckets: Map<string, Bucket>): ScoredMix[] {
-  const reps = [...buckets.values()]
+function byBestFit(a: ScoredMix, b: ScoredMix): number {
+  return a.score - b.score || (a.signature < b.signature ? -1 : a.signature > b.signature ? 1 : 0);
+}
+
+/** Best section mix of each course group, best fit first. */
+function rankedGroups(buckets: Map<string, Bucket>): ScoredMix[] {
+  return [...buckets.values()]
     .map((bucket) => bucket.items[0])
     .filter((item): item is ScoredMix => Boolean(item))
-    .sort((a, b) => a.score - b.score);
-  const chosen: ScoredMix[] = [];
-  const seen = new Set<string>();
-  for (const rep of reps) {
-    if (chosen.length >= MAX_RESULTS) break;
-    chosen.push(rep);
-    seen.add(rep.signature);
-  }
-  if (chosen.length >= 3) return chosen;
-  const variants = [...buckets.values()]
-    .flatMap((bucket) => bucket.items.slice(1))
-    .sort((a, b) => a.score - b.score);
-  for (const variant of variants) {
-    if (chosen.length >= 3) break;
-    if (seen.has(variant.signature)) continue;
-    seen.add(variant.signature);
-    chosen.push(variant);
-  }
-  return chosen;
+    .sort(byBestFit);
 }
 
 class PlanSearch implements GeneratorSearch {
@@ -543,6 +546,7 @@ class PlanSearch implements GeneratorSearch {
   validCount = 0;
   overDailyCap = 0;
   emptyReason: string | null = null;
+  private evaluationLimit = MAX_EVALUATIONS;
   private jobs: MixJob[] = [];
   private cursor = 0;
   private buckets = new Map<string, Bucket>();
@@ -642,11 +646,20 @@ class PlanSearch implements GeneratorSearch {
     return subsets;
   }
 
+  raiseLimit(extra: number = MAX_EVALUATIONS): void {
+    if (!Number.isFinite(extra) || extra <= 0) return;
+    this.evaluationLimit += Math.floor(extra);
+    if (this.jobs.some((job) => !job.done)) {
+      this.done = false;
+      this.capped = false;
+    }
+  }
+
   advance(limit: number): void {
     if (this.done) return;
     let steps = 0;
     let idle = 0;
-    while (steps < limit && this.evaluated < MAX_EVALUATIONS) {
+    while (steps < limit && this.evaluated < this.evaluationLimit) {
       if (this.jobs.length === 0) {
         this.done = true;
         return;
@@ -671,7 +684,7 @@ class PlanSearch implements GeneratorSearch {
       }
       job.done = !bump(job.indexes, job.radix);
       this.cursor = (this.cursor + 1) % this.jobs.length;
-      if (this.evaluated >= MAX_EVALUATIONS) {
+      if (this.evaluated >= this.evaluationLimit) {
         this.capped = this.jobs.some((item) => !item.done);
         this.done = true;
         return;
@@ -697,7 +710,7 @@ class PlanSearch implements GeneratorSearch {
   }
 
   result(): GeneratorResult {
-    const chosen = selectVaried(this.buckets);
+    const chosen = rankedGroups(this.buckets);
     const order = new Map(this.pickedOrder.map((group, index) => [group.key, index]));
     const plans = chosen.map((item) => {
       const sorted = [...item.courses].sort((a, b) => {
@@ -716,8 +729,10 @@ class PlanSearch implements GeneratorSearch {
         else includedCodes.push(group.code);
       }
       const { tags } = scoreMix(sorted, this.prefs);
+      const groupKey = sorted.map((course) => courseCodeKey(course.code)).sort().join('|');
       return {
         id: item.signature,
+        groupKey,
         courses: sorted,
         pinnedCodes,
         includedCodes,
@@ -733,10 +748,10 @@ class PlanSearch implements GeneratorSearch {
       if (this.overDailyCap > 0 && cap != null) {
         const noun = cap === 1 ? 'course' : 'courses';
         emptyReason = this.capped
-          ? `Checked 5,000 mixes. None stay within ${cap} ${noun} a day.`
+          ? `Checked ${formatCount(this.evaluated)} mixes. None stay within ${cap} ${noun} a day.`
           : `Every clash-free mix puts more than ${cap} ${noun} on one day.`;
       } else {
-        emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, this.capped);
+        emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, this.capped, this.evaluated);
       }
     }
 
