@@ -12,6 +12,7 @@ import { countConflictPairs, detectPlanConflicts } from '../../utils/timeUtils';
 import {
   Plus,
   AlertTriangle,
+  ChevronDown,
   Undo2,
   Redo2,
 } from 'lucide-react';
@@ -126,6 +127,8 @@ export const Header = memo(function Header({
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [plansMenuOpen, setPlansMenuOpen] = useState(false);
+  const [redoOpen, setRedoOpen] = useState(false);
+  const redoSlotRef = useRef<HTMLSpanElement>(null);
   const [newPlanInputName, setNewPlanInputName] = useState('');
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [conflictModalMounted, setConflictModalMounted] = useState(false);
@@ -198,7 +201,33 @@ export const Header = memo(function Header({
     setPlansMenuOpen(false);
     setIsSettingsOpen(false);
     onImportExportOpenChange(false);
+    setRedoOpen(false);
   };
+
+  useEffect(() => {
+    if (!canRedo) setRedoOpen(false);
+  }, [canRedo]);
+
+  useEffect(() => {
+    if (!redoOpen) return;
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (redoSlotRef.current?.contains(target)) return;
+      setRedoOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setRedoOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [redoOpen]);
 
   const anyMenuOpen = isSettingsOpen || plansMenuOpen || compareOpen;
 
@@ -381,17 +410,48 @@ export const Header = memo(function Header({
           >
             <Undo2 className="w-4 h-4" />
           </button>
-          <button
-            type="button"
-            id="btn-redo"
-            onClick={redo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
-            aria-label="Redo"
-            className="up-icon-btn up-chrome-btn"
-          >
-            <Redo2 className="w-4 h-4" />
-          </button>
+          {isPhone ? (
+            <span className="up-redo-slot" ref={redoSlotRef}>
+              <button
+                type="button"
+                className={`up-redo-toggle up-chrome-btn ${redoOpen ? 'is-open' : ''}`}
+                aria-expanded={redoOpen}
+                aria-label="Show redo"
+                title="Redo"
+                disabled={!canRedo}
+                onClick={() => setRedoOpen((open) => !open)}
+              >
+                <ChevronDown className={`up-chevron w-4 h-4 ${redoOpen ? 'is-open' : ''}`} />
+              </button>
+              {redoOpen && (
+                <button
+                  type="button"
+                  id="btn-redo"
+                  onClick={() => {
+                    redo();
+                    setRedoOpen(false);
+                  }}
+                  title="Redo (Ctrl+Shift+Z)"
+                  aria-label="Redo"
+                  className="up-redo-panel up-chrome-btn"
+                >
+                  <Redo2 className="w-4 h-4" />
+                </button>
+              )}
+            </span>
+          ) : (
+            <button
+              type="button"
+              id="btn-redo"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              aria-label="Redo"
+              className="up-icon-btn up-chrome-btn"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          )}
 
           <ImportExportMenu
             isPhone={isPhone}
@@ -405,6 +465,7 @@ export const Header = memo(function Header({
                 setPlansMenuOpen(false);
                 onCompareOpenChange(false);
                 setIsSettingsOpen(false);
+                setRedoOpen(false);
               }
               onImportExportOpenChange(open);
             }}
@@ -448,6 +509,7 @@ export const Header = memo(function Header({
               setPlansMenuOpen(false);
               onCompareOpenChange(false);
               onImportExportOpenChange(false);
+              setRedoOpen(false);
               setIsSettingsOpen((open) => !open);
             }}
             onSetTimeRange={setTimeRange}
@@ -500,6 +562,7 @@ export const Header = memo(function Header({
               setEditingPlanId(null);
               setIsSettingsOpen(false);
               onCompareOpenChange(false);
+              setRedoOpen(false);
               setPlansMenuOpen((open) => !open);
             }}
             onSelectPlan={(planId) => {
@@ -559,6 +622,7 @@ export const Header = memo(function Header({
             setIsSettingsOpen(false);
             setPlansMenuOpen(false);
             onImportExportOpenChange(false);
+            setRedoOpen(false);
             onCompareOpenChange(!compareOpen);
           }}
           onToggleGhost={toggleGhostPlan}

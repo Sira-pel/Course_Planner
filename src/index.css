@@ -303,7 +303,7 @@ html.dark body {
 
   .up-icon-btn {
     opacity: 1;
-    background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+    background: transparent;
   }
 }
 
@@ -553,10 +553,12 @@ html.dark body {
 }
 
 @media (max-width: 639px) {
-  /* Add course lives on the floating pill. Undo and redo stay on tablet and up. */
-  #btn-add-course,
-  #btn-undo,
-  #btn-redo {
+  /* Add course lives on the floating pill. Redo is the disclosure under the chevron. */
+  #btn-add-course {
+    display: none;
+  }
+
+  .up-enrolled {
     display: none;
   }
 
@@ -566,22 +568,140 @@ html.dark body {
     min-width: 44px;
   }
 
+  .up-icon-btn,
   #btn-settings,
   #btn-ghost-overlay,
   #btn-import-export {
     width: 44px;
     height: 44px;
-    border: 1px solid var(--up-line);
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
     color: var(--up-ink);
     opacity: 1;
   }
 
-  .up-header-row {
-    min-height: 48px;
+  .up-icon-btn:hover:not(:disabled) {
+    background: transparent;
+    opacity: 1;
+  }
+
+  .up-icon-btn:active:not(:disabled),
+  .up-icon-btn.is-open {
+    background: color-mix(in srgb, var(--up-ink) 10%, transparent);
+    opacity: 1;
+  }
+
+  #btn-undo:disabled,
+  .up-redo-toggle:disabled {
+    opacity: 0.4;
   }
 
   .up-header-actions {
+    gap: 0;
     padding-left: 0;
+  }
+
+  .up-header-row {
+    min-height: 44px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .up-redo-slot {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    width: 28px;
+    height: 44px;
+    flex: none;
+  }
+
+  .up-redo-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--up-ink);
+    cursor: pointer;
+  }
+
+  .up-redo-toggle.is-open,
+  .up-redo-toggle:active:not(:disabled) {
+    background: color-mix(in srgb, var(--up-ink) 10%, transparent);
+  }
+
+  .up-redo-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid var(--up-line);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--up-ink) 8%, var(--up-raised));
+    color: var(--up-ink);
+    box-shadow: 0 10px 24px rgb(0 0 0 / 0.28);
+    cursor: pointer;
+  }
+
+  .up-plans-anchor {
+    flex: 0 1 auto;
+    max-width: min(178px, 100%);
+  }
+
+  .up-plan-trigger {
+    width: auto;
+    max-width: 100%;
+    height: 44px;
+    min-height: 44px;
+    min-width: 0;
+    padding: 0 8px 0 10px;
+    gap: 8px;
+  }
+
+  .up-plan-trigger-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+    line-height: 1.05;
+  }
+
+  .up-plan-trigger-name {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .up-plan-trigger-credits {
+    font-size: 10px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--up-muted);
+    white-space: nowrap;
+  }
+
+  .up-header-view-toggle .up-cal-toggle-btn[aria-pressed='true'] {
+    background: var(--up-accent);
+    color: var(--up-accent-ink);
   }
 }
 
@@ -1188,6 +1308,12 @@ html.dark .up-plan-trigger.is-open:hover {
 .up-plan-trigger > .up-chevron {
   width: 14px;
   height: 14px;
+}
+
+@media (min-width: 640px) {
+  .up-plan-trigger-copy {
+    display: none;
+  }
 }
 
 .up-plan-row-btn {

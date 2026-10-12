@@ -431,7 +431,12 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
       >
         <Folder className="w-4 h-4 shrink-0" />
         <span className="hidden sm:inline">Plans</span>
-        <span className="sm:hidden truncate">{activePlan?.name || 'Plans'}</span>
+        <span className="up-plan-trigger-copy">
+          <span className="up-plan-trigger-name">{activePlan?.name || 'Plans'}</span>
+          <span className="up-plan-trigger-credits">
+            {activePlan?.courses.reduce((sum, course) => sum + (course.credits || 0), 0) ?? 0} cr
+          </span>
+        </span>
         <ChevronDown className={`up-chevron w-3 h-3 opacity-60 shrink-0 ${plansMenuOpen ? 'is-open' : ''}`} />
       </button>
 
