@@ -600,12 +600,18 @@ html.dark body {
   .up-header-actions {
     gap: 0;
     padding-left: 0;
+    margin-right: -8px;
+  }
+
+  .up-header-row-secondary .up-header-compare {
+    margin-right: -8px;
   }
 
   .up-header-row {
     min-height: 44px;
     padding-top: 2px;
     padding-bottom: 2px;
+    padding-right: 0;
   }
 
   .up-redo-slot {
