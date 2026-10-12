@@ -20,6 +20,8 @@ export interface StoredGeneratorPrefs {
   lunchEnd: string;
   lunchMinutes: number;
   daysOff: DayOfWeek[];
+  dailyCapEnabled: boolean;
+  dailyCourseCap: number;
   classHoursEnabled: boolean;
   classStart: string | null;
   classEnd: string | null;
@@ -36,6 +38,8 @@ export const DEFAULT_GENERATOR_PREFS: StoredGeneratorPrefs = {
   lunchEnd: '13:30',
   lunchMinutes: 45,
   daysOff: [],
+  dailyCapEnabled: false,
+  dailyCourseCap: 3,
   classHoursEnabled: false,
   classStart: '10:00',
   classEnd: '15:00',
@@ -60,6 +64,8 @@ function optionalClock(value: unknown): string | null {
 export const LUNCH_MINUTE_MIN = 15;
 export const LUNCH_MINUTE_MAX = 90;
 export const LUNCH_MINUTE_STEP = 15;
+export const DAILY_COURSE_MIN = 1;
+export const DAILY_COURSE_MAX = 6;
 
 function snapLunchMinutes(value: unknown): number {
   const snapped = clampInt(value, LUNCH_MINUTE_MIN, LUNCH_MINUTE_MAX, DEFAULT_GENERATOR_PREFS.lunchMinutes);
@@ -91,6 +97,15 @@ export function sanitizeGeneratorPrefs(raw: unknown): StoredGeneratorPrefs {
     lunchEnd: clock(record.lunchEnd, DEFAULT_GENERATOR_PREFS.lunchEnd),
     lunchMinutes: snapLunchMinutes(record.lunchMinutes),
     daysOff: [...new Set(daysOff)],
+    dailyCapEnabled: typeof record.dailyCapEnabled === 'boolean'
+      ? record.dailyCapEnabled
+      : DEFAULT_GENERATOR_PREFS.dailyCapEnabled,
+    dailyCourseCap: clampInt(
+      record.dailyCourseCap,
+      DAILY_COURSE_MIN,
+      DAILY_COURSE_MAX,
+      DEFAULT_GENERATOR_PREFS.dailyCourseCap,
+    ),
     classHoursEnabled: typeof record.classHoursEnabled === 'boolean'
       ? record.classHoursEnabled
       : optionalClock(record.classStart) != null || optionalClock(record.classEnd) != null,

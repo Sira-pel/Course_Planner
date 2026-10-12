@@ -367,6 +367,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
         lunchEnd,
         lunchMinutes: prefs.lunchMinutes,
         daysOff: prefs.daysOff,
+        dailyCap: prefs.dailyCapEnabled ? prefs.dailyCourseCap : null,
         classStart,
         classEnd,
         blocked: blocked.map((block) => ({

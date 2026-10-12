@@ -38,6 +38,8 @@ export interface GeneratorPreferences {
   lunchEnd: number;
   lunchMinutes: number;
   daysOff: DayOfWeek[];
+  /** Maximum distinct courses that may meet on one day. Null means no cap. */
+  dailyCap: number | null;
   classStart: number | null;
   classEnd: number | null;
   blocked: BlockedWindow[];
@@ -334,6 +336,30 @@ function dayHasLunch(
   return windowEnd - cursor >= needed;
 }
 
+function maxCoursesOnOneDay(courses: Course[]): number {
+  const byDay = new Map<DayOfWeek, Set<string>>();
+  for (const course of courses) {
+    for (const session of course.sessions || []) {
+      let ids = byDay.get(session.day);
+      if (!ids) {
+        ids = new Set();
+        byDay.set(session.day, ids);
+      }
+      ids.add(course.id);
+    }
+  }
+  let max = 0;
+  for (const ids of byDay.values()) {
+    if (ids.size > max) max = ids.size;
+  }
+  return max;
+}
+
+function withinDailyCap(courses: Course[], prefs: GeneratorPreferences): boolean {
+  if (prefs.dailyCap == null) return true;
+  return maxCoursesOnOneDay(courses) <= prefs.dailyCap;
+}
+
 function formatGap(minutes: number): string {
   if (minutes <= 0) return 'No gaps';
   if (minutes < 60) return `Max gap ${minutes}m`;
@@ -397,6 +423,7 @@ function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: numb
     tags.push(`${names.join(', ')} off`);
   }
   tags.push(formatGap(maxGap));
+  if (prefs.dailyCap != null) tags.push(`Max ${prefs.dailyCap} a day`);
   if (prefs.lunchEnabled && lunchWindowOk && missingLunch === 0 && days.size > 0) tags.push('Lunch free');
   return { score, tags };
 }
@@ -514,6 +541,7 @@ class PlanSearch implements GeneratorSearch {
   capped = false;
   estimate = 0;
   validCount = 0;
+  overDailyCap = 0;
   emptyReason: string | null = null;
   private jobs: MixJob[] = [];
   private cursor = 0;
@@ -637,7 +665,10 @@ class PlanSearch implements GeneratorSearch {
       const courses = job.indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
       this.evaluated += 1;
       steps += 1;
-      if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) this.consider(courses);
+      if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) {
+        if (withinDailyCap(courses, this.prefs)) this.consider(courses);
+        else this.overDailyCap += 1;
+      }
       job.done = !bump(job.indexes, job.radix);
       this.cursor = (this.cursor + 1) % this.jobs.length;
       if (this.evaluated >= MAX_EVALUATIONS) {
@@ -698,7 +729,15 @@ class PlanSearch implements GeneratorSearch {
 
     let emptyReason = this.emptyReason;
     if (!emptyReason && plans.length === 0) {
-      emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, this.capped);
+      const cap = this.prefs.dailyCap;
+      if (this.overDailyCap > 0 && cap != null) {
+        const noun = cap === 1 ? 'course' : 'courses';
+        emptyReason = this.capped
+          ? `Checked 5,000 mixes. None stay within ${cap} ${noun} a day.`
+          : `Every clash-free mix puts more than ${cap} ${noun} on one day.`;
+      } else {
+        emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, this.capped);
+      }
     }
 
     return {

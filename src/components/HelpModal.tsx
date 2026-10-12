@@ -440,7 +440,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Add quickly.</strong> Use + on a course to put it on the current plan.</li>
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Switch plans.</strong> The Pool is shared across your plans.</li>
                         <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Bring a spreadsheet into the pool. Choose Pool only when you want to pick courses later.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Generate plans.</strong> Tick courses, pin must-takes, then set size, gaps, and lunch. Save a clash-free result as a normal plan. The pool and your other plans stay as they are.</li>
+                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Generate plans.</strong> Tick courses, pin must-takes, then set size, gaps, lunch, and a daily course cap. Save a clash-free result as a normal plan. The pool and your other plans stay as they are.</li>
                       </ul>
 
                       {onOpenCatalog && (

@@ -4,6 +4,8 @@ import { DAYS_LIST } from '../../types/schedule';
 import { AnimatedBody } from '../app/AnimatedBody';
 import { ModalTabPill } from '../app/ModalTabPill';
 import {
+  DAILY_COURSE_MAX,
+  DAILY_COURSE_MIN,
   LUNCH_MINUTE_MAX,
   LUNCH_MINUTE_MIN,
   LUNCH_MINUTE_STEP,
@@ -315,7 +317,7 @@ export function PreferencesStep({
           <ChevronDown className={`up-chevron w-3.5 h-3.5 ${moreOpen ? 'is-open' : ''}`} />
         </button>
         {!moreOpen && (
-          <p className="up-gen-hint">Day off · class hours · blocked times · lock/exclude</p>
+          <p className="up-gen-hint">Day off · courses per day · class hours · blocked times · lock/exclude</p>
         )}
         <AnimatedBody activeKey={moreOpen ? 'open' : 'closed'} contentClassName="up-gen-more-body">
           {moreOpen && (
@@ -345,6 +347,31 @@ export function PreferencesStep({
                   })}
                 </div>
               </div>
+
+              <section className="up-gen-pref">
+                <div className="up-gen-pref-copy">
+                  <h3>Courses per day</h3>
+                  <p>
+                    {prefs.dailyCapEnabled
+                      ? `At most ${prefs.dailyCourseCap} ${prefs.dailyCourseCap === 1 ? 'course' : 'courses'} on one day`
+                      : 'Off · no daily limit'}
+                  </p>
+                </div>
+                <div className="up-gen-pref-controls">
+                  <Stepper
+                    value={prefs.dailyCourseCap}
+                    min={DAILY_COURSE_MIN}
+                    max={DAILY_COURSE_MAX}
+                    label="Maximum courses per day"
+                    onChange={(dailyCourseCap) => onPrefs({ dailyCourseCap })}
+                  />
+                  <GenSwitch
+                    on={prefs.dailyCapEnabled}
+                    label="Cap courses per day"
+                    onToggle={() => onPrefs({ dailyCapEnabled: !prefs.dailyCapEnabled })}
+                  />
+                </div>
+              </section>
 
               <section className="up-gen-pref">
                 <div className="up-gen-pref-copy">
