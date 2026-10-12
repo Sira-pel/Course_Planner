@@ -614,6 +614,20 @@ html.dark body {
     padding-right: 0;
   }
 
+  #btn-undo,
+  #btn-import-export {
+    position: relative;
+    z-index: 1;
+  }
+
+  #btn-undo {
+    margin-right: -18px;
+  }
+
+  #btn-import-export {
+    margin-right: -22px;
+  }
+
   .up-redo-slot {
     position: relative;
     z-index: 2;
