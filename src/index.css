@@ -600,11 +600,11 @@ html.dark body {
   .up-header-actions {
     gap: 0;
     padding-left: 0;
-    margin-right: -8px;
+    margin-right: -2px;
   }
 
   .up-header-row-secondary .up-header-compare {
-    margin-right: -8px;
+    margin-right: -2px;
   }
 
   .up-header-row {
