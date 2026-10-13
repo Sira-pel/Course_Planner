@@ -131,6 +131,28 @@ export function excelSerialToTime(val: number): string | null {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+const MONTH_NAME =
+  'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+
+/**
+ * Calendar dates are not class times or credits.
+ * 2026-08-17, 8/17/2026, 17/08/2026, Aug 17, August 17 2026, and Excel date serials.
+ */
+export function isDateCell(raw: string): boolean {
+  const val = raw.trim();
+  if (!val) return false;
+  if (/^\d{4}-\d{1,2}-\d{1,2}(?:[t\s].*)?$/i.test(val)) return true;
+  if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/.test(val)) return true;
+  const monthFirst = new RegExp(`^(?:${MONTH_NAME})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?$`, 'i');
+  const dayFirst = new RegExp(`^\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH_NAME})(?:,?\\s+\\d{4})?$`, 'i');
+  if (monthFirst.test(val) || dayFirst.test(val)) return true;
+  if (/^\d{5}(?:\.\d+)?$/.test(val)) {
+    const serial = Number(val);
+    if (serial >= 20000 && serial <= 80000) return true;
+  }
+  return false;
+}
+
 /** Parses a clock string, or an Excel day-fraction such as 0.375 for 9:00. */
 function parseCellTime(raw: string): { h: number; m: number } | null {
   const trimmed = raw.trim();
@@ -151,36 +173,52 @@ function parseCellTime(raw: string): { h: number; m: number } | null {
  */
 export function extractTimeRange(raw: unknown): { start: string; end: string } | null {
   if (raw === null || raw === undefined) return null;
-  if (typeof raw === 'number') {
-    const t = excelSerialToTime(raw);
-    if (t) {
-      const [hStr, mStr] = t.split(':');
-      const h = parseInt(hStr, 10);
-      const m = parseInt(mStr, 10);
-      const endH = (h + 1) % 24;
-      return {
-        start: t,
-        end: `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
-      };
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    const whole = Math.floor(raw);
+    const fraction = raw - whole;
+    // Integer serials (and plain counts) are dates or quantities, not a clock.
+    if (!(whole >= 1 && fraction === 0)) {
+      const clockSource = whole >= 1 ? fraction : raw;
+      const t = excelSerialToTime(clockSource);
+      if (t) {
+        const [hStr, mStr] = t.split(':');
+        const h = parseInt(hStr, 10);
+        const m = parseInt(mStr, 10);
+        const endH = (h + 1) % 24;
+        return {
+          start: t,
+          end: `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+        };
+      }
     }
   }
 
   const str = sanitizeString(raw, 100);
-  if (!str) return null;
+  if (!str || isDateCell(str)) return null;
+
+  if (/^\d*\.\d+$/.test(str)) {
+    const fraction = Number(str);
+    if (fraction >= 0 && fraction < 1) {
+      const t = excelSerialToTime(fraction);
+      if (t) {
+        const [hStr, mStr] = t.split(':');
+        const h = parseInt(hStr, 10);
+        const m = parseInt(mStr, 10);
+        const endH = (h + 1) % 24;
+        return {
+          start: t,
+          end: `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+        };
+      }
+    }
+  }
 
   // Clean unicode dashes and common separators
   const cleanStr = str
     .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212~]/g, '-')
     .replace(/\b(?:to|until|till)\b/gi, '-');
 
-  // 1. Try standard regex time range: e.g. "08:30AM - 10:00AM", "01:45PM - 03:15PM", "1:45 PM - 3:15 PM", "9:00-10:15", "13:30-15:00"
-  const rangeMatch = cleanStr.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)\s*[-/]\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)/i);
-  if (rangeMatch) {
-    const parsed = parseTimeRange(`${rangeMatch[1]}-${rangeMatch[2]}`);
-    if (parsed) return parsed;
-  }
-
-  // 2. Condensed military time: e.g. "0900-1015" or "1330-1500"
+  // Military ranges first. The clock pattern would read "0900-0950" as 0900-09 and turn 09 into 21:00.
   const militaryMatch = cleanStr.match(/\b([012]\d[0-5]\d)\s*[-/ ]\s*([012]\d[0-5]\d)\b/);
   if (militaryMatch) {
     const sH = militaryMatch[1].slice(0, 2);
@@ -189,8 +227,14 @@ export function extractTimeRange(raw: unknown): { start: string; end: string } |
     const eM = militaryMatch[2].slice(2, 4);
     const start = `${sH}:${sM}`;
     const end = `${eH}:${eM}`;
-    if (timeToMinutes(start) >= timeToMinutes(end)) return null;
-    return { start, end };
+    if (timeToMinutes(start) < timeToMinutes(end)) return { start, end };
+  }
+
+  // Clock ranges: "08:30AM - 10:00AM", "9:00-10:15", "13:30-15:00", "9.00-9.50"
+  const rangeMatch = cleanStr.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)\s*[-/]\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a|p)?|\b[012]\d[0-5]\d\b)/i);
+  if (rangeMatch) {
+    const parsed = parseTimeRange(`${rangeMatch[1]}-${rangeMatch[2]}`);
+    if (parsed) return parsed;
   }
 
   return parseTimeRange(cleanStr);
@@ -502,7 +546,7 @@ export function analyzeTabularRows(inputRows: (string | number | undefined)[][])
     'course', 'code', 'subject', 'subj', 'title', 'name', 'section', 'sec',
     'instructor', 'professor', 'prof', 'faculty', 'day', 'days', 'time', 'times',
     'start', 'end', 'room', 'bldg', 'classroom', 'location', 'credit', 'credits', 'unit', 'units', 'schedule',
-    'crn', 'catalog', 'crse', 'descr', 'nbr', 'dept',
+    'crn', 'catalog', 'crse', 'descr', 'nbr', 'dept', 'sect', 'hour', 'hours', 'building', 'rm',
   ];
 
   for (let r = 0; r < Math.min(trimmedRows.length, 12); r++) {
@@ -583,9 +627,316 @@ const SUBJECT_ONLY_REGEX = /^[A-Za-z]{2,5}$/;
 const COURSE_NUMBER_ONLY_REGEX = /^\d{2,4}[A-Za-z]?$/;
 const SECTION_REGEX = /^\d{1,4}[A-Za-z]?$|^[A-Za-z]\d{0,2}$/i;
 
+const DETECT_FIELDS = [
+  'code',
+  'subject',
+  'courseNum',
+  'name',
+  'section',
+  'schedule',
+  'days',
+  'time',
+  'startTime',
+  'endTime',
+  'instructor',
+  'credits',
+  'room',
+] as const;
+
+type DetectField = (typeof DETECT_FIELDS)[number];
+
+const DAY_WORD_RE =
+  /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues|tue|wed|thurs|thur|thu|fri|sat|sun|mo|tu|we|th|fr|sa|su|mwf|mtwrf|mtwthf|mtwr|tth|tuth|tr|mw|wf|tf|mf|mr|wr|rf|daily|m|t|w|r|f|s|u)$/i;
+
+const COMPACT_DAY_RE =
+  /^(?:m-f|m-th|mon-fri|mon-thu|monday-friday|monday-thursday|mtwthf|mtwrf|mtwr|mwf|tth|tuth|tr|mw|wf|tf|th|daily)$/i;
+
+function blankFieldScores(): Record<DetectField, number> {
+  return {
+    code: 0,
+    subject: 0,
+    courseNum: 0,
+    name: 0,
+    section: 0,
+    schedule: 0,
+    days: 0,
+    time: 0,
+    startTime: 0,
+    endTime: 0,
+    instructor: 0,
+    credits: 0,
+    room: 0,
+  };
+}
+
+/** Monday, Mon, Mo, M, Thur, R, MWF, TTH, TR, Mon/Wed, "Tue Thu", M-F, and the same shapes. */
+function isDayPatternCell(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed || /\d/.test(trimmed)) return false;
+  if (COMPACT_DAY_RE.test(trimmed.replace(/\s+/g, ''))) return true;
+  const parts = trimmed.split(/\s*(?:[/,&+]|\band\b|-)\s*|\s+/i).filter(Boolean);
+  return parts.length > 0 && parts.every((part) => DAY_WORD_RE.test(part));
+}
+
+function headerTextNorm(header: string): string {
+  return header
+    .toLowerCase()
+    .replace(/#/g, ' # ')
+    .replace(/[_/\\|]+/g, ' ')
+    .replace(/[^a-z0-9#\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Header synonyms. Course/Crse/Course #, Sec/Sect, Prof/Faculty, Units/Cr/Credit Hrs, Room/Bldg. */
+function scoreHeaderText(header: string): Record<DetectField, number> {
+  const scores = blankFieldScores();
+  const norm = headerTextNorm(header);
+  if (!norm) return scores;
+
+  const hasDate = /\bdate\b/.test(norm);
+  const isTitle = /\b(?:title|name|desc|description|descr)\b/.test(norm);
+
+  if (
+    /\b(?:acad\s+dept|academic\s+department|subject|subj|department|dept|discipline)\b/.test(norm) &&
+    !isTitle
+  ) {
+    scores.subject = 14;
+  }
+
+  if (
+    /\b(?:crse|course)\s*#/.test(norm) ||
+    /\b(?:crse|course)\s+(?:no|num|number|nbr)\b/.test(norm) ||
+    /\b(?:catalog|cat)\s*#/.test(norm) ||
+    /\b(?:catalog|cat)\s+(?:no|num|number|nbr)\b/.test(norm)
+  ) {
+    scores.courseNum = 14;
+  } else if (/\b(?:number|num|nbr)\b/.test(norm) && !/\b(?:section|sec|sect|phone|room|bldg|id)\b/.test(norm)) {
+    scores.courseNum = 12;
+  }
+
+  if (
+    /\b(?:course\s+code|course\s+id|course\s+identifier|crn|subj\s+crse)\b/.test(norm) ||
+    /\bclass\s*#/.test(norm) ||
+    /\bclass\s+(?:nbr|number)\b/.test(norm)
+  ) {
+    scores.code = 16;
+  } else if (/\bcode\b/.test(norm)) {
+    scores.code = 12;
+  } else if (!isTitle && /\b(?:course|crse)\b/.test(norm) && !/\b(?:schedule|day|days|time)\b/.test(norm)) {
+    // "Course" and "Crse" are a code or a number depending on the values underneath.
+    scores.code = 12;
+    if (!scores.courseNum) scores.courseNum = 12;
+  }
+
+  if (
+    /\b(?:course\s+title|course\s+name|subject\s+title|course\s+desc|description|descr|long\s+title)\b/.test(norm)
+  ) {
+    scores.name = 16;
+  } else if (/\b(?:title|name)\b/.test(norm) && !/\b(?:instructor|prof|teacher|faculty)\b/.test(norm)) {
+    scores.name = 8;
+  }
+
+  if (
+    /\b(?:section|sect)\b/.test(norm) ||
+    /\bsec\b/.test(norm) ||
+    /\bsec\s*#/.test(norm) ||
+    /\b(?:class\s+sec|section\s+number|sec\s+no)\b/.test(norm)
+  ) {
+    scores.section = 16;
+  }
+
+  if (
+    /\b(?:schedule|meeting\s+pattern|class\s+schedule|meeting\s+info|days?\s+and\s+times?)\b/.test(norm) ||
+    (/\bday\b/.test(norm) && /\btime\b/.test(norm))
+  ) {
+    scores.schedule = 16;
+  } else if (/\btime\b/.test(norm) && !/\b(?:start|end|begin|finish|due|date)\b/.test(norm)) {
+    scores.schedule = 10;
+    scores.time = 10;
+  }
+
+  if (/\b(?:meeting\s+days?|class\s+days?|mtg\s+days?|pattern)\b/.test(norm) && !scores.schedule) {
+    scores.days = 14;
+  } else if (/\bdays?\b/.test(norm) && !/\btime\b/.test(norm)) {
+    scores.days = 8;
+  }
+
+  if (!hasDate && /\b(?:start\s+time|begin\s+time|start|begin|from)\b/.test(norm)) scores.startTime = 14;
+  if (!hasDate && /\b(?:end\s+time|finish\s+time|end|finish|to)\b/.test(norm)) scores.endTime = 14;
+
+  if (/\b(?:faculty|instructor|professor|teacher|prof|lecturer|instr)\b/.test(norm)) scores.instructor = 16;
+  else if (/\bstaff\b/.test(norm)) scores.instructor = 6;
+
+  if (/\b(?:credit\s+hours?|credit\s+hrs?|credits?|units?|hrs?|hours?|cr)\b/.test(norm)) scores.credits = 16;
+
+  if (/\b(?:classroom|class\s+room|room|location|bldg|building|facility|hall|venue|rm)\b/.test(norm)) {
+    scores.room = 16;
+  }
+
+  return scores;
+}
+
+function fitsCode(val: string): boolean {
+  if (isDateCell(val) || isDayPatternCell(val)) return false;
+  const codePrefix = val.match(/^([A-Za-z]{2,6})\b/)?.[1] || '';
+  if (/^(?:hall|room|rm|lab|bldg|building|aud|auditorium|online|tba|tbd)$/i.test(codePrefix)) return false;
+  if (COURSE_CODE_REGEX.test(val)) return true;
+  const stripped = val.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  if (stripped !== val && COURSE_CODE_REGEX.test(stripped)) return true;
+  return /^[A-Za-z]{2,6}\s+\d{2,4}[A-Za-z]?(?:\s*\/\s*[A-Za-z]{2,6}\s+\d{2,4}[A-Za-z]?)+$/.test(val);
+}
+
+function fitsSubject(val: string): boolean {
+  if (isDayPatternCell(val)) return false;
+  return SUBJECT_ONLY_REGEX.test(val);
+}
+
+function fitsCourseNum(val: string): boolean {
+  return COURSE_NUMBER_ONLY_REGEX.test(val);
+}
+
+function fitsName(val: string): boolean {
+  if (fitsCode(val) || isDateCell(val) || isDayPatternCell(val)) return false;
+  if (extractTimeRange(val) || looksLikeSingleTime(val)) return false;
+  if (val.length < 5 || !/\s/.test(val)) return false;
+  if (/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(val)) return false;
+  if (/^\d{1,2}[\/.-]\d{1,2}/.test(val)) return false;
+  return true;
+}
+
+function fitsSectionValue(val: string): boolean {
+  if (isDayPatternCell(val) || isDateCell(val)) return false;
+  if (!SECTION_REGEX.test(val) || val.length > 4) return false;
+  if (/^[A-Za-z]{2,}/.test(val)) return false;
+  return true;
+}
+
+/** 30, 25, 40 is a seats column. 001, 002, 101 is still a section column. */
+function isLargeVariedNumberColumn(values: string[]): boolean {
+  const nonempty = values.filter((value) => value.trim() !== '');
+  if (nonempty.length < 2) return false;
+  const nums: number[] = [];
+  for (const value of nonempty) {
+    if (!/^\d{1,4}$/.test(value)) return false;
+    nums.push(Number(value));
+  }
+  if (new Set(nums).size < 2) return false;
+  const large = nums.filter((num) => num >= 20).length / nums.length;
+  return large >= 0.6;
+}
+
+/** Seats sit under 100. Catalog numbers such as 101 and 221 do not. */
+function isSeatsColumn(values: string[]): boolean {
+  if (!isLargeVariedNumberColumn(values)) return false;
+  const nums = values.filter((value) => /^\d{1,4}$/.test(value)).map(Number);
+  if (nums.length === 0) return false;
+  return nums.filter((num) => num < 100).length / nums.length >= 0.8;
+}
+
+function fitsSchedule(val: string): boolean {
+  if (isDateCell(val)) return false;
+  if (!extractTimeRange(val)) return false;
+  return extractDays(val).length > 0;
+}
+
+function isExcelTimeFraction(val: string): boolean {
+  const s = val.trim();
+  if (!/^\d*\.\d+$/.test(s)) return false;
+  const fraction = Number(s);
+  return fraction >= 0 && fraction < 1;
+}
+
+function looksLikeSingleTime(val: string): boolean {
+  if (isDateCell(val)) return false;
+  if (isExcelTimeFraction(val)) return true;
+  if (extractTimeRange(val)) return false;
+  const s = val.trim();
+  if (/^\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?m\.?)?$/i.test(s)) return true;
+  if (/^\d{1,2}\.\d{2}$/.test(s)) return true;
+  if (/^\d{1,2}\s*[ap]\.?m\.?$/i.test(s)) return true;
+  if (/^(?:[01]\d|2[0-3])[0-5]\d$/.test(s)) return true;
+  return false;
+}
+
+function fitsTime(val: string): boolean {
+  if (isDateCell(val) || fitsSchedule(val)) return false;
+  if (isExcelTimeFraction(val)) return true;
+  return extractTimeRange(val) !== null;
+}
+
+function fitsInstructor(val: string): boolean {
+  if (/^(?:staff|tba|tbd|tbc|online(?:\s+\w+)?)$/i.test(val)) return true;
+  const cleaned = val
+    .replace(/\s*\/\s*/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+-\s+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned || /\d/.test(cleaned)) return false;
+  const words = cleaned.split(' ');
+  if (words.length < 2 || words.length > 5) return false;
+  if (/\b(?:of|the|and|to|for|in|introduction|intro|principles|fundamentals)\b/i.test(cleaned)) return false;
+  return words.every((word) => /^[A-Z][A-Za-z'’.ʼ-]*$/.test(word));
+}
+
+function fitsCredits(val: string): boolean {
+  if (isDateCell(val)) return false;
+  const match = val.match(/^(\d+(?:\.\d+)?)(?:\s*(?:credits?|credit\s*hours?|units?|hrs?|cr))?$/i);
+  if (!match) return false;
+  if (/^0\d/.test(match[1])) return false;
+  const credits = Number(match[1]);
+  return credits >= 0.5 && credits <= 8;
+}
+
+function fitsRoom(val: string): boolean {
+  if (/^(?:tbd|tba|online(?:\s+\w+)?|arr(?:anged)?)$/i.test(val)) return true;
+  if (/^(?:room|rm\.?|hall|bldg|building|lab|auditorium|aud|classroom|facility)\b/i.test(val)) return true;
+  if (/^[A-Za-z]{5,}\s+\d{1,4}[A-Za-z]?$/.test(val)) return true;
+  return false;
+}
+
+function valueFits(field: DetectField, val: string): boolean {
+  switch (field) {
+    case 'code':
+      return fitsCode(val);
+    case 'subject':
+      return fitsSubject(val);
+    case 'courseNum':
+      return fitsCourseNum(val);
+    case 'name':
+      return fitsName(val);
+    case 'section':
+      return fitsSectionValue(val);
+    case 'schedule':
+      return fitsSchedule(val);
+    case 'days':
+      return isDayPatternCell(val);
+    case 'time':
+      return fitsTime(val);
+    case 'startTime':
+    case 'endTime':
+      return looksLikeSingleTime(val);
+    case 'instructor':
+      return fitsInstructor(val);
+    case 'credits':
+      return fitsCredits(val);
+    case 'room':
+      return fitsRoom(val);
+    default:
+      return false;
+  }
+}
+
 /**
  * Automatically detects which column corresponds to each course field
  * combining header keyword analysis and deep content validation across up to 1,000 rows.
+ *
+ * A header match is kept only when the sampled values fit that field. Day patterns
+ * are not subjects, and a column of large varied numbers is not a section. When two
+ * fields want one column, the stronger data score wins. Days are filled before subject.
+ * The school SIS layout (Acad. Dept, Course Code, Section, Time*) keeps its headers
+ * when the values agree, which they do.
  */
 export function autoDetectColumns(
   rawRows: (string | number | undefined)[][],
@@ -600,230 +951,68 @@ export function autoDetectColumns(
 
   interface FieldScore {
     colKey: string;
-    code: number;
-    subject: number;
-    courseNum: number;
-    name: number;
-    section: number;
-    schedule: number;
-    days: number;
-    time: number;
-    startTime: number;
-    endTime: number;
-    instructor: number;
-    credits: number;
-    room: number;
-    header: Record<keyof Omit<FieldScore, 'colKey' | 'header'>, number>;
+    index: number;
+    data: Record<DetectField, number>;
+    header: Record<DetectField, number>;
   }
 
+  const DATA_WEIGHT: Record<DetectField, number> = {
+    code: 8,
+    subject: 6,
+    courseNum: 6,
+    name: 8,
+    section: 8,
+    schedule: 8,
+    days: 6,
+    time: 6,
+    startTime: 6,
+    endTime: 6,
+    instructor: 8,
+    credits: 8,
+    room: 8,
+  };
+
   const scores: FieldScore[] = columns.map((col) => {
-    const rawH = col.headerText.toLowerCase();
-    const cleanH = rawH.replace(/[^a-z0-9]/g, ' ').trim();
-
-    // 1. Header keyword weights
-    let codeH = 0;
-    let subjectH = 0;
-    let courseNumH = 0;
-    let nameH = 0;
-    let sectionH = 0;
-    let scheduleH = 0;
-    let daysH = 0;
-    let timeH = 0;
-    let startH = 0;
-    let endH = 0;
-    let instructorH = 0;
-    let creditsH = 0;
-    let roomH = 0;
-
-    // Subject column detection e.g. "Acad. Dept", "Subject", "Dept"
-    if (/\b(acad\s*dept|academic\s*department|subject|subj|department|dept)\b/i.test(cleanH)) subjectH = 14;
-
-    // Course number column detection e.g. "Crse", "Course #", "Number"
-    if (/\b(crse|course\s*no|course\s*num|course\s*#|catalog\s*#|cat\s*#|cat\s*no|catalog\s*nbr|catalog\s*number)\b/i.test(cleanH)) courseNumH = 14;
-    else if (/\b(number|num|nbr)\b/i.test(cleanH) && !/\b(section|sec|phone|room|bldg|id)\b/i.test(cleanH)) courseNumH = 12;
-
-    // Full Course Code detection e.g. "Course Code", "Course ID", "CRN"
-    if (/\b(course\s*code|course\s*id|crn|class\s*#|class\s*nbr|course\s*identifier|subj\s*crse)\b/i.test(cleanH)) codeH = 16;
-    else if (/\b(code)\b/i.test(cleanH)) codeH = 8;
-
-    // Course Title detection e.g. "Course Title", "Course Name"
-    if (/\b(course\s*title|course\s*name|subject\s*title|course\s*desc|description|descr|long\s*title)\b/i.test(cleanH)) nameH = 16;
-    else if (/\b(title|name)\b/i.test(cleanH) && !/\b(instructor|prof|teacher|faculty)\b/i.test(cleanH)) nameH = 8;
-
-    // Section e.g. "Section", "Sec"
-    if (/\b(section|sec|sec\s*#|sec\s*no|sect|class\s*sec|section\s*number)\b/i.test(cleanH)) sectionH = 16;
-
-    // Schedule / Meeting / Time* e.g. "Time*", "Schedule", "Day / Time"
-    if (/\b(schedule|day\s*[\/&]\s*time|days\s*[\/&]\s*time|days\s*and\s*times?|meeting\s*pattern|class\s*schedule|meeting\s*info)\b/i.test(cleanH)) {
-      scheduleH = 16;
-    } else if (/\b(time)\b/i.test(cleanH) && !/\b(start|end|begin|finish|due|date)\b/i.test(cleanH)) {
-      scheduleH = 10;
-      timeH = 10;
-    }
-
-    if (/\b(meeting\s*days?|class\s*days?|pattern|mtg\s*days?)\b/i.test(cleanH)) daysH = 14;
-    else if (/\b(days?)\b/i.test(cleanH) && !/\btime\b/i.test(cleanH)) daysH = 8;
-
-    if (/\b(start\s*time|begin\s*time|start|begin|from)\b/i.test(cleanH) && !/\bdate\b/i.test(cleanH)) startH = 14;
-    if (/\b(end\s*time|finish\s*time|end|finish|to)\b/i.test(cleanH) && !/\bdate\b/i.test(cleanH)) endH = 14;
-
-    // Faculty / Professor / Instructor e.g. "Faculty", "Instructor"
-    if (/\b(faculty|instructor|professor|teacher|prof|lecturer|instructor\s*name|primary\s*instructor)\b/i.test(cleanH)) instructorH = 16;
-    else if (/\bstaff\b/i.test(cleanH)) instructorH = 6;
-
-    // Credit e.g. "Credit", "Credits", "Units"
-    if (/\b(credit\s*hours?|credits?|units?|credit\s*units?|hrs?|cr|credit)\b/i.test(cleanH)) creditsH = 16;
-
-    // Classroom / Room e.g. "Classroom", "Room", "Location"
-    if (/\b(classroom|room|location|bldg|building|facility|hall|venue|facility\s*id)\b/i.test(cleanH)) roomH = 16;
-
-    // 2. Data content analysis across rows
-    let codeMatches = 0;
-    let subjectMatches = 0;
-    let courseNumMatches = 0;
-    let nameMatches = 0;
-    let sectionMatches = 0;
-    let scheduleMatches = 0;
-    let daysMatches = 0;
-    let timeMatches = 0;
-    let startMatches = 0;
-    let endMatches = 0;
-    let instructorMatches = 0;
-    let creditsMatches = 0;
-    let roomMatches = 0;
+    const header = scoreHeaderText(col.headerText);
+    const hits = blankFieldScores();
+    let nonempty = 0;
+    const seen: string[] = [];
 
     for (let r = dataStartRow; r < scanEnd; r++) {
       const row = rawRows[r];
       if (!row) continue;
       const val = sanitizeString(row[col.index]);
       if (!val) continue;
-
-      // Full Course Code e.g. "BUSN 200", "BUSN 370", "BUSN 370L", "ECON 200".
-      // Building names such as "Turing 101" and "Hall 12" are rooms, not codes.
-      const codePrefix = val.match(/^([A-Za-z]{2,5})\b/)?.[1] || '';
-      const looksLikeRoomWord = /^(?:hall|room|rm|lab|bldg|building|aud|auditorium|online|tba|tbd)$/i.test(codePrefix);
-      if (COURSE_CODE_REGEX.test(val) && codePrefix.length >= 2 && codePrefix.length <= 5 && !looksLikeRoomWord) {
-        codeMatches++;
-      } else if (/^[A-Za-z]{2,4}\s+\d{2,4}/.test(val) && !looksLikeRoomWord) {
-        codeMatches += 0.8;
+      nonempty++;
+      seen.push(val);
+      for (const field of DETECT_FIELDS) {
+        if (field === 'section') continue;
+        if (valueFits(field, val)) hits[field] += 1;
       }
-
-      // Subject Only e.g. "BUSN", "ECON", "MATH", "CS"
-      if (SUBJECT_ONLY_REGEX.test(val) && val.length <= 5) {
-        subjectMatches++;
-      }
-
-      // Course Number Only e.g. "200", "370", "370L"
-      if (COURSE_NUMBER_ONLY_REGEX.test(val) && val.length <= 5) {
-        courseNumMatches++;
-      }
-
-      // Section e.g. "001", "002", "003", "A"
-      if (SECTION_REGEX.test(val) && val.length <= 4 && !/^[A-Za-z]{2,}/.test(val)) {
-        sectionMatches++;
-      }
-
-      // Course Title e.g. "Intro to Business Communication", "Management of Information Systems"
-      if (
-        val.length >= 5 &&
-        val.includes(' ') &&
-        !/\d{1,2}:\d{2}/.test(val) &&
-        !/^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(val) &&
-        !/^\d{1,2}\/\d{1,2}/.test(val)
-      ) {
-        nameMatches++;
-      }
-
-      // Schedule (Day + Time combined) e.g. "(DD) 01:45PM - 03:15PM TF", "(A) 08:30AM - 10:00AM MW"
-      const hasTime = /\d{1,2}[:.]\d{2}|\b[012]\d[0-5]\d\b/.test(val);
-      const hasDays = extractDays(val).length > 0;
-
-      if (hasTime && hasDays) {
-        scheduleMatches++;
-      } else if (hasDays && !hasTime) {
-        daysMatches++;
-      } else if (hasTime && !hasDays) {
-        if (/[-–~to/]/.test(val)) {
-          timeMatches++;
-        } else {
-          startMatches += 0.5;
-          endMatches += 0.5;
-        }
-      }
-
-      // Instructor e.g. "Yusuf Nulla", "Darin Duch", "TBC", "TBA", "Staff"
-      if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$/.test(val) || val === 'Staff' || val === 'TBA' || val === 'TBC') {
-        instructorMatches++;
-      }
-
-      // Credits e.g. 1 to 6
-      const num = Number(val);
-      if (!isNaN(num) && num >= 0.5 && num <= 8) {
-        creditsMatches++;
-      }
-
-      // Room e.g. "TBD", "TBA", "Hall 101", "Room 204"
-      if (
-        val === 'TBD' ||
-        val === 'TBA' ||
-        /^Room|Hall|Bldg|Lab|Aud/i.test(val) ||
-        /\b[A-Za-z]{1,3}\s*\d{3}\b/.test(val)
-      ) {
-        roomMatches++;
-      }
+      if (fitsSectionValue(val)) hits.section += 1;
     }
 
-    return {
-      colKey: col.key,
-      code: codeH + (codeMatches / totalSampleRows) * 8,
-      subject: subjectH + (subjectMatches / totalSampleRows) * 6,
-      courseNum: courseNumH + (courseNumMatches / totalSampleRows) * 6,
-      name: nameH + (nameMatches / totalSampleRows) * 8,
-      section: sectionH + (sectionMatches / totalSampleRows) * 8,
-      schedule: scheduleH + (scheduleMatches / totalSampleRows) * 8,
-      days: daysH + (daysMatches / totalSampleRows) * 6,
-      time: timeH + (timeMatches / totalSampleRows) * 6,
-      startTime: startH + (startMatches / totalSampleRows) * 6,
-      endTime: endH + (endMatches / totalSampleRows) * 6,
-      instructor: instructorH + (instructorMatches / totalSampleRows) * 8,
-      credits: creditsH + (creditsMatches / totalSampleRows) * 8,
-      room: roomH + (roomMatches / totalSampleRows) * 8,
-      header: {
-        code: codeH,
-        subject: subjectH,
-        courseNum: courseNumH,
-        name: nameH,
-        section: sectionH,
-        schedule: scheduleH,
-        days: daysH,
-        time: timeH,
-        startTime: startH,
-        endTime: endH,
-        instructor: instructorH,
-        credits: creditsH,
-        room: roomH,
-      },
-    };
+    // Seats (30, 25) match the section pattern. Drop them when the column is large and varied.
+    if (isLargeVariedNumberColumn(seen)) hits.section = 0;
+    if (isSeatsColumn(seen)) hits.courseNum = 0;
+
+    for (const field of DETECT_FIELDS) {
+      if (header[field] < 8) continue;
+      if (nonempty > 0 && hits[field] / nonempty < 0.5) header[field] = 0;
+    }
+
+    const data = blankFieldScores();
+    for (const field of DETECT_FIELDS) {
+      data[field] = (hits[field] / totalSampleRows) * DATA_WEIGHT[field];
+    }
+
+    return { colKey: col.key, index: col.index, data, header };
   });
 
   const assigned = new Set<string>();
 
-  const pickBest = (field: keyof Omit<FieldScore, 'colKey' | 'header'>, threshold = 1.5): string => {
-    const candidates = scores
-      .filter((s) => !assigned.has(s.colKey) && s[field] >= threshold)
-      .sort((a, b) => b[field] - a[field]);
-
-    if (candidates.length > 0) {
-      const best = candidates[0].colKey;
-      assigned.add(best);
-      return best;
-    }
-    return '';
-  };
-
-  // Header labels win before sample guesses. Otherwise "Turing 101" is read as a
-  // course code and a credits column of 3s is read as section numbers.
-  const headerFields = [
+  // Validated headers win before sample guesses, in the school column order.
+  const headerFields: DetectField[] = [
     'subject',
     'courseNum',
     'section',
@@ -837,53 +1026,70 @@ export function autoDetectColumns(
     'time',
     'name',
     'code',
-  ] as const;
+  ];
   for (const field of headerFields) {
     const best = scores
-      .filter((s) => !assigned.has(s.colKey) && s.header[field] >= 8)
-      .sort((a, b) => b.header[field] - a.header[field])[0];
+      .filter((score) => !assigned.has(score.colKey) && score.header[field] >= 8)
+      .sort((a, b) => b.header[field] - a.header[field] || a.index - b.index)[0];
     if (best) {
       mapping[field] = best.colKey;
       assigned.add(best.colKey);
     }
   }
 
-  if (!mapping.code) mapping.code = pickBest('code');
-  if (!mapping.code) {
-    if (!mapping.subject) mapping.subject = pickBest('subject');
-    if (!mapping.courseNum) mapping.courseNum = pickBest('courseNum');
-  } else if (!mapping.subject) {
-    mapping.subject = pickBest('subject', 5.0);
+  // Days outrank subject on a tie so MW/TR is not read as a department.
+  const dataPriority: DetectField[] = [
+    'days',
+    'schedule',
+    'time',
+    'startTime',
+    'endTime',
+    'code',
+    'courseNum',
+    'name',
+    'instructor',
+    'credits',
+    'room',
+    'section',
+    'subject',
+  ];
+  const candidates: { field: DetectField; colKey: string; score: number; index: number; priority: number }[] = [];
+  for (const score of scores) {
+    dataPriority.forEach((field, priority) => {
+      if (score.data[field] >= 1.5) {
+        candidates.push({
+          field,
+          colKey: score.colKey,
+          score: score.data[field],
+          index: score.index,
+          priority,
+        });
+      }
+    });
+  }
+  candidates.sort((a, b) => b.score - a.score || a.priority - b.priority || a.index - b.index);
+
+  const fieldTaken = new Set<DetectField>(
+    DETECT_FIELDS.filter((field) => mapping[field] !== '')
+  );
+  for (const candidate of candidates) {
+    if (fieldTaken.has(candidate.field) || assigned.has(candidate.colKey)) continue;
+    if (candidate.field === 'subject' && mapping.code && candidate.score < 5) continue;
+    mapping[candidate.field] = candidate.colKey;
+    assigned.add(candidate.colKey);
+    fieldTaken.add(candidate.field);
   }
 
-  if (!mapping.name) mapping.name = pickBest('name');
-  if (!mapping.schedule) mapping.schedule = pickBest('schedule');
-  if (!mapping.schedule) {
-    if (!mapping.days) mapping.days = pickBest('days');
-    if (!mapping.time) mapping.time = pickBest('time');
-    if (!mapping.time) {
-      if (!mapping.startTime) mapping.startTime = pickBest('startTime');
-      if (!mapping.endTime) mapping.endTime = pickBest('endTime');
-    }
-  }
-
-  if (!mapping.section) mapping.section = pickBest('section');
-  if (!mapping.instructor) mapping.instructor = pickBest('instructor');
-  if (!mapping.credits) mapping.credits = pickBest('credits');
-  if (!mapping.room) mapping.room = pickBest('room');
-
-  // Safety fallback: if code still empty, pick first non-empty column
   if (!mapping.code && !mapping.subject && columns.length > 0) {
-    const unassigned = columns.find((c) => !assigned.has(c.key) && c.samples.length > 0);
+    const unassigned = columns.find((col) => !assigned.has(col.key) && col.samples.length > 0);
     if (unassigned) {
       mapping.code = unassigned.key;
       assigned.add(unassigned.key);
     }
   }
 
-  // Safety fallback: if name still empty, pick next non-empty column
   if (!mapping.name && columns.length > 1) {
-    const unassigned = columns.find((c) => !assigned.has(c.key) && c.samples.length > 0);
+    const unassigned = columns.find((col) => !assigned.has(col.key) && col.samples.length > 0);
     if (unassigned) {
       mapping.name = unassigned.key;
       assigned.add(unassigned.key);
