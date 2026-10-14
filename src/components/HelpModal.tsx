@@ -40,7 +40,6 @@ interface HelpModalProps {
   onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
   onOpenExport?: () => void;
   onOpenCatalog?: () => void;
-  onOpenShortcuts?: () => void;
   onTabChange?: (tab: HelpTabType) => void;
 }
 
@@ -78,7 +77,6 @@ export const HelpModal: React.FC<HelpModalProps> = ({
   onOpenImport,
   onOpenExport,
   onOpenCatalog,
-  onOpenShortcuts,
   onTabChange,
 }) => {
   const customShortcuts = useScheduleStore((state) => state.customShortcuts);

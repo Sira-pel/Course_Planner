@@ -161,7 +161,7 @@ export const CourseBlock = memo(function CourseBlock({
   }
 
   // Active Plan Course Block
-  const colors = displayCourseColor(course.color, theme);
+  const colors = displayCourseColor(course.color);
   const isLightText = colors.text === '#ffffff';
   const contrastText = isLightText ? 'text-white' : 'text-slate-900';
   const subtitleColor = isLightText ? 'text-white/95' : 'text-slate-900/90';

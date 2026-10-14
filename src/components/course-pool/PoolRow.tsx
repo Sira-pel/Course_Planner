@@ -10,8 +10,6 @@ export interface PoolRowProps {
   inActivePlan: boolean;
   conflict: Course | null;
   confirmDelete: boolean;
-  index?: number;
-  reduceMotion?: boolean | null;
   activePlanName: string | undefined;
   onEdit: (id: string) => void;
   onRequestDelete: (id: string) => void;

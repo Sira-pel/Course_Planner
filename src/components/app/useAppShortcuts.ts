@@ -4,7 +4,6 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { SchedulePlan } from '../../types/schedule';
 import { useScheduleStore } from '../../store/useScheduleStore';
 
 export type ShortcutSurface =
@@ -18,7 +17,6 @@ export type ShortcutSurface =
   | 'pool';
 
 export interface UseAppShortcutsArgs {
-  plans?: SchedulePlan[];
   activePlanId: string;
   isMoreOpen: boolean;
   isConfirmingClear: boolean;
@@ -36,7 +34,6 @@ export interface UseAppShortcutsArgs {
   onCloseExport: () => void;
   onCloseImport?: () => void;
   onCloseHelp?: () => void;
-  onCloseShortcuts?: () => void;
   onCloseShareImport?: () => void;
   onCollapsePool: () => void;
 }
@@ -102,7 +99,6 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         onCloseExport,
         onCloseImport,
         onCloseHelp,
-        onCloseShortcuts,
         onCloseShareImport,
         onCollapsePool,
       } = argsRef.current;
@@ -132,7 +128,6 @@ export function useAppShortcuts(args: UseAppShortcutsArgs): void {
         onCloseExport();
         onCloseImport?.();
         onCloseHelp?.();
-        onCloseShortcuts?.();
         onCloseShareImport?.();
         onCollapsePool();
         return;

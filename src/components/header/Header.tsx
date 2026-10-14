@@ -30,7 +30,6 @@ interface HeaderProps {
   onOpenNewCourse: (initialMode?: 'form' | 'quick') => void;
   onOpenExport: (tab?: ExportTabType, focus?: 'google') => void;
   onOpenImport?: (tab?: 'excel' | 'share' | 'ics' | 'backup') => void;
-  onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onOpenCatalog: () => void;
   onOpenShare?: (plan?: SchedulePlan) => void;
@@ -47,7 +46,6 @@ export const Header = memo(function Header({
   onOpenNewCourse,
   onOpenExport,
   onOpenImport,
-  onOpenShortcuts,
   onOpenHelp,
   onOpenCatalog,
   onOpenShare,
@@ -517,10 +515,6 @@ export const Header = memo(function Header({
             onSetWeekStart={setWeekStart}
             onSetShowWeekends={setShowWeekends}
             onSetThemePreference={handleAppearance}
-            onOpenShortcuts={() => {
-              setIsSettingsOpen(false);
-              onOpenShortcuts();
-            }}
             onOpenHelp={() => {
               setIsSettingsOpen(false);
               onOpenHelp();
@@ -542,7 +536,6 @@ export const Header = memo(function Header({
         <div className="up-header-plan">
           <PlansMenu
             isPhone={isPhone}
-            reduceMotion={reduceMotion}
             menuEnter={menuEnter}
             menuShown={menuShown}
             menuLeave={menuLeave}
@@ -607,7 +600,6 @@ export const Header = memo(function Header({
 
         <CompareMenu
           isPhone={isPhone}
-          reduceMotion={reduceMotion}
           menuEnter={menuEnter}
           menuShown={menuShown}
           menuLeave={menuLeave}

@@ -190,7 +190,7 @@ for (const hex of COURSE_COLORS) {
  * Preset swatches use the softened palette. Any other hex, including a custom
  * color from the picker, is painted exactly as stored in both themes.
  */
-export function displayCourseColor(hex: string, _theme?: 'light' | 'dark'): CourseColorDisplay {
+export function displayCourseColor(hex: string): CourseColorDisplay {
   const parsed = parseHex(hex || '');
   if (!parsed) return PRESET_PAINT.get('#3b82f6') ?? paint({ r: 50, g: 165, b: 212 });
   const preset = PRESET_PAINT.get(toHex(parsed).toLowerCase());

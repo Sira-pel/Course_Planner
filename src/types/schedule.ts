@@ -1,10 +1,5 @@
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
-export interface TimeRange {
-  startMinutes: number; // e.g. 9:00 AM = 540
-  endMinutes: number;   // e.g. 10:15 AM = 615
-}
-
 export interface ClassSession {
   id: string;
   day: DayOfWeek;
@@ -27,7 +22,6 @@ export interface Course {
 export interface SchedulePlan {
   id: string;
   name: string;         // e.g. "Plan A (Primary)", "Plan B (Backup)"
-  isArchived?: boolean;
   courses: Course[];
 }
 

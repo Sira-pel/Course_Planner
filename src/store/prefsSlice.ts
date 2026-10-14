@@ -20,10 +20,8 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
   | 'setCustomShortcut'
   | 'resetCustomShortcuts'
-  | 'setTheme'
   | 'setThemePreference'
   | 'commitTheme'
-  | 'toggleTheme'
   | 'setShowWeekends'
   | 'setTimeRange'
   | 'setTimeRangeMode'
@@ -50,13 +48,6 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
     resetCustomShortcuts: () => {
       set({ customShortcuts: {} });
     },
-    setTheme: (theme: 'light' | 'dark') => {
-      if (!isThemeName(theme)) return;
-      applyDomTheme(theme);
-      persistTheme(theme);
-      if (get().theme === theme && get().themePreference === theme) return;
-      set({ theme, themePreference: theme });
-    },
 
     setThemePreference: (preference: ThemePreference) => {
       if (!isThemePreference(preference)) return;
@@ -71,12 +62,6 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
       if (!isThemeName(theme)) return;
       if (get().theme === theme) return;
       set({ theme });
-    },
-
-    toggleTheme: () => {
-      const current = get().theme;
-      const next = current === 'dark' ? 'light' : 'dark';
-      get().setTheme(next);
     },
 
     setShowWeekends: (show: boolean) => set({ showWeekends: show }),

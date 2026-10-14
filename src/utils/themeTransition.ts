@@ -50,10 +50,6 @@ let failsafe = 0;
 let pendingFrame = 0;
 let groupSizeWarned = false;
 
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 function rememberChosenTheme(goingToDark: boolean): 'light' | 'dark' {
   const theme = goingToDark ? 'dark' : 'light';
   chosenTheme = theme;
@@ -351,10 +347,6 @@ function cancelAnimations(animations: Animation[]): void {
   }
 }
 
-export function isThemeRevealing(): boolean {
-  return activeReveal !== null;
-}
-
 /**
  * Pointer-origin circular swap on View Transition bitmaps.
  * Capture light/dark as named body groups, then scale a rounded-clip wrapper
@@ -567,20 +559,4 @@ export function originRelativeTo(
   }
 
   return { x: frame.width / 2, y: frame.height / 2 };
-}
-
-export function originFromPointer(event: {
-  clientX: number;
-  clientY: number;
-  currentTarget: EventTarget | null;
-}): ThemeRevealOrigin {
-  const { width, height, left, top } = viewMetrics();
-  return originRelativeTo(
-    { getBoundingClientRect: () => ({ left, top, width, height }) },
-    event
-  );
-}
-
-export function isPointerClick(event: { detail: number }): boolean {
-  return event.detail > 0;
 }

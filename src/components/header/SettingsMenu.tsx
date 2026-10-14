@@ -41,7 +41,6 @@ interface SettingsMenuProps {
   onSetWeekStart: (weekStart: 'monday' | 'sunday') => void;
   onSetShowWeekends: (show: boolean) => void;
   onSetThemePreference: (preference: ThemePreference, event: React.MouseEvent<HTMLElement>) => void;
-  onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onLoadDemo: () => void;
   onClearAll: () => void;
@@ -70,7 +69,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onSetWeekStart,
   onSetShowWeekends,
   onSetThemePreference,
-  onOpenShortcuts,
   onOpenHelp,
   onLoadDemo,
   onClearAll,

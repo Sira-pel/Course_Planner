@@ -46,11 +46,9 @@ export interface ScheduleState {
   getNextColor: (targetPlanId?: string) => string;
 
   // Catalog Pool actions
-  addToCatalog: (course: Course) => void;
   bulkAddToCatalog: (courses: Course[]) => void;
   removeFromCatalog: (courseId: string) => void;
   updateCatalogCourse: (course: Course) => void;
-  toggleCourseInPlan: (catalogCourseId: string, targetPlanId?: string) => void;
   addCourseFromPool: (catalogCourseId: string, targetPlanId?: string) => void;
   removeCourseFromPlanByCatalog: (catalogCourseId: string, targetPlanId?: string) => void;
   clearUnusedCatalogCourses: () => void;
@@ -65,10 +63,8 @@ export interface ScheduleState {
   customShortcuts: Record<string, string>;
   setCustomShortcut: (actionId: string, shortcut: string) => void;
   resetCustomShortcuts: () => void;
-  setTheme: (theme: 'light' | 'dark') => void;
   setThemePreference: (preference: 'light' | 'dark' | 'system') => void;
   commitTheme: (theme: 'light' | 'dark') => void;
-  toggleTheme: () => void;
   setShowWeekends: (show: boolean) => void;
   setTimeRange: (startHour: number, endHour: number) => void;
   setTimeRangeMode: (mode: 'auto' | 'custom') => void;

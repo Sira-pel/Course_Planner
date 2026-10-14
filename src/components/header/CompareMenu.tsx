@@ -9,7 +9,6 @@ import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../u
 
 interface CompareMenuProps {
   isPhone: boolean;
-  reduceMotion: boolean | null;
   menuEnter: TargetAndTransition;
   menuShown: TargetAndTransition;
   menuLeave: TargetAndTransition;
