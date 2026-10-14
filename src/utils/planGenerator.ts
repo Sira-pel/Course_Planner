@@ -9,7 +9,6 @@ export const MAX_CANDIDATES = 12;
 export const MAX_EVALUATIONS = 5000;
 /** Course groups revealed at a time. The search keeps every group it has ranked. */
 export const MAX_RESULTS = 5;
-export const LUNCH_FREE_MINUTES = 45;
 
 const DAY_LABEL = new Map(DAYS_LIST.map((day) => [day.id, day.label]));
 const WEEKDAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];

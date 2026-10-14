@@ -299,13 +299,6 @@ export function reconcilePersistedState(
   };
 }
 
-export function rehydratePersistedState(state: ScheduleState): void {
-  const reconciled = reconcilePersistedState(state, state);
-  Object.assign(state, reconciled);
-  applyDomTheme(reconciled.theme);
-  persistTheme(reconciled.themePreference === 'system' ? 'system' : reconciled.theme);
-}
-
 export const persistOptions: PersistOptions<ScheduleState, PersistedSchedule> = {
   name: STORAGE_NAME,
   version: PERSIST_SCHEMA_VERSION,
