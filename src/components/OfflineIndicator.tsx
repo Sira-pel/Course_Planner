@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { WifiOff, X } from 'lucide-react';
 import { useOnlineStatus } from '../utils/useOnlineStatus';
-import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
+import { EASE_SMOOTH } from '../utils/motion';
 
 export const OfflineIndicator: React.FC = () => {
   const isOnline = useOnlineStatus();

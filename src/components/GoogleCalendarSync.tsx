@@ -22,7 +22,7 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
+const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
   activePlan,
   semesterStart,
   semesterEnd,

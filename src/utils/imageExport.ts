@@ -249,7 +249,7 @@ export async function exportScheduleToImage(
       } else {
         ctx.rect(bX, bY, bW, bH);
       }
-      const blockColor = displayCourseColor(course.color || '#3B82F6', options.theme);
+      const blockColor = displayCourseColor(course.color || '#3B82F6');
       ctx.fillStyle = blockColor.bg;
       ctx.fill();
 

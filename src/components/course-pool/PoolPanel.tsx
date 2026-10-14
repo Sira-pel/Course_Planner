@@ -381,7 +381,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               </div>
             </div>
           ) : (
-            filteredCourses.map((item, index) => {
+            filteredCourses.map((item) => {
               const inActivePlan = isEnrolled(item);
               const conflict = findConflict(item);
 
@@ -392,8 +392,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   inActivePlan={inActivePlan}
                   conflict={conflict}
                   confirmDelete={confirmDeleteCourseId === item.id}
-                  index={index}
-                  reduceMotion={reduceMotion}
                   activePlanName={activePlanName}
                   onEdit={onEditCourse}
                   onRequestDelete={onRequestDelete}

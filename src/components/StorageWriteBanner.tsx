@@ -7,7 +7,7 @@ import {
   storageWriteErrorMessage,
   subscribeStorageWriteError,
 } from '../store/storageWrite';
-import { EASE_OUT, EASE_SMOOTH } from '../utils/motion';
+import { EASE_SMOOTH } from '../utils/motion';
 
 export const StorageWriteBanner: React.FC = () => {
   const kind = useSyncExternalStore(

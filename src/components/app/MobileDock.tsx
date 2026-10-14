@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Transition } from 'motion/react';
 import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical, Smartphone, Download, X } from 'lucide-react';
 import { ClearAllDialog } from '../header/ClearAllDialog';
-import { EASE_OUT, EASE_POP, EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
+import { EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 
 const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
@@ -22,7 +22,6 @@ export interface MobileDockProps {
   onTogglePool: () => void;
   onAddCourse: () => void;
   onLoadDemo: () => void;
-  onOpenShortcuts: () => void;
   onOpenHelp?: () => void;
   onOpenExport?: () => void;
   onRequestClear: () => void;
@@ -40,7 +39,6 @@ export const MobileDock = React.memo(function MobileDock({
   onTogglePool,
   onAddCourse,
   onLoadDemo,
-  onOpenShortcuts,
   onOpenHelp,
   onOpenExport,
   onRequestClear,

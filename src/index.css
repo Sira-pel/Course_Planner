@@ -1165,62 +1165,6 @@ html.dark .up-settings-select option,
   background: color-mix(in srgb, var(--up-danger) 10%, transparent);
 }
 
-.up-settings-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 2px 4px 4px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--up-danger) 32%, var(--up-line));
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--up-danger) 8%, transparent);
-}
-
-.up-settings-confirm p {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--up-danger);
-  line-height: 1.35;
-}
-
-.up-settings-confirm-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.up-settings-confirm-yes,
-.up-settings-confirm-no {
-  flex: 1;
-  min-height: 32px;
-  padding: 0 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.up-settings-confirm-yes {
-  border: 0;
-  background: #c42b4a;
-  color: #fdf6f7;
-}
-
-.up-settings-confirm-yes:hover {
-  background: color-mix(in srgb, #c42b4a 88%, #1a080c);
-}
-
-.up-settings-confirm-no {
-  border: 1px solid var(--up-line);
-  background: transparent;
-  color: var(--up-ink);
-  font-weight: 500;
-}
-
-.up-settings-confirm-no:hover {
-  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
-}
-
 .up-settings-tip {
   margin: 0;
   padding: 10px 14px 12px;
@@ -1231,9 +1175,7 @@ html.dark .up-settings-select option,
 }
 
 @media (max-width: 639px) {
-  .up-settings-item,
-  .up-settings-confirm-yes,
-  .up-settings-confirm-no {
+  .up-settings-item {
     min-height: 44px;
   }
 
@@ -1968,14 +1910,6 @@ body[data-up-pool-open] .up-fab-cluster {
   border-bottom: 1px solid var(--up-line);
 }
 
-.up-cal-switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  min-height: 32px;
-}
-
 .up-cal-toggle {
   display: inline-flex;
   align-items: center;
@@ -2084,22 +2018,6 @@ html.dark .up-phone-time-gutter.is-week {
   background: transparent;
   color: var(--up-accent);
   box-shadow: none;
-}
-
-.up-day-context {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-  color: var(--up-ink);
-}
-
-.up-zoom-hint {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.3;
-  text-align: center;
-  color: var(--up-muted);
 }
 
 .up-welcome-backdrop {
@@ -3314,7 +3232,6 @@ html.is-theme-revealing .up-pool-tab,
 html.is-theme-revealing .up-pool-row,
 html.is-theme-revealing .up-header,
 html.is-theme-revealing .up-app,
-html.is-theme-revealing .up-footer,
 html.is-theme-revealing .up-pool-rail,
 html.is-theme-revealing .up-pool-panel,
 html.is-theme-revealing .up-pool-dock,
@@ -3330,47 +3247,6 @@ html.is-theme-revealing .transition-opacity,
 html.is-theme-revealing [role='dialog'] kbd,
 html.is-theme-revealing .up-modal-card {
   transition: none !important;
-}
-
-.up-theme-glyph {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 1em;
-  height: 1em;
-}
-
-.up-theme-glyph svg {
-  grid-area: 1 / 1;
-  width: 1em;
-  height: 1em;
-}
-
-.up-theme-sun,
-.up-theme-moon {
-  transform-origin: 50% 50%;
-}
-
-html:not(.dark) .up-theme-glyph .up-theme-sun,
-html.dark .up-theme-glyph .up-theme-moon {
-  opacity: 1;
-  filter: blur(0);
-  transform: scale(1);
-}
-
-html:not(.dark) .up-theme-glyph .up-theme-moon,
-html.dark .up-theme-glyph .up-theme-sun {
-  opacity: 0;
-  filter: blur(var(--blur-ink));
-  transform: scale(0.25);
-  pointer-events: none;
-}
-
-html:not(.is-theme-revealing) .up-theme-sun,
-html:not(.is-theme-revealing) .up-theme-moon {
-  transition-property: opacity, filter, transform;
-  transition-duration: var(--dur-open);
-  transition-timing-function: var(--ease-in-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3455,23 +3331,6 @@ html:not(.is-theme-revealing) .up-theme-moon {
   ::view-transition-new(theme-light) {
     animation: none !important;
     filter: none !important;
-  }
-
-  .up-theme-sun,
-  .up-theme-moon {
-    transition: none;
-    filter: none;
-    transform: none;
-  }
-
-  html:not(.dark) .up-theme-glyph .up-theme-moon,
-  html.dark .up-theme-glyph .up-theme-sun {
-    opacity: 0;
-  }
-
-  html:not(.dark) .up-theme-glyph .up-theme-sun,
-  html.dark .up-theme-glyph .up-theme-moon {
-    opacity: 1;
   }
 }
 

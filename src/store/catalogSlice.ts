@@ -7,25 +7,14 @@ import type { ScheduleState, StoreGet, StoreSet } from './types';
 
 export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
-  | 'addToCatalog'
   | 'bulkAddToCatalog'
   | 'removeFromCatalog'
   | 'updateCatalogCourse'
   | 'addCourseFromPool'
   | 'removeCourseFromPlanByCatalog'
-  | 'toggleCourseInPlan'
   | 'clearUnusedCatalogCourses'
 > {
   return {
-    addToCatalog: (course: Course) => {
-      const state = get();
-      const exists = state.catalogCourses.some(c => sameCourseIdentity(c, course));
-      if (exists) return;
-      commitWithHistory(set, get, {
-        catalogCourses: [{ ...course, id: course.id.startsWith('cat_') ? course.id : `cat_${course.id}` }, ...state.catalogCourses],
-      });
-    },
-
     bulkAddToCatalog: (courses: Course[]) => {
       if (courses.length === 0) return;
       const state = get();
@@ -173,26 +162,6 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       commitWithHistory(set, get, {
         plans: updatedPlans,
       });
-    },
-
-    toggleCourseInPlan: (catalogCourseId: string, targetPlanId?: string) => {
-      const state = get();
-      const targetId = targetPlanId || state.activePlanId;
-      const targetPlan = state.plans.find(p => p.id === targetId);
-      if (!targetPlan) return;
-
-      const catalogItem = state.catalogCourses.find(c => c.id === catalogCourseId);
-      if (!catalogItem) return;
-
-      const existingInPlan = targetPlan.courses.find(
-        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
-      );
-
-      if (existingInPlan) {
-        state.removeCourseFromPlanByCatalog(catalogCourseId, targetId);
-      } else {
-        state.addCourseFromPool(catalogCourseId, targetId);
-      }
     },
 
     clearUnusedCatalogCourses: () => {

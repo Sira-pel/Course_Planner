@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Share, PlusSquare, X, CheckCircle2 } from 'lucide-react';
-import { EASE_OUT, EASE_SMOOTH } from '../../utils/motion';
+import { EASE_SMOOTH } from '../../utils/motion';
 
 interface PWAInstallModalProps {
   isOpen: boolean;

@@ -399,10 +399,6 @@ export default function App() {
     setShortcutSurface(shortcutSurfaceForHelpTab(tab));
   }, []);
 
-  const handleOpenShortcuts = useCallback(() => {
-    handleOpenHelp('shortcuts');
-  }, [handleOpenHelp]);
-
   const handleToggleMore = useCallback(() => {
     setIsConfirmingClear(false);
     setIsMoreOpen((open) => !open);
@@ -613,7 +609,6 @@ export default function App() {
           onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
           onOpenExport={handleOpenExport}
           onOpenImport={handleOpenImport}
-          onOpenShortcuts={handleOpenShortcuts}
           onOpenHelp={() => handleOpenHelp('workflow')}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
           onOpenShare={handleOpenShareModal}
@@ -660,7 +655,6 @@ export default function App() {
         onTogglePool={() => setIsPoolCollapsed((prev) => !prev)}
         onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
         onLoadDemo={requestLoadDemo}
-        onOpenShortcuts={handleOpenShortcuts}
         onOpenHelp={() => handleOpenHelp('workflow')}
         onOpenExport={() => setImportExportOpen(true)}
         onRequestClear={handleRequestClear}
@@ -710,7 +704,6 @@ export default function App() {
           onOpenImport={handleOpenImport}
           onOpenExport={() => handleOpenExport('text')}
           onOpenCatalog={() => setIsPoolCollapsed(false)}
-          onOpenShortcuts={handleOpenShortcuts}
           onTabChange={handleHelpTabChange}
         />
       </DeferredDialog>
