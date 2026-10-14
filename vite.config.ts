@@ -83,6 +83,10 @@ export default defineConfig(() => {
             '**/ImportModal-*.js',
             '**/HelpModal-*.js',
             '**/ShareImportModal-*.js',
+            '**/GeneratePlansModal-*.js',
+            '**/excelImport-*.js',
+            '**/BackupRestoreDialog-*.js',
+            '**/ConflictModal-*.js',
             '**/textParser-*.js',
             '**/icsImport-*.js',
             '**/calendar-*.js',
@@ -93,7 +97,7 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               // Hashed deferred scripts, cached after the screen that needs them opens.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|GeneratePlansModal|excelImport|BackupRestoreDialog|ConflictModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
