@@ -36,35 +36,44 @@ function formatAxisHour(hour: number): string {
 
 /**
  * 1px line on the same pixel as a border-bottom at `fraction` of the box.
- * background-position percentages resolve against (area − image size), and
- * Chrome snaps that edge down to a whole pixel. `round(down)` follows it.
+ * background-position percentages resolve against (area − image size).
+ * `plain` is the calc() position. `snapped` rounds that edge down where supported.
  */
-function hourLinePosition(fraction: number): string {
+function hourLinePosition(fraction: number): { plain: string; snapped: string } {
   const nudge = Number((1 - fraction).toFixed(4));
-  return `0 round(down, calc(${fraction * 100}% - ${nudge}px), 1px)`;
+  const calc = `calc(${fraction * 100}% - ${nudge}px)`;
+  return {
+    plain: `0 ${calc}`,
+    snapped: `0 round(down, ${calc}, 1px)`,
+  };
 }
 
 /** Solid hour lines and dashed half-hour lines, without a DOM node per row. */
 function hourGridPaint(numHours: number): React.CSSProperties {
   const images: string[] = [];
   const sizes: string[] = [];
-  const positions: string[] = [];
+  const plain: string[] = [];
+  const snapped: string[] = [];
   for (let i = 0; i < numHours; i += 1) {
-    const mid = (i + 0.5) / numHours;
+    const mid = hourLinePosition((i + 0.5) / numHours);
     // Chrome paints a 1px dashed border as a 3px dash and a 2px gap.
     images.push('repeating-linear-gradient(to right, var(--up-half-line) 0 3px, transparent 3px 5px)');
     sizes.push('100% 1px');
-    positions.push(hourLinePosition(mid));
+    plain.push(mid.plain);
+    snapped.push(mid.snapped);
     if (i < numHours - 1) {
+      const edge = hourLinePosition((i + 1) / numHours);
       images.push('linear-gradient(var(--up-hour-line), var(--up-hour-line))');
       sizes.push('100% 1px');
-      positions.push(hourLinePosition((i + 1) / numHours));
+      plain.push(edge.plain);
+      snapped.push(edge.snapped);
     }
   }
   return {
     backgroundImage: images.join(', '),
     backgroundSize: sizes.join(', '),
-    backgroundPosition: positions.join(', '),
+    ['--up-hour-positions' as string]: plain.join(', '),
+    ['--up-hour-positions-round' as string]: snapped.join(', '),
   };
 }
 

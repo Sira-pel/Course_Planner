@@ -70,12 +70,17 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          // First visit has no previous worker, so this one activates immediately.
+          // Claiming the page lets the runtime cache store chunks fetched on that visit.
+          clientsClaim: true,
           // Icons are added once via includeAssets and the manifest. Matching
           // them here as well precaches every icon twice.
           globPatterns: ['**/*.{js,css,html,woff,woff2}'],
           // Dialogs and SheetJS load after first paint, not with the shell.
           // Leave them out of the install precache so the first visit does not
           // download them up front. The runtime cache stores them when they arrive.
+          // PWAInstallModal is mounted at startup (settings and the phone dock),
+          // so it stays in the precache. PWAReloadPrompt does too.
           globIgnores: [
             '**/node_modules/**/*',
             '**/xlsx-*.js',
@@ -90,7 +95,6 @@ export default defineConfig(() => {
             '**/excelImport-*.js',
             '**/BackupRestoreDialog-*.js',
             '**/ConflictModal-*.js',
-            '**/PWAInstallModal-*.js',
             '**/textParser-*.js',
             '**/icsImport-*.js',
             '**/calendar-*.js',
@@ -101,7 +105,7 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               // Hashed deferred scripts, cached when the idle prefetch or a tap fetches them.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|GeneratePlansModal|excelImport|BackupRestoreDialog|ConflictModal|PWAInstallModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|GeneratePlansModal|excelImport|BackupRestoreDialog|ConflictModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
