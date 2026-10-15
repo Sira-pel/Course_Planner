@@ -1,5 +1,4 @@
 import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 
 /** True only on the open that replaces a dialog already on screen. Cleared on the next frame. */
 export const DialogReplaceAppearContext = React.createContext(false);
@@ -86,14 +85,6 @@ class DialogErrorBoundary extends Component<
   }
 }
 
-function DialogLoading({ onClose }: { onClose: () => void }) {
-  if (typeof document === 'undefined') return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[100] bg-black/60" onClick={onClose} />,
-    document.body,
-  );
-}
-
 export function DeferredDialog({
   open,
   onClose,
@@ -117,7 +108,7 @@ export function DeferredDialog({
 
   return (
     <DialogErrorBoundary open={open} onClose={onClose}>
-      <Suspense fallback={<DialogLoading onClose={onClose} />}>{children}</Suspense>
+      <Suspense fallback={null}>{children}</Suspense>
     </DialogErrorBoundary>
   );
 }
