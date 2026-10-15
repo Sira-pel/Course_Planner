@@ -26,12 +26,23 @@ import { extractSharePayloadFromUrl, decodePlanFromSharePayload, clearShareHash,
 import { shouldConfirmLoadDemo } from './utils/loadDemo';
 import { LoadDemoDialog } from './components/header/LoadDemoDialog';
 
-const CourseModal = lazy(() => import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
-const ExportModal = lazy(() => import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
-const ImportModal = lazy(() => import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
-const HelpModal = lazy(() => import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
-const ShareImportModal = lazy(() => import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
-const GeneratePlansModal = lazy(() => import('./components/generate/GeneratePlansModal').then((m) => ({ default: m.GeneratePlansModal })));
+// Start these with the app shell so the first open does not wait on a download.
+function loadDialog<T>(loader: Promise<T>): Promise<T> {
+  loader.catch(() => {});
+  return loader;
+}
+const courseModalModule = loadDialog(import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
+const exportModalModule = loadDialog(import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
+const importModalModule = loadDialog(import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
+const helpModalModule = loadDialog(import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
+const shareImportModalModule = loadDialog(import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
+const generateModalModule = loadDialog(import('./components/generate/GeneratePlansModal').then((m) => ({ default: m.GeneratePlansModal })));
+const CourseModal = lazy(() => courseModalModule);
+const ExportModal = lazy(() => exportModalModule);
+const ImportModal = lazy(() => importModalModule);
+const HelpModal = lazy(() => helpModalModule);
+const ShareImportModal = lazy(() => shareImportModalModule);
+const GeneratePlansModal = lazy(() => generateModalModule);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 function shortcutSurfaceForCourseMode(mode: 'form' | 'quick', editing: boolean): ShortcutSurface | null {
