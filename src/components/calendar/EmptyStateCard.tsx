@@ -70,6 +70,7 @@ export function EmptyStateCard({ onClose, onQuickAdd, onImport, onLoadDemo }: Em
         <div className="up-welcome-options">
           <button
             type="button"
+            data-dialog="course"
             className="up-welcome-option up-chrome-btn"
             onClick={() => choose(onQuickAdd)}
           >
@@ -99,6 +100,7 @@ export function EmptyStateCard({ onClose, onQuickAdd, onImport, onLoadDemo }: Em
 
           <button
             type="button"
+            data-dialog="import"
             className="up-welcome-option up-chrome-btn"
             onClick={() => choose(onImport)}
           >

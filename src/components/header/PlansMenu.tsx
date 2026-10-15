@@ -375,6 +375,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
           <button
             type="button"
             role="menuitem"
+            data-dialog="export"
             className="up-plan-row-item up-chrome-btn"
             onClick={() => {
               setRowMenuPlanId(null);

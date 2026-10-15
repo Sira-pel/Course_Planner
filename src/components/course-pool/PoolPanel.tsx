@@ -180,6 +180,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               <button
                 type="button"
                 id="btn-pool-import"
+                data-dialog="import"
                 onClick={onOpenImport}
                 className="up-pool-create up-chrome-btn"
                 title="Import courses (Excel / CSV / Calendar)"
@@ -192,6 +193,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
             <button
               type="button"
               id="btn-pool-add-course"
+              data-dialog="course"
               onClick={onOpenNewCourse}
               className="up-pool-create up-chrome-btn"
               title="New course"
@@ -204,6 +206,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               <button
                 type="button"
                 id="btn-pool-generate"
+                data-dialog="generate"
                 onClick={onOpenGenerate}
                 disabled={catalogCount < 2}
                 className="up-pool-generate up-chrome-btn"
@@ -348,6 +351,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   <>
                     <button
                       type="button"
+                      data-dialog="course"
                       onClick={onOpenNewCourse}
                       className="up-pool-add up-chrome-btn"
                       style={{ width: 'auto', paddingInline: 14 }}
@@ -358,6 +362,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                     {onOpenImport && (
                       <button
                         type="button"
+                        data-dialog="import"
                         onClick={onOpenImport}
                         className="up-pool-add up-chrome-btn"
                         style={{ width: 'auto', paddingInline: 14 }}

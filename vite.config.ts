@@ -70,64 +70,31 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          // Dialogs and SheetJS load on demand. Leave them out of the
-          // install precache so the first visit does not download them.
+          // First visit has no previous worker, so this one activates immediately.
+          // Claiming the page lets the runtime cache store chunks fetched on that visit.
+          clientsClaim: true,
+          // Icons are added once via includeAssets and the manifest. Matching
+          // them here as well precaches every icon twice.
+          globPatterns: ['**/*.{js,css,html,woff,woff2}'],
+          // SheetJS, Firebase, and Google Calendar sync stay out of the install
+          // precache. Dialogs and the small chunks they share are precached so
+          // an offline return can still open them.
           globIgnores: [
             '**/node_modules/**/*',
             '**/xlsx-*.js',
             '**/firebase-*.js',
             '**/GoogleCalendarSync-*.js',
-            '**/CourseModal-*.js',
-            '**/ExportModal-*.js',
-            '**/ImportModal-*.js',
-            '**/HelpModal-*.js',
-            '**/ShareImportModal-*.js',
-            '**/textParser-*.js',
-            '**/icsImport-*.js',
-            '**/calendar-*.js',
-            '**/database-*.js',
-            '**/file-spreadsheet-*.js',
-            '**/circle-alert-*.js',
           ],
           runtimeCaching: [
             {
-              // Hashed deferred scripts, cached after the screen that needs them opens.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              // Large chunks that are not needed to open a dialog. Cached when first fetched.
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync)-[^/]+\.js$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
                 expiration: {
-                  maxEntries: 32,
+                  maxEntries: 40,
                   maxAgeSeconds: 60 * 60 * 24 * 30,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],

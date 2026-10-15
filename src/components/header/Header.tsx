@@ -480,6 +480,7 @@ export const Header = memo(function Header({
           <button
             type="button"
             id="btn-add-course"
+            data-dialog="course"
             onClick={() => onOpenNewCourse('form')}
             aria-label="Add course"
             className="up-add-course up-chrome-btn"

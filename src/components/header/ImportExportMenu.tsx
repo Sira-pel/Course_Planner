@@ -70,6 +70,7 @@ function ImportExportList({ actions }: { actions: ImportExportActions }) {
                 key={item.label}
                 type="button"
                 role="menuitem"
+                data-dialog={section.label === 'Import' ? 'import' : 'export'}
                 className="up-more-item up-import-row"
                 onClick={() => {
                   actions.onClose();
@@ -156,6 +157,7 @@ export function ImportExportMenu({
         aria-expanded={open}
         aria-label="Import / Export"
         title="Import / Export"
+        data-dialog="import export"
         onClick={() => onOpenChange(!open)}
       >
         <ArrowUpDown className={isPhone ? 'w-4 h-4' : 'up-import-export-icon'} strokeWidth={1.75} aria-hidden />

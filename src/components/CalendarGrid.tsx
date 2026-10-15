@@ -25,6 +25,10 @@ function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
 }
 
+/** Captured at load, before the share hash is cleared. Welcome stays closed for this visit. */
+const OPENED_FROM_SHARE_LINK =
+  typeof window !== 'undefined' && window.location.hash.includes('#share=');
+
 /** Axis label that fits a narrow phone gutter: "7 AM", not "7:00 AM". */
 function formatAxisHour(hour: number): string {
   const h = hour >= 24 ? hour % 24 : hour;
@@ -32,6 +36,49 @@ function formatAxisHour(hour: number): string {
   if (h === 12) return '12 PM';
   if (h > 12) return `${h - 12} PM`;
   return `${h} AM`;
+}
+
+/**
+ * 1px line on the same pixel as a border-bottom at `fraction` of the box.
+ * background-position percentages resolve against (area − image size).
+ * `plain` is the calc() position. `snapped` rounds that edge down where supported.
+ */
+function hourLinePosition(fraction: number): { plain: string; snapped: string } {
+  const nudge = Number((1 - fraction).toFixed(4));
+  const calc = `calc(${fraction * 100}% - ${nudge}px)`;
+  return {
+    plain: `0 ${calc}`,
+    snapped: `0 round(down, ${calc}, 1px)`,
+  };
+}
+
+/** Solid hour lines and dashed half-hour lines, without a DOM node per row. */
+function hourGridPaint(numHours: number): React.CSSProperties {
+  const images: string[] = [];
+  const sizes: string[] = [];
+  const plain: string[] = [];
+  const snapped: string[] = [];
+  for (let i = 0; i < numHours; i += 1) {
+    const mid = hourLinePosition((i + 0.5) / numHours);
+    // Chrome paints a 1px dashed border as a 3px dash and a 2px gap.
+    images.push('repeating-linear-gradient(to right, var(--up-half-line) 0 3px, transparent 3px 5px)');
+    sizes.push('100% 1px');
+    plain.push(mid.plain);
+    snapped.push(mid.snapped);
+    if (i < numHours - 1) {
+      const edge = hourLinePosition((i + 1) / numHours);
+      images.push('linear-gradient(var(--up-hour-line), var(--up-hour-line))');
+      sizes.push('100% 1px');
+      plain.push(edge.plain);
+      snapped.push(edge.snapped);
+    }
+  }
+  return {
+    backgroundImage: images.join(', '),
+    backgroundSize: sizes.join(', '),
+    ['--up-hour-positions' as string]: plain.join(', '),
+    ['--up-hour-positions-round' as string]: snapped.join(', '),
+  };
 }
 
 function getInitialCalendarWidth(): number {
@@ -122,6 +169,9 @@ export const CalendarGrid = memo(function CalendarGrid({
     const decide = () => {
       if (welcomeDecided.current) return;
       welcomeDecided.current = true;
+      // A share link opens its own dialog. Do not stack the welcome card, and do not
+      // open it after that dialog closes.
+      if (OPENED_FROM_SHARE_LINK) return;
       const state = useScheduleStore.getState();
       const plan = state.plans.find((item) => item.id === state.activePlanId) || state.plans[0];
       if ((plan?.courses.length ?? 0) === 0) setWelcomeOpen(true);
@@ -200,10 +250,9 @@ export const CalendarGrid = memo(function CalendarGrid({
 
   // Total grid minutes and dimensions
   const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);
-  
+
   const HOUR_MIN_PX = isPhone && mobileCalendarView === 'week' ? 40 : 55;
   const totalMinutes = numHours * 60;
-  const hourPct = 100 / numHours;
 
   const hourMarks = useMemo(() => {
     const arr: number[] = [];
@@ -213,7 +262,7 @@ export const CalendarGrid = memo(function CalendarGrid({
     return arr;
   }, [effectiveStartHour, effectiveEndHour]);
 
-  const hourSlots = useMemo(() => Array.from({ length: numHours }, (_, i) => i), [numHours]);
+  const hourGridStyle = useMemo(() => hourGridPaint(numHours), [numHours]);
 
   const planIndexMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -469,29 +518,11 @@ export const CalendarGrid = memo(function CalendarGrid({
           className="flex w-full max-w-full relative flex-1 min-h-0"
           style={{ minHeight: `${numHours * HOUR_MIN_PX}px` }}
         >
-          {/* Horizontal Hour Guidelines across all day columns */}
+          {/* Horizontal hour and half-hour rules across the day columns */}
           <div
-            className="absolute top-0 bottom-0 right-0 pointer-events-none z-0"
-            style={{ left: `${gutterWidth}px` }}
-          >
-            {hourSlots.map((slotIdx) => (
-              <div
-                key={`hour-slot-${slotIdx}`}
-                style={{
-                  top: `${slotIdx * hourPct}%`,
-                  height: `${hourPct}%`,
-                }}
-                className={`absolute left-0 right-0 ${
-                  slotIdx === numHours - 1
-                    ? ''
-                    : 'border-b border-slate-200 dark:border-slate-800'
-                }`}
-              >
-                {/* Subtle 30-minute dashed half-hour line */}
-                <div className="w-full h-1/2 border-b border-dashed border-slate-200/60 dark:border-slate-800/60" />
-              </div>
-            ))}
-          </div>
+            className="up-hour-grid absolute top-0 bottom-0 right-0 pointer-events-none z-0"
+            style={{ left: `${gutterWidth}px`, ...hourGridStyle }}
+          />
 
           {/* Time Gutter (Left Column) */}
           <div
@@ -550,6 +581,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={day.id}
                   id={`day-column-${day.id}`}
+                  data-dialog="course"
                   className={`relative h-full overflow-x-clip group/col ${
                     isToday && !phoneWeek ? 'bg-indigo-500/[0.02] dark:bg-transparent' : ''
                   }`}
