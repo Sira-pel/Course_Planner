@@ -25,6 +25,11 @@ function getTodayDayOfWeek(): DayOfWeek {
   return DAY_INDEX_MAP[new Date().getDay()];
 }
 
+/** Captured at load, before the share hash is cleared. Welcome stays closed for this visit. */
+const OPENED_FROM_SHARE_LINK =
+  typeof window !== 'undefined' &&
+  /[#?&]share=/.test(`${window.location.search}${window.location.hash}`);
+
 /** Axis label that fits a narrow phone gutter: "7 AM", not "7:00 AM". */
 function formatAxisHour(hour: number): string {
   const h = hour >= 24 ? hour % 24 : hour;
@@ -165,6 +170,9 @@ export const CalendarGrid = memo(function CalendarGrid({
     const decide = () => {
       if (welcomeDecided.current) return;
       welcomeDecided.current = true;
+      // A share link opens its own dialog. Do not stack the welcome card, and do not
+      // open it after that dialog closes.
+      if (OPENED_FROM_SHARE_LINK) return;
       const state = useScheduleStore.getState();
       const plan = state.plans.find((item) => item.id === state.activePlanId) || state.plans[0];
       if ((plan?.courses.length ?? 0) === 0) setWelcomeOpen(true);

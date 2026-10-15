@@ -76,36 +76,19 @@ export default defineConfig(() => {
           // Icons are added once via includeAssets and the manifest. Matching
           // them here as well precaches every icon twice.
           globPatterns: ['**/*.{js,css,html,woff,woff2}'],
-          // Dialogs and SheetJS load after first paint, not with the shell.
-          // Leave them out of the install precache so the first visit does not
-          // download them up front. The runtime cache stores them when they arrive.
-          // PWAInstallModal is mounted at startup (settings and the phone dock),
-          // so it stays in the precache. PWAReloadPrompt does too.
+          // SheetJS, Firebase, and Google Calendar sync stay out of the install
+          // precache. Dialogs and the small chunks they share are precached so
+          // an offline return can still open them.
           globIgnores: [
             '**/node_modules/**/*',
             '**/xlsx-*.js',
             '**/firebase-*.js',
             '**/GoogleCalendarSync-*.js',
-            '**/CourseModal-*.js',
-            '**/ExportModal-*.js',
-            '**/ImportModal-*.js',
-            '**/HelpModal-*.js',
-            '**/ShareImportModal-*.js',
-            '**/GeneratePlansModal-*.js',
-            '**/excelImport-*.js',
-            '**/BackupRestoreDialog-*.js',
-            '**/ConflictModal-*.js',
-            '**/textParser-*.js',
-            '**/icsImport-*.js',
-            '**/calendar-*.js',
-            '**/database-*.js',
-            '**/file-spreadsheet-*.js',
-            '**/circle-alert-*.js',
           ],
           runtimeCaching: [
             {
-              // Hashed deferred scripts, cached when the idle prefetch or a tap fetches them.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|GeneratePlansModal|excelImport|BackupRestoreDialog|ConflictModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              // Large chunks that are not needed to open a dialog. Cached when first fetched.
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync)-[^/]+\.js$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
