@@ -27,8 +27,7 @@ function getTodayDayOfWeek(): DayOfWeek {
 
 /** Captured at load, before the share hash is cleared. Welcome stays closed for this visit. */
 const OPENED_FROM_SHARE_LINK =
-  typeof window !== 'undefined' &&
-  /[#?&]share=/.test(`${window.location.search}${window.location.hash}`);
+  typeof window !== 'undefined' && window.location.hash.includes('#share=');
 
 /** Axis label that fits a narrow phone gutter: "7 AM", not "7:00 AM". */
 function formatAxisHour(hour: number): string {

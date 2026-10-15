@@ -2,6 +2,19 @@ import type { ComponentType } from 'react';
 
 type DialogModule<T> = { default: T };
 
+export interface DialogLoader<T extends ComponentType<never>> {
+  (): Promise<DialogModule<T>>;
+  /** True while this loader's import is already in flight or cached. */
+  started(): boolean;
+}
+
+/** Imports kicked off by the idle prefetch. Their failures must not reload the page. */
+let idlePrefetchImports = 0;
+
+export function isIdleDialogPrefetch(): boolean {
+  return idlePrefetchImports > 0;
+}
+
 /**
  * One promise per dialog. An early tap, the idle prefetch, and React.lazy
  * all share it, so the download starts once and is not kicked off while the
@@ -9,9 +22,9 @@ type DialogModule<T> = { default: T };
  */
 export function memoizedLoader<T extends ComponentType<never>>(
   load: () => Promise<DialogModule<T>>,
-): () => Promise<DialogModule<T>> {
+): DialogLoader<T> {
   let pending: Promise<DialogModule<T>> | undefined;
-  return () => {
+  const run = (() => {
     if (!pending) {
       const next = load();
       pending = next;
@@ -20,7 +33,9 @@ export function memoizedLoader<T extends ComponentType<never>>(
       });
     }
     return pending;
-  };
+  }) as DialogLoader<T>;
+  run.started = () => pending !== undefined;
+  return run;
 }
 
 export const loadCourseModal = memoizedLoader(() =>
@@ -58,7 +73,22 @@ export function prefetchDialog(name: DialogPrefetchName): void {
 }
 
 export function prefetchAllDialogs(): void {
-  for (const load of Object.values(DIALOG_LOADERS)) void load();
+  for (const load of Object.values(DIALOG_LOADERS)) {
+    // A tap already started this import. Leave it as a user-started load.
+    if (load.started()) {
+      void load().catch(() => {});
+      continue;
+    }
+    idlePrefetchImports += 1;
+    void load().then(
+      () => {
+        idlePrefetchImports -= 1;
+      },
+      () => {
+        idlePrefetchImports -= 1;
+      },
+    );
+  }
 }
 
 /** pointerdown on [data-dialog="course"] (space-separated names allowed). */
