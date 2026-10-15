@@ -70,9 +70,12 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          // Dialogs and SheetJS load on demand. Leave them out of the
-          // install precache so the first visit does not download them.
+          // Icons are added once via includeAssets and the manifest. Matching
+          // them here as well precaches every icon twice.
+          globPatterns: ['**/*.{js,css,html,woff,woff2}'],
+          // Dialogs and SheetJS load after first paint, not with the shell.
+          // Leave them out of the install precache so the first visit does not
+          // download them up front. The runtime cache stores them when they arrive.
           globIgnores: [
             '**/node_modules/**/*',
             '**/xlsx-*.js',
@@ -83,6 +86,11 @@ export default defineConfig(() => {
             '**/ImportModal-*.js',
             '**/HelpModal-*.js',
             '**/ShareImportModal-*.js',
+            '**/GeneratePlansModal-*.js',
+            '**/excelImport-*.js',
+            '**/BackupRestoreDialog-*.js',
+            '**/ConflictModal-*.js',
+            '**/PWAInstallModal-*.js',
             '**/textParser-*.js',
             '**/icsImport-*.js',
             '**/calendar-*.js',
@@ -92,42 +100,14 @@ export default defineConfig(() => {
           ],
           runtimeCaching: [
             {
-              // Hashed deferred scripts, cached after the screen that needs them opens.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
+              // Hashed deferred scripts, cached when the idle prefetch or a tap fetches them.
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync|CourseModal|ExportModal|ImportModal|HelpModal|ShareImportModal|GeneratePlansModal|excelImport|BackupRestoreDialog|ConflictModal|PWAInstallModal|textParser|icsImport|calendar|database|file-spreadsheet|circle-alert)-[^/]+\.js$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
                 expiration: {
-                  maxEntries: 32,
+                  maxEntries: 40,
                   maxAgeSeconds: 60 * 60 * 24 * 30,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],

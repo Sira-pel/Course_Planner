@@ -228,6 +228,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
         <button
           type="button"
           id="btn-open-help"
+          data-dialog="help"
           onClick={onOpenHelp}
           className="up-settings-item up-chrome-btn"
         >

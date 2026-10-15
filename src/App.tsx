@@ -25,24 +25,24 @@ import { revealingTheme, runThemeReveal } from './utils/themeTransition';
 import { extractSharePayloadFromUrl, decodePlanFromSharePayload, clearShareHash, INVALID_SHARE_LINK_MESSAGE } from './utils/shareLink';
 import { shouldConfirmLoadDemo } from './utils/loadDemo';
 import { LoadDemoDialog } from './components/header/LoadDemoDialog';
+import {
+  loadCourseModal,
+  loadExportModal,
+  loadGenerateModal,
+  loadHelpModal,
+  loadImportModal,
+  loadShareImportModal,
+  prefetchAllDialogs,
+  prefetchDialogsFromPointer,
+  scheduleIdle,
+} from './components/app/dialogLoaders';
 
-// Start these with the app shell so the first open does not wait on a download.
-function loadDialog<T>(loader: Promise<T>): Promise<T> {
-  loader.catch(() => {});
-  return loader;
-}
-const courseModalModule = loadDialog(import('./components/course-modal/CourseModal').then((m) => ({ default: m.CourseModal })));
-const exportModalModule = loadDialog(import('./components/export/ExportModal').then((m) => ({ default: m.ExportModal })));
-const importModalModule = loadDialog(import('./components/import/ImportModal').then((m) => ({ default: m.ImportModal })));
-const helpModalModule = loadDialog(import('./components/HelpModal').then((m) => ({ default: m.HelpModal })));
-const shareImportModalModule = loadDialog(import('./components/ShareImportModal').then((m) => ({ default: m.ShareImportModal })));
-const generateModalModule = loadDialog(import('./components/generate/GeneratePlansModal').then((m) => ({ default: m.GeneratePlansModal })));
-const CourseModal = lazy(() => courseModalModule);
-const ExportModal = lazy(() => exportModalModule);
-const ImportModal = lazy(() => importModalModule);
-const HelpModal = lazy(() => helpModalModule);
-const ShareImportModal = lazy(() => shareImportModalModule);
-const GeneratePlansModal = lazy(() => generateModalModule);
+const CourseModal = lazy(loadCourseModal);
+const ExportModal = lazy(loadExportModal);
+const ImportModal = lazy(loadImportModal);
+const HelpModal = lazy(loadHelpModal);
+const ShareImportModal = lazy(loadShareImportModal);
+const GeneratePlansModal = lazy(loadGenerateModal);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 function shortcutSurfaceForCourseMode(mode: 'form' | 'quick', editing: boolean): ShortcutSurface | null {
@@ -218,10 +218,14 @@ export default function App() {
       }, reduce ? 0 : 320);
     };
 
-    // Double requestAnimationFrame ensures React has committed DOM and browser has completed first composite
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    // Double requestAnimationFrame ensures React has committed DOM and browser has completed first composite.
+    // Dialog chunks start on the idle callback after that paint, not while the shell evaluates.
+    let cancelIdle = () => {};
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
         dismissSplash();
+        cancelIdle = scheduleIdle(prefetchAllDialogs);
       });
     });
 
@@ -245,9 +249,17 @@ export default function App() {
     }
 
     return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      cancelIdle();
       unsub();
       media.removeEventListener('change', syncSystemTheme);
     };
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('pointerdown', prefetchDialogsFromPointer, true);
+    return () => document.removeEventListener('pointerdown', prefetchDialogsFromPointer, true);
   }, []);
 
   // Handlers for Shared Plan import
@@ -281,6 +293,7 @@ export default function App() {
   }, []);
 
   const handleOpenImportShare = useCallback(() => {
+    loadShareImportModal();
     setSharedPlan(null);
     setInitialManualPaste(true);
     setIsShareImportOpen(true);
@@ -289,6 +302,7 @@ export default function App() {
   // Handler for opening new course modal
   const handleOpenNewCourse = useCallback(
     (day: DayOfWeek = 'monday', startTime: string = '09:00', mode: 'form' | 'quick' = 'form', targetPlanId?: string) => {
+      loadCourseModal();
       setIsPoolCollapsed(true);
       setEditingCourseId(null);
       setEditingCoursePlanId(targetPlanId || null);
@@ -311,6 +325,7 @@ export default function App() {
 
   // Handler for editing an existing course
   const handleEditCourse = useCallback((courseId: string, planId?: string) => {
+    loadCourseModal();
     setIsPoolCollapsed(true);
     setEditingCourseId(courseId);
     setEditingCoursePlanId(planId || null);
@@ -320,6 +335,7 @@ export default function App() {
   }, []);
 
   const handleOpenExport = useCallback((tab: ExportTabType = 'text', focus?: 'google') => {
+    loadExportModal();
     setIsPoolCollapsed(true);
     setExportInitialTab(tab);
     setExportInitialFocus(focus);
@@ -333,6 +349,7 @@ export default function App() {
       const hash = window.location.hash;
       if (!hash) return;
       if (hash.includes('share=')) {
+        loadShareImportModal();
         const payload = extractSharePayloadFromUrl(hash);
         const res = payload
           ? decodePlanFromSharePayload(payload)
@@ -374,6 +391,7 @@ export default function App() {
   }, [activePlanId, handleOpenExport, setActivePlan]);
 
   const handleOpenImport = useCallback((tab: ImportTabType = 'excel') => {
+    loadImportModal();
     setIsPoolCollapsed(true);
     setImportInitialTab(tab);
     setShortcutSurface('import');
@@ -381,6 +399,7 @@ export default function App() {
   }, []);
 
   const handleOpenHelp = useCallback((tab: HelpTabType = 'workflow') => {
+    loadHelpModal();
     setIsPoolCollapsed(true);
     setHelpInitialTab(tab);
     setShortcutSurface(shortcutSurfaceForHelpTab(tab));
@@ -430,6 +449,39 @@ export default function App() {
     }
     applyLoadDemo();
   }, [applyLoadDemo]);
+
+  const handleHeaderOpenNewCourse = useCallback((mode?: 'form' | 'quick') => {
+    handleOpenNewCourse('monday', '09:00', mode || 'form');
+  }, [handleOpenNewCourse]);
+
+  const handleOpenHelpWorkflow = useCallback(() => {
+    handleOpenHelp('workflow');
+  }, [handleOpenHelp]);
+
+  const handleOpenCatalog = useCallback(() => {
+    setIsPoolCollapsed(false);
+  }, []);
+
+  const handleCalendarOpenImport = useCallback(() => {
+    handleOpenImport('excel');
+  }, [handleOpenImport]);
+
+  const handleTogglePool = useCallback(() => {
+    setIsPoolCollapsed((prev) => !prev);
+  }, []);
+
+  const handleOpenGenerate = useCallback(() => {
+    loadGenerateModal();
+    setIsGenerateOpen(true);
+  }, []);
+
+  const handleDockAddCourse = useCallback(() => {
+    handleOpenNewCourse('monday', '09:00', 'form');
+  }, [handleOpenNewCourse]);
+
+  const handleDockOpenExport = useCallback(() => {
+    setImportExportOpen(true);
+  }, []);
 
   const confirmLoadDemo = useCallback(() => {
     setConfirmDemo(false);
@@ -606,11 +658,11 @@ export default function App() {
       <main className="up-workspace flex-1 max-w-[1720px] w-full min-w-0 mx-auto p-2.5 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 min-h-0 overflow-x-clip">
         {/* Header: brand, enrolled readout, plans, compare, settings */}
         <Header
-          onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
+          onOpenNewCourse={handleHeaderOpenNewCourse}
           onOpenExport={handleOpenExport}
           onOpenImport={handleOpenImport}
-          onOpenHelp={() => handleOpenHelp('workflow')}
-          onOpenCatalog={() => setIsPoolCollapsed(false)}
+          onOpenHelp={handleOpenHelpWorkflow}
+          onOpenCatalog={handleOpenCatalog}
           onOpenShare={handleOpenShareModal}
           onOpenImportShare={handleOpenImportShare}
           onLoadDemo={requestLoadDemo}
@@ -629,7 +681,7 @@ export default function App() {
               onEditCourse={handleEditCourse}
               onAddCourseAtTime={handleAddCourseAtTime}
               onOpenNewCourse={handleOpenCalendarCourse}
-              onOpenImport={() => handleOpenImport('excel')}
+              onOpenImport={handleCalendarOpenImport}
               onLoadDemo={requestLoadDemo}
             />
           </div>
@@ -637,10 +689,10 @@ export default function App() {
           {/* Course Pool Sidebar on the right (bottom on mobile, drawer on tablet) */}
           <CoursePoolSidebar
             isCollapsed={isPoolCollapsed}
-            onToggleCollapse={() => setIsPoolCollapsed((prev) => !prev)}
-            onOpenNewCourse={(mode) => handleOpenNewCourse('monday', '09:00', mode || 'form')}
-            onOpenImport={() => handleOpenImport('excel')}
-            onOpenGenerate={() => setIsGenerateOpen(true)}
+            onToggleCollapse={handleTogglePool}
+            onOpenNewCourse={handleHeaderOpenNewCourse}
+            onOpenImport={handleCalendarOpenImport}
+            onOpenGenerate={handleOpenGenerate}
             onEditCourse={handleEditCourse}
           />
         </div>
@@ -652,11 +704,11 @@ export default function App() {
         catalogCount={catalogCount}
         reduceMotion={reduceMotion}
         onToggleMore={handleToggleMore}
-        onTogglePool={() => setIsPoolCollapsed((prev) => !prev)}
-        onAddCourse={() => handleOpenNewCourse('monday', '09:00', 'form')}
+        onTogglePool={handleTogglePool}
+        onAddCourse={handleDockAddCourse}
         onLoadDemo={requestLoadDemo}
-        onOpenHelp={() => handleOpenHelp('workflow')}
-        onOpenExport={() => setImportExportOpen(true)}
+        onOpenHelp={handleOpenHelpWorkflow}
+        onOpenExport={handleDockOpenExport}
         onRequestClear={handleRequestClear}
         onConfirmClear={handleConfirmClearDock}
         onCancelClear={handleCancelClear}

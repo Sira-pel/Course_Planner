@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* Class dark mode without a universal descendant. `.dark *` on every utility
+   made the boot style pass walk the whole tree. The class only lives on <html>. */
+@custom-variant dark (html.dark &);
 
 :root {
   --ease-smooth: cubic-bezier(0.3, 0.55, 0.3, 1);
@@ -76,13 +78,10 @@ body {
   height: 100dvh;
 }
 
-/* Zero-stutter startup: suppress transitions inside #root while app-launch-splash covers the initial mount */
+/* Zero-stutter startup: suppress transitions inside #root while app-launch-splash covers the initial mount.
+   Do not match ::before/::after here. A universal pseudo rule forces a style pass over generated boxes. */
 html.up-preload #root *,
-html.up-preload #root *::before,
-html.up-preload #root *::after,
-html:not(.up-ready) #root *,
-html:not(.up-ready) #root *::before,
-html:not(.up-ready) #root *::after {
+html:not(.up-ready) #root * {
   transition: none !important;
   animation-duration: 0.001ms !important;
 }
@@ -1566,6 +1565,19 @@ html[data-up-layout='desktop'] .up-workspace-body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Hour and half-hour rules. One painted layer, same 1px solid and 3px dashed
+   lines the per-slot borders used. */
+.up-hour-grid {
+  --up-hour-line: var(--color-slate-200);
+  --up-half-line: color-mix(in oklab, var(--color-slate-200) 60%, transparent);
+  background-repeat: no-repeat;
+}
+
+html.dark .up-hour-grid {
+  --up-hour-line: var(--color-slate-800);
+  --up-half-line: color-mix(in oklab, var(--color-slate-800) 60%, transparent);
 }
 
 @media (max-width: 639px) {

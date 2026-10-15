@@ -123,6 +123,7 @@ export const MobileDock = React.memo(function MobileDock({
         <button
           type="button"
           id="btn-mobile-add-course-pill"
+          data-dialog="course"
           onClick={onAddCourse}
           className="up-fab-primary up-chrome-btn"
           title="Add course"
@@ -203,6 +204,7 @@ export const MobileDock = React.memo(function MobileDock({
                       <button
                         type="button"
                         role="menuitem"
+                        data-dialog="import export"
                         className="up-more-item up-chrome-btn"
                         onClick={() => {
                           onCloseMoreMenu();
@@ -229,6 +231,7 @@ export const MobileDock = React.memo(function MobileDock({
                       <button
                         type="button"
                         role="menuitem"
+                        data-dialog="help"
                         className="up-more-item up-chrome-btn"
                         onClick={() => {
                           onCloseMoreMenu();

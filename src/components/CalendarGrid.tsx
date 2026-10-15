@@ -34,6 +34,40 @@ function formatAxisHour(hour: number): string {
   return `${h} AM`;
 }
 
+/**
+ * 1px line on the same pixel as a border-bottom at `fraction` of the box.
+ * background-position percentages resolve against (area − image size), and
+ * Chrome snaps that edge down to a whole pixel. `round(down)` follows it.
+ */
+function hourLinePosition(fraction: number): string {
+  const nudge = Number((1 - fraction).toFixed(4));
+  return `0 round(down, calc(${fraction * 100}% - ${nudge}px), 1px)`;
+}
+
+/** Solid hour lines and dashed half-hour lines, without a DOM node per row. */
+function hourGridPaint(numHours: number): React.CSSProperties {
+  const images: string[] = [];
+  const sizes: string[] = [];
+  const positions: string[] = [];
+  for (let i = 0; i < numHours; i += 1) {
+    const mid = (i + 0.5) / numHours;
+    // Chrome paints a 1px dashed border as a 3px dash and a 2px gap.
+    images.push('repeating-linear-gradient(to right, var(--up-half-line) 0 3px, transparent 3px 5px)');
+    sizes.push('100% 1px');
+    positions.push(hourLinePosition(mid));
+    if (i < numHours - 1) {
+      images.push('linear-gradient(var(--up-hour-line), var(--up-hour-line))');
+      sizes.push('100% 1px');
+      positions.push(hourLinePosition((i + 1) / numHours));
+    }
+  }
+  return {
+    backgroundImage: images.join(', '),
+    backgroundSize: sizes.join(', '),
+    backgroundPosition: positions.join(', '),
+  };
+}
+
 function getInitialCalendarWidth(): number {
   if (typeof window === 'undefined') return 1000;
   const w = window.innerWidth;
@@ -200,10 +234,9 @@ export const CalendarGrid = memo(function CalendarGrid({
 
   // Total grid minutes and dimensions
   const numHours = Math.max(1, effectiveEndHour - effectiveStartHour);
-  
+
   const HOUR_MIN_PX = isPhone && mobileCalendarView === 'week' ? 40 : 55;
   const totalMinutes = numHours * 60;
-  const hourPct = 100 / numHours;
 
   const hourMarks = useMemo(() => {
     const arr: number[] = [];
@@ -213,7 +246,7 @@ export const CalendarGrid = memo(function CalendarGrid({
     return arr;
   }, [effectiveStartHour, effectiveEndHour]);
 
-  const hourSlots = useMemo(() => Array.from({ length: numHours }, (_, i) => i), [numHours]);
+  const hourGridStyle = useMemo(() => hourGridPaint(numHours), [numHours]);
 
   const planIndexMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -469,29 +502,11 @@ export const CalendarGrid = memo(function CalendarGrid({
           className="flex w-full max-w-full relative flex-1 min-h-0"
           style={{ minHeight: `${numHours * HOUR_MIN_PX}px` }}
         >
-          {/* Horizontal Hour Guidelines across all day columns */}
+          {/* Horizontal hour and half-hour rules across the day columns */}
           <div
-            className="absolute top-0 bottom-0 right-0 pointer-events-none z-0"
-            style={{ left: `${gutterWidth}px` }}
-          >
-            {hourSlots.map((slotIdx) => (
-              <div
-                key={`hour-slot-${slotIdx}`}
-                style={{
-                  top: `${slotIdx * hourPct}%`,
-                  height: `${hourPct}%`,
-                }}
-                className={`absolute left-0 right-0 ${
-                  slotIdx === numHours - 1
-                    ? ''
-                    : 'border-b border-slate-200 dark:border-slate-800'
-                }`}
-              >
-                {/* Subtle 30-minute dashed half-hour line */}
-                <div className="w-full h-1/2 border-b border-dashed border-slate-200/60 dark:border-slate-800/60" />
-              </div>
-            ))}
-          </div>
+            className="up-hour-grid absolute top-0 bottom-0 right-0 pointer-events-none z-0"
+            style={{ left: `${gutterWidth}px`, ...hourGridStyle }}
+          />
 
           {/* Time Gutter (Left Column) */}
           <div
@@ -550,6 +565,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 <div
                   key={day.id}
                   id={`day-column-${day.id}`}
+                  data-dialog="course"
                   className={`relative h-full overflow-x-clip group/col ${
                     isToday && !phoneWeek ? 'bg-indigo-500/[0.02] dark:bg-transparent' : ''
                   }`}
