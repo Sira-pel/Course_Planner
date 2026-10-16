@@ -23,8 +23,23 @@ function lastPreloadReloadAt(): number | null {
   }
 }
 
+function rejectionMessage(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason ?? '');
+}
+
+window.addEventListener('unhandledrejection', (event) => {
+  // A prefetch or ?retry= import is recovered by the dialog. Don't report it as uncaught.
+  const message = rejectionMessage(event.reason);
+  const dynamicImportFailed =
+    message.includes('dynamically imported module') || message.includes('Importing a module script failed');
+  if (message.includes('retry=') || (isIdleDialogPrefetch() && dynamicImportFailed)) {
+    event.preventDefault();
+  }
+});
+
 window.addEventListener('vite:preloadError', (event) => {
-  // Idle prefetch swallows its own rejection, so only a user-started import reloads.
+  // Idle prefetch catches its own rejection. Leave the error intact so the loader
+  // can read the failed URL. preventDefault would resolve the import to undefined.
   if (isIdleDialogPrefetch()) return;
   // Offline imports should reject into the dialog error UI.
   if (!navigator.onLine) return;

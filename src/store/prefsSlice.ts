@@ -153,10 +153,9 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
         let nextTheme = state.theme;
         let nextPreference = state.themePreference;
         if (isThemePreference(backup.themePreference)) {
-          nextPreference = backup.themePreference === 'system'
-            ? resolveTheme('system')
-            : backup.themePreference;
-          nextTheme = nextPreference;
+          // Keep "system" as the preference. Only the applied theme is resolved.
+          nextPreference = backup.themePreference;
+          nextTheme = resolveTheme(nextPreference);
           applyDomTheme(nextTheme);
           persistTheme(nextPreference);
         } else if (isThemeName(backup.theme)) {
@@ -200,7 +199,7 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
           themePreference: nextPreference,
           semesterStart: isIsoDate(backup.semesterStart) ? backup.semesterStart : state.semesterStart,
           semesterEnd: isIsoDate(backup.semesterEnd) ? backup.semesterEnd : state.semesterEnd,
-        });
+        }, { includeSettings: true });
         return { success: true };
       } catch {
         return { success: false, error: BACKUP_READ_ERROR };

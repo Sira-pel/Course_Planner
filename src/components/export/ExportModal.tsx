@@ -161,6 +161,9 @@ const ExportModalBody: React.FC<{
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [imageTheme, setImageTheme] = useState<'light' | 'dark'>(theme);
+  // Bumped whenever the schedule changes so a render that was already running
+  // cannot put an outdated image back after the preview was cleared.
+  const imageRequestRef = useRef(0);
 
   // Revoke object URL on unmount or when imagePreviewUrl changes to prevent memory leak
   useEffect(() => {
@@ -170,6 +173,13 @@ const ExportModalBody: React.FC<{
       }
     };
   }, [imagePreviewUrl]);
+
+  // The dialog stays mounted after its first open. Drop the preview when what it
+  // draws changes, so the next visit to the image tab renders the current schedule.
+  useEffect(() => {
+    imageRequestRef.current += 1;
+    setImagePreviewUrl(null);
+  }, [activePlan, showWeekends, startHour, endHour]);
 
   // Generate preview image smoothly with debounce when activeTab becomes 'image'
   useEffect(() => {
@@ -212,6 +222,7 @@ const ExportModalBody: React.FC<{
   };
 
   const handleGeneratePreviewImage = async () => {
+    const request = imageRequestRef.current;
     setGeneratingImage(true);
     try {
       const url = await exportScheduleToImage(activePlan, {
@@ -220,6 +231,10 @@ const ExportModalBody: React.FC<{
         startHour,
         endHour,
       });
+      if (request !== imageRequestRef.current) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+        return;
+      }
       setImagePreviewUrl((prev) => {
         if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
         return url;
@@ -271,7 +286,8 @@ const ExportModalBody: React.FC<{
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -285,6 +301,8 @@ const ExportModalBody: React.FC<{
       setImportError('Failed to read file');
     };
     reader.readAsText(file);
+    // Let the same file be chosen again after Cancel or an edit.
+    input.value = '';
   };
 
   const handleApplyImport = () => {
