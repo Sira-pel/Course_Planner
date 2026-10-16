@@ -73,6 +73,9 @@ export default defineConfig(() => {
           // First visit has no previous worker, so this one activates immediately.
           // Claiming the page lets the runtime cache store chunks fetched on that visit.
           clientsClaim: true,
+          // A failed import is retried as the same chunk with ?retry=. Drop that
+          // param so the precached dialog still matches while offline.
+          ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^retry$/],
           // Icons are added once via includeAssets and the manifest. Matching
           // them here as well precaches every icon twice.
           globPatterns: ['**/*.{js,css,html,woff,woff2}'],
@@ -88,7 +91,8 @@ export default defineConfig(() => {
           runtimeCaching: [
             {
               // Large chunks that are not needed to open a dialog. Cached when first fetched.
-              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync)-[^/]+\.js$/i,
+              // The same file may be requested again with ?retry= after a failed import.
+              urlPattern: /\/assets\/(?:xlsx|firebase|GoogleCalendarSync)-[^/]+\.js(?:\?.*)?$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'deferred-js',
@@ -99,6 +103,15 @@ export default defineConfig(() => {
                 cacheableResponse: {
                   statuses: [0, 200],
                 },
+                plugins: [
+                  {
+                    cacheKeyWillBeUsed: async ({ request }) => {
+                      const url = new URL(request.url);
+                      url.searchParams.delete('retry');
+                      return url.href;
+                    },
+                  },
+                ],
               },
             },
           ],

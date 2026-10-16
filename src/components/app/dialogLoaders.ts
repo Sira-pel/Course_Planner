@@ -64,6 +64,13 @@ function withRetryQuery(url: string, attempt: number): string {
   return parsed.href;
 }
 
+/** A failed retry must not surface as an uncaught rejection. Callers still observe `pending`. */
+function importRetried(failedUrl: string, attempt: number): Promise<unknown> {
+  const pending = import(/* @vite-ignore */ withRetryQuery(failedUrl, attempt));
+  void pending.catch(() => {});
+  return pending;
+}
+
 /**
  * One promise per dialog. An early tap, the idle prefetch, and React.lazy
  * all share it, so the download starts once and is not kicked off while the
@@ -81,7 +88,7 @@ export function memoizedLoader<M, T extends ComponentType<any>>(
   const run = (() => {
     if (!pending) {
       const source: Promise<M> = attempt > 0 && failedUrl
-        ? import(/* @vite-ignore */ withRetryQuery(failedUrl, attempt))
+        ? importRetried(failedUrl, attempt) as Promise<M>
         : load();
       const next = source.then(adapt).catch((error: unknown) => {
         const url = moduleUrlFromError(error);
@@ -135,7 +142,7 @@ const DIALOG_LOADERS = {
 export type DialogPrefetchName = keyof typeof DIALOG_LOADERS;
 
 export function prefetchDialog(name: DialogPrefetchName): void {
-  void DIALOG_LOADERS[name]();
+  void DIALOG_LOADERS[name]().catch(() => {});
 }
 
 export function prefetchAllDialogs(): void {
