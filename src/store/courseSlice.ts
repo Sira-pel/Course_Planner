@@ -42,6 +42,13 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       const oldCourse = targetPlan?.courses.find((c) => c.id === updatedCourse.id);
       if (!oldCourse) return;
 
+      const oldKey = courseIdentityKey(oldCourse.code, oldCourse.section);
+      const newKey = courseIdentityKey(updatedCourse.code, updatedCourse.section);
+
+      // The same course (same code and section) in other plans follows the edit, as it
+      // does when the course is edited from the pool. Each plan keeps its own ids and
+      // color. A plan that already holds a different course with the new identity is
+      // left alone so the rename cannot create a duplicate in it.
       const updatedPlans = state.plans.map((p) => {
         if (p.id === targetId) {
           return {
@@ -49,62 +56,69 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
             courses: p.courses.map((c) => (c.id === updatedCourse.id ? updatedCourse : c)),
           };
         }
-        return p;
+        const holdsOld = p.courses.some((c) => courseIdentityKey(c.code, c.section) === oldKey);
+        if (!holdsOld) return p;
+        const wouldCollide =
+          oldKey !== newKey &&
+          p.courses.some((c) => courseIdentityKey(c.code, c.section) === newKey);
+        if (wouldCollide) return p;
+        return {
+          ...p,
+          courses: p.courses.map((c) =>
+            courseIdentityKey(c.code, c.section) === oldKey
+              ? {
+                  ...updatedCourse,
+                  id: c.id,
+                  color: c.color || updatedCourse.color,
+                  sessions: updatedCourse.sessions.map((s, idx) => ({ ...s, id: `s_${c.id}_${idx}` })),
+                }
+              : c
+          ),
+        };
       });
 
       // Keep catalogCourses synchronized with updated course
       let updatedCatalog = [...state.catalogCourses];
-      const oldKey = oldCourse ? courseIdentityKey(oldCourse.code, oldCourse.section) : null;
-      const newKey = courseIdentityKey(updatedCourse.code, updatedCourse.section);
+      const catalogId = updatedCourse.id.startsWith('cat_') ? updatedCourse.id : `cat_${updatedCourse.id}`;
+      const keyAt = (index: number) =>
+        courseIdentityKey(updatedCatalog[index].code, updatedCatalog[index].section);
+      const findByKey = (key: string) =>
+        updatedCatalog.findIndex((_, index) => keyAt(index) === key);
 
-      const catalogIdx = updatedCatalog.findIndex(
-        (cat) =>
-          (oldKey && courseIdentityKey(cat.code, cat.section) === oldKey) ||
-          courseIdentityKey(cat.code, cat.section) === newKey ||
-          cat.id === updatedCourse.id
-      );
+      // The pool entry this plan course came from: same identity as before the edit,
+      // or the entry made for this course id. Matching the new identity here would
+      // pick an unrelated pool entry when the code or section changes.
+      let sourceIdx = findByKey(oldKey);
+      if (sourceIdx === -1) sourceIdx = updatedCatalog.findIndex((cat) => cat.id === catalogId);
+      const targetIdx = oldKey === newKey ? sourceIdx : findByKey(newKey);
 
-      if (catalogIdx !== -1) {
-        // If identity changed, check if any other plan still uses oldKey
-        const isOldUsedElsewhere =
-          oldKey &&
-          oldKey !== newKey &&
-          state.plans.some((p) =>
-            p.courses.some(
-              (c) =>
-                (p.id !== targetId || c.id !== updatedCourse.id) &&
-                courseIdentityKey(c.code, c.section) === oldKey
-            )
-          );
+      const addToPool = () => {
+        updatedCatalog = [{ ...updatedCourse, id: catalogId }, ...updatedCatalog];
+      };
 
-        if (isOldUsedElsewhere) {
-          // Keep old catalog item for other plans, add updated one if needed
-          if (!updatedCatalog.some((c) => courseIdentityKey(c.code, c.section) === newKey)) {
-            updatedCatalog = [
-              {
-                ...updatedCourse,
-                id: updatedCourse.id.startsWith('cat_') ? updatedCourse.id : `cat_${updatedCourse.id}`,
-              },
-              ...updatedCatalog,
-            ];
-          }
+      if (oldKey === newKey) {
+        if (sourceIdx === -1) {
+          addToPool();
         } else {
-          // Update in place
-          const existingCat = updatedCatalog[catalogIdx];
-          updatedCatalog[catalogIdx] = {
-            ...updatedCourse,
-            id: existingCat.id,
-          };
+          updatedCatalog[sourceIdx] = { ...updatedCourse, id: updatedCatalog[sourceIdx].id };
         }
       } else {
-        // Not in catalog, add it
-        updatedCatalog = [
-          {
-            ...updatedCourse,
-            id: updatedCourse.id.startsWith('cat_') ? updatedCourse.id : `cat_${updatedCourse.id}`,
-          },
-          ...updatedCatalog,
-        ];
+        // Only plans that were left alone above still hold the old identity.
+        const isOldUsedElsewhere = updatedPlans.some((p) =>
+          p.courses.some((c) => courseIdentityKey(c.code, c.section) === oldKey)
+        );
+
+        if (isOldUsedElsewhere || sourceIdx === -1) {
+          // Other plans still use the old pool entry. Keep it, and add the new one if missing.
+          if (targetIdx === -1) addToPool();
+        } else if (targetIdx === -1) {
+          // Nobody else uses it, so rename the pool entry in place.
+          updatedCatalog[sourceIdx] = { ...updatedCourse, id: updatedCatalog[sourceIdx].id };
+        } else {
+          // The new identity is already in the pool. Drop the unused old entry
+          // instead of leaving two pool entries for one course.
+          updatedCatalog = updatedCatalog.filter((_, index) => index !== sourceIdx);
+        }
       }
 
       commitWithHistory(set, get, {

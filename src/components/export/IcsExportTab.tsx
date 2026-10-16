@@ -1,10 +1,42 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Component, Suspense, type ReactNode } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
+import { lazyWithRetry } from '../app/dialogLoaders';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 
-const GoogleCalendarSync = lazy(() => import('../GoogleCalendarSync'));
+const GoogleCalendarSync = lazyWithRetry(() => import('../GoogleCalendarSync'));
+
+/**
+ * Keeps a failed Google Calendar chunk (for example while offline) from taking down the
+ * whole Export dialog. The local .ics download works without it.
+ */
+class GoogleSyncBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  public state = { failed: false };
+
+  public static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  public render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div
+        role="status"
+        className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300"
+      >
+        <span>Google Calendar sync couldn&apos;t load. Check your connection. The .ics download above still works.</span>
+        <button
+          type="button"
+          onClick={() => this.setState({ failed: false })}
+          className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+}
 
 interface IcsExportTabProps {
   activePlan: SchedulePlan;
@@ -72,9 +104,11 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
         </div>
 
         <div id="google-calendar-sync">
-          <Suspense fallback={<p className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">Loading Google Calendar sync.</p>}>
-            <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
-          </Suspense>
+          <GoogleSyncBoundary>
+            <Suspense fallback={<p className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">Loading Google Calendar sync.</p>}>
+              <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
+            </Suspense>
+          </GoogleSyncBoundary>
         </div>
         {/* Optional: Individual Course .ics Download */}
         {activePlan.courses.length > 1 && (

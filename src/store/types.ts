@@ -1,11 +1,27 @@
 import type { StoreApi } from 'zustand';
 import type { Course, SchedulePlan } from '../types/schedule';
 
+/** View and calendar settings that a backup restore can overwrite. */
+export interface SettingsSnapshot {
+  showWeekends: boolean;
+  startHour: number;
+  endHour: number;
+  timeRangeMode: 'auto' | 'custom';
+  weekStart: 'monday' | 'sunday';
+  mobileCalendarView: 'week' | 'day';
+  theme: 'light' | 'dark';
+  themePreference: 'light' | 'dark' | 'system';
+  semesterStart: string;
+  semesterEnd: string;
+}
+
 export interface HistorySnapshot {
   plans: SchedulePlan[];
   catalogCourses: Course[];
   activePlanId: string;
   ghostPlanIds: string[];
+  /** Present only when the change also replaced settings, so Undo can put them back. */
+  settings?: SettingsSnapshot;
 }
 
 export interface ScheduleState {

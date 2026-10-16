@@ -1,19 +1,48 @@
-import type { HistorySnapshot, ScheduleState, StoreGet, StoreSet } from './types';
+import { applyDomTheme, persistTheme, resolveTheme } from '../utils/theme';
+import type { HistorySnapshot, ScheduleState, SettingsSnapshot, StoreGet, StoreSet } from './types';
 
 export const MAX_HISTORY = 25;
 
-export function createHistorySnapshot(state: {
-  plans: HistorySnapshot['plans'];
-  catalogCourses: HistorySnapshot['catalogCourses'];
-  activePlanId: string;
-  ghostPlanIds: string[];
-}): HistorySnapshot {
+export function createHistorySnapshot(
+  state: {
+    plans: HistorySnapshot['plans'];
+    catalogCourses: HistorySnapshot['catalogCourses'];
+    activePlanId: string;
+    ghostPlanIds: string[];
+  },
+  settings?: SettingsSnapshot,
+): HistorySnapshot {
   return {
     plans: state.plans,
     catalogCourses: state.catalogCourses,
     activePlanId: state.activePlanId,
     ghostPlanIds: state.ghostPlanIds,
+    ...(settings ? { settings } : {}),
   };
+}
+
+export function pickSettings(state: ScheduleState): SettingsSnapshot {
+  return {
+    showWeekends: state.showWeekends,
+    startHour: state.startHour,
+    endHour: state.endHour,
+    timeRangeMode: state.timeRangeMode,
+    weekStart: state.weekStart,
+    mobileCalendarView: state.mobileCalendarView,
+    theme: state.theme,
+    themePreference: state.themePreference,
+    semesterStart: state.semesterStart,
+    semesterEnd: state.semesterEnd,
+  };
+}
+
+/** State patch for a saved settings snapshot. Also puts the page theme and its storage key back. */
+function restoreSettings(settings: SettingsSnapshot): SettingsSnapshot {
+  // A "system" preference follows the OS as it is now, not as it was when saved.
+  const theme = resolveTheme(settings.themePreference);
+  applyDomTheme(theme);
+  persistTheme(settings.themePreference);
+  return { ...settings, theme };
 }
 
 export function restoreViewFromSnapshot(snapshot: HistorySnapshot): { activePlanId: string; ghostPlanIds: string[] } {
@@ -28,10 +57,11 @@ export function restoreViewFromSnapshot(snapshot: HistorySnapshot): { activePlan
 export function commitWithHistory(
   set: StoreSet,
   get: StoreGet,
-  patch: Partial<ScheduleState> | ((state: ScheduleState) => Partial<ScheduleState>)
+  patch: Partial<ScheduleState> | ((state: ScheduleState) => Partial<ScheduleState>),
+  options: { includeSettings?: boolean } = {},
 ): void {
   const state = get();
-  const snapshot = createHistorySnapshot(state);
+  const snapshot = createHistorySnapshot(state, options.includeSettings ? pickSettings(state) : undefined);
   const resolved = typeof patch === 'function' ? patch(state) : patch;
   set({
     past: [snapshot, ...state.past].slice(0, MAX_HISTORY),
@@ -51,7 +81,11 @@ export function createHistorySlice(set: StoreSet, get: StoreGet): Pick<
 
       const previous = state.past[0];
       const newPast = state.past.slice(1);
-      const currentSnapshot = createHistorySnapshot(state);
+      // When the step being undone changed settings, keep today's settings for Redo.
+      const currentSnapshot = createHistorySnapshot(
+        state,
+        previous.settings ? pickSettings(state) : undefined,
+      );
       const view = restoreViewFromSnapshot(previous);
 
       set({
@@ -61,6 +95,7 @@ export function createHistorySlice(set: StoreSet, get: StoreGet): Pick<
         catalogCourses: previous.catalogCourses,
         activePlanId: view.activePlanId,
         ghostPlanIds: view.ghostPlanIds,
+        ...(previous.settings ? restoreSettings(previous.settings) : {}),
       });
     },
 
@@ -70,7 +105,10 @@ export function createHistorySlice(set: StoreSet, get: StoreGet): Pick<
 
       const next = state.future[0];
       const newFuture = state.future.slice(1);
-      const currentSnapshot = createHistorySnapshot(state);
+      const currentSnapshot = createHistorySnapshot(
+        state,
+        next.settings ? pickSettings(state) : undefined,
+      );
       const view = restoreViewFromSnapshot(next);
 
       set({
@@ -80,6 +118,7 @@ export function createHistorySlice(set: StoreSet, get: StoreGet): Pick<
         catalogCourses: next.catalogCourses,
         activePlanId: view.activePlanId,
         ghostPlanIds: view.ghostPlanIds,
+        ...(next.settings ? restoreSettings(next.settings) : {}),
       });
     },
 

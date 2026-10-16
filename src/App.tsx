@@ -32,17 +32,18 @@ import {
   loadHelpModal,
   loadImportModal,
   loadShareImportModal,
+  lazyWithRetry,
   prefetchAllDialogs,
   prefetchDialogsFromPointer,
   scheduleIdle,
 } from './components/app/dialogLoaders';
 
-const CourseModal = lazy(loadCourseModal);
-const ExportModal = lazy(loadExportModal);
-const ImportModal = lazy(loadImportModal);
-const HelpModal = lazy(loadHelpModal);
-const ShareImportModal = lazy(loadShareImportModal);
-const GeneratePlansModal = lazy(loadGenerateModal);
+const CourseModal = lazyWithRetry(loadCourseModal);
+const ExportModal = lazyWithRetry(loadExportModal);
+const ImportModal = lazyWithRetry(loadImportModal);
+const HelpModal = lazyWithRetry(loadHelpModal);
+const ShareImportModal = lazyWithRetry(loadShareImportModal);
+const GeneratePlansModal = lazyWithRetry(loadGenerateModal);
 const PWAReloadPrompt = lazy(() => import('./components/pwa/PWAReloadPrompt').then((m) => ({ default: m.PWAReloadPrompt })));
 
 function shortcutSurfaceForCourseMode(mode: 'form' | 'quick', editing: boolean): ShortcutSurface | null {

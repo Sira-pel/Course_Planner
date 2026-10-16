@@ -1,6 +1,33 @@
-import type { ComponentType } from 'react';
+import {
+  createElement,
+  lazy,
+  type ComponentProps,
+  type ComponentType,
+  type LazyExoticComponent,
+} from 'react';
 
 type DialogModule<T> = { default: T };
+
+/**
+ * React.lazy remembers a rejected import for good. This wraps it so a failed
+ * download swaps in a fresh lazy component, and the next render tries again
+ * (for example after the network is back).
+ */
+export function lazyWithRetry<T extends ComponentType<any>>(
+  load: () => Promise<DialogModule<T>>,
+): ComponentType<ComponentProps<T>> {
+  const make = (): LazyExoticComponent<T> =>
+    lazy(() =>
+      load().catch((error: unknown) => {
+        Inner = make();
+        throw error;
+      }),
+    );
+  let Inner: LazyExoticComponent<T> = make();
+  const Retryable = (props: ComponentProps<T>) =>
+    createElement(Inner as ComponentType<ComponentProps<T>>, props);
+  return Retryable;
+}
 
 export interface DialogLoader<T extends ComponentType<never>> {
   (): Promise<DialogModule<T>>;

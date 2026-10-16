@@ -68,12 +68,22 @@ function DialogLoadError({ onClose }: { onClose: () => void }) {
 
 class DialogErrorBoundary extends Component<
   { open: boolean; onClose: () => void; children: ReactNode },
-  { failed: boolean }
+  { failed: boolean; wasOpen: boolean }
 > {
-  public state = { failed: false };
+  public state = { failed: false, wasOpen: this.props.open };
 
   public static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };
+  }
+
+  /** A new open gets a fresh try, so one offline failure does not outlive the connection. */
+  public static getDerivedStateFromProps(
+    props: { open: boolean },
+    state: { failed: boolean; wasOpen: boolean },
+  ): Partial<{ failed: boolean; wasOpen: boolean }> | null {
+    if (props.open === state.wasOpen) return null;
+    if (props.open) return { failed: false, wasOpen: true };
+    return { wasOpen: false };
   }
 
   public render() {
