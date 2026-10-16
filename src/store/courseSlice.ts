@@ -108,16 +108,19 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
           p.courses.some((c) => courseIdentityKey(c.code, c.section) === oldKey)
         );
 
-        if (isOldUsedElsewhere || sourceIdx === -1) {
-          // Other plans still use the old pool entry. Keep it, and add the new one if missing.
-          if (targetIdx === -1) addToPool();
-        } else if (targetIdx === -1) {
+        if (targetIdx !== -1) {
+          // The new identity is already in the pool: update that entry with the edited
+          // details, and drop the old pool entry once no other plan uses it.
+          updatedCatalog[targetIdx] = { ...updatedCourse, id: updatedCatalog[targetIdx].id };
+          if (!isOldUsedElsewhere && sourceIdx !== -1 && sourceIdx !== targetIdx) {
+            updatedCatalog = updatedCatalog.filter((_, index) => index !== sourceIdx);
+          }
+        } else if (isOldUsedElsewhere || sourceIdx === -1) {
+          // Other plans still use the old pool entry. Keep it, and add the new one.
+          addToPool();
+        } else {
           // Nobody else uses it, so rename the pool entry in place.
           updatedCatalog[sourceIdx] = { ...updatedCourse, id: updatedCatalog[sourceIdx].id };
-        } else {
-          // The new identity is already in the pool. Drop the unused old entry
-          // instead of leaving two pool entries for one course.
-          updatedCatalog = updatedCatalog.filter((_, index) => index !== sourceIdx);
         }
       }
 

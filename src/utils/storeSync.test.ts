@@ -70,18 +70,30 @@ describe('updateCourse keeps plans and the pool in step', () => {
     assert.equal(pool.find((c) => c.id === 'cat_c1')?.code, 'CS 102');
   });
 
-  it('merges into an existing pool entry instead of duplicating it', () => {
+  it('merges into an existing pool entry instead of duplicating it and updates its details', () => {
     seed(
       [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] }],
-      [course('cat_new', 'CS 102', '001'), course('cat_c1', 'CS 101', '001')],
+      [course('cat_new', 'CS 102', '001', 'monday'), course('cat_c1', 'CS 101', '001')],
     );
 
-    useScheduleStore.getState().updateCourse(course('c1', 'CS 102', '001'), 'a');
+    useScheduleStore.getState().updateCourse(
+      {
+        ...course('c1', 'CS 102', '001', 'tuesday'),
+        name: 'Updated Algorithms',
+        instructor: 'Dr. Knuth',
+        credits: 4,
+      },
+      'a',
+    );
 
     const pool = useScheduleStore.getState().catalogCourses;
     assert.equal(pool.length, 1);
     assert.equal(pool[0].code, 'CS 102');
     assert.equal(pool[0].id, 'cat_new');
+    assert.equal(pool[0].name, 'Updated Algorithms');
+    assert.equal(pool[0].instructor, 'Dr. Knuth');
+    assert.equal(pool[0].credits, 4);
+    assert.equal(pool[0].sessions[0].day, 'tuesday');
   });
 
   it('keeps the old pool entry while another plan still uses it', () => {
@@ -94,11 +106,16 @@ describe('updateCourse keeps plans and the pool in step', () => {
       [course('cat_c1', 'CS 101', '001'), course('cat_c3', 'CS 102', '001')],
     );
 
-    useScheduleStore.getState().updateCourse(course('c1', 'CS 102', '001'), 'a');
+    useScheduleStore.getState().updateCourse(
+      { ...course('c1', 'CS 102', '001', 'tuesday'), name: 'Edited 102' },
+      'a',
+    );
 
     const { plans, catalogCourses } = useScheduleStore.getState();
     assert.deepEqual(plans[1].courses.map((c) => c.code), ['CS 101', 'CS 102']);
     assert.deepEqual(catalogCourses.map((c) => c.code).sort(), ['CS 101', 'CS 102']);
+    assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.name, 'Edited 102');
+    assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.sessions[0].day, 'tuesday');
   });
 });
 
@@ -184,5 +201,61 @@ describe('backup restore settings', () => {
     useScheduleStore.getState().undo();
     assert.equal(useScheduleStore.getState().plans.length, 1);
     assert.equal(useScheduleStore.getState().showWeekends, false);
+  });
+});
+
+describe('lazyWithRetry', () => {
+  it('does not re-request a failed chunk in a loop until reset() is called', async () => {
+    const { lazyWithRetry } = await import('../components/app/dialogLoaders');
+    let calls = 0;
+    let shouldFail = true;
+    const Stub = () => null;
+    const Retryable = lazyWithRetry(async () => {
+      calls += 1;
+      if (shouldFail) throw new Error('offline');
+      return { default: Stub };
+    });
+
+    const unwrapLazy = () => {
+      const element = (Retryable as unknown as (props: Record<string, never>) => {
+        type: { _init: (payload: unknown) => unknown; _payload: unknown };
+      })({});
+      return element.type._init(element.type._payload);
+    };
+
+    // First render starts the import and suspends by throwing a promise.
+    let firstThrown: unknown;
+    try {
+      unwrapLazy();
+    } catch (thrown) {
+      firstThrown = thrown;
+    }
+    assert.equal(calls, 1);
+    assert.equal(typeof (firstThrown as Promise<unknown>)?.then, 'function');
+    await (firstThrown as Promise<unknown>).then(
+      () => {},
+      () => {},
+    );
+
+    // When Suspense wakes up on rejection and re-renders, the failed lazy component
+    // must throw the rejection synchronously to the error boundary instead of calling
+    // load() again in an endless loop.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      assert.throws(() => unwrapLazy(), /offline/);
+      assert.equal(calls, 1);
+    }
+
+    // Once the user retries via reset(), a fresh lazy wrapper requests the chunk again.
+    shouldFail = false;
+    Retryable.reset();
+    let retryThrown: unknown;
+    try {
+      unwrapLazy();
+    } catch (thrown) {
+      retryThrown = thrown;
+    }
+    assert.equal(calls, 2);
+    await (retryThrown as Promise<unknown>);
+    assert.equal(unwrapLazy(), Stub);
   });
 });

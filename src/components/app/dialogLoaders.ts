@@ -8,24 +8,26 @@ import {
 
 type DialogModule<T> = { default: T };
 
+export type RetryableLazyComponent<T extends ComponentType<any>> = ComponentType<ComponentProps<T>> & {
+  /** Swap in a fresh React.lazy wrapper so the next render retries a failed import. */
+  reset: () => void;
+};
+
 /**
- * React.lazy remembers a rejected import for good. This wraps it so a failed
- * download swaps in a fresh lazy component, and the next render tries again
- * (for example after the network is back).
+ * React.lazy remembers a rejected import for good. Keep the failed lazy wrapper
+ * in place so the error boundary catches the rejection once instead of looping,
+ * and only swap in a fresh lazy component when reset() is called to retry.
  */
 export function lazyWithRetry<T extends ComponentType<any>>(
   load: () => Promise<DialogModule<T>>,
-): ComponentType<ComponentProps<T>> {
-  const make = (): LazyExoticComponent<T> =>
-    lazy(() =>
-      load().catch((error: unknown) => {
-        Inner = make();
-        throw error;
-      }),
-    );
+): RetryableLazyComponent<T> {
+  const make = (): LazyExoticComponent<T> => lazy(load);
   let Inner: LazyExoticComponent<T> = make();
-  const Retryable = (props: ComponentProps<T>) =>
-    createElement(Inner as ComponentType<ComponentProps<T>>, props);
+  const Retryable = ((props: ComponentProps<T>) =>
+    createElement(Inner as ComponentType<ComponentProps<T>>, props)) as RetryableLazyComponent<T>;
+  Retryable.reset = () => {
+    Inner = make();
+  };
   return Retryable;
 }
 

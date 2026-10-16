@@ -28,7 +28,10 @@ class GoogleSyncBoundary extends Component<{ children: ReactNode }, { failed: bo
         <span>Google Calendar sync couldn&apos;t load. Check your connection. The .ics download above still works.</span>
         <button
           type="button"
-          onClick={() => this.setState({ failed: false })}
+          onClick={() => {
+            GoogleCalendarSync.reset();
+            this.setState({ failed: false });
+          }}
           className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           Try again
