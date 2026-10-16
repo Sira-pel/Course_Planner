@@ -31,7 +31,7 @@ export function lazyWithRetry<T extends ComponentType<any>>(
   return Retryable;
 }
 
-export interface DialogLoader<T extends ComponentType<never>> {
+export interface DialogLoader<T extends ComponentType<any>> {
   (): Promise<DialogModule<T>>;
   /** True while this loader's import is already in flight or cached. */
   started(): boolean;
@@ -44,22 +44,53 @@ export function isIdleDialogPrefetch(): boolean {
   return idlePrefetchImports > 0;
 }
 
+/** Chrome keeps a failed dynamic import for that exact URL until the page reloads. */
+function moduleUrlFromError(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : String(error);
+  const match = message.match(/https?:\/\/\S+/);
+  if (!match) return undefined;
+  try {
+    const url = new URL(match[0].replace(/[),.;]+$/, ''));
+    url.searchParams.delete('retry');
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function withRetryQuery(url: string, attempt: number): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set('retry', String(attempt));
+  return parsed.href;
+}
+
 /**
  * One promise per dialog. An early tap, the idle prefetch, and React.lazy
  * all share it, so the download starts once and is not kicked off while the
  * shell is still evaluating.
+ * A failed fetch is remembered by the browser for that URL, so the next call
+ * after a rejection imports the same chunk with a new `retry` query.
  */
-export function memoizedLoader<T extends ComponentType<never>>(
-  load: () => Promise<DialogModule<T>>,
+export function memoizedLoader<M, T extends ComponentType<any>>(
+  load: () => Promise<M>,
+  adapt: (mod: M) => DialogModule<T>,
 ): DialogLoader<T> {
   let pending: Promise<DialogModule<T>> | undefined;
+  let attempt = 0;
+  let failedUrl: string | undefined;
   const run = (() => {
     if (!pending) {
-      const next = load();
-      pending = next;
-      next.catch(() => {
+      const source: Promise<M> = attempt > 0 && failedUrl
+        ? import(/* @vite-ignore */ withRetryQuery(failedUrl, attempt))
+        : load();
+      const next = source.then(adapt).catch((error: unknown) => {
+        const url = moduleUrlFromError(error);
+        if (url) failedUrl = url;
+        attempt += 1;
         if (pending === next) pending = undefined;
+        throw error;
       });
+      pending = next;
     }
     return pending;
   }) as DialogLoader<T>;
@@ -67,23 +98,29 @@ export function memoizedLoader<T extends ComponentType<never>>(
   return run;
 }
 
-export const loadCourseModal = memoizedLoader(() =>
-  import('../course-modal/CourseModal').then((m) => ({ default: m.CourseModal })),
+export const loadCourseModal = memoizedLoader(
+  () => import('../course-modal/CourseModal'),
+  (mod) => ({ default: mod.CourseModal }),
 );
-export const loadExportModal = memoizedLoader(() =>
-  import('../export/ExportModal').then((m) => ({ default: m.ExportModal })),
+export const loadExportModal = memoizedLoader(
+  () => import('../export/ExportModal'),
+  (mod) => ({ default: mod.ExportModal }),
 );
-export const loadImportModal = memoizedLoader(() =>
-  import('../import/ImportModal').then((m) => ({ default: m.ImportModal })),
+export const loadImportModal = memoizedLoader(
+  () => import('../import/ImportModal'),
+  (mod) => ({ default: mod.ImportModal }),
 );
-export const loadHelpModal = memoizedLoader(() =>
-  import('../HelpModal').then((m) => ({ default: m.HelpModal })),
+export const loadHelpModal = memoizedLoader(
+  () => import('../HelpModal'),
+  (mod) => ({ default: mod.HelpModal }),
 );
-export const loadShareImportModal = memoizedLoader(() =>
-  import('../ShareImportModal').then((m) => ({ default: m.ShareImportModal })),
+export const loadShareImportModal = memoizedLoader(
+  () => import('../ShareImportModal'),
+  (mod) => ({ default: mod.ShareImportModal }),
 );
-export const loadGenerateModal = memoizedLoader(() =>
-  import('../generate/GeneratePlansModal').then((m) => ({ default: m.GeneratePlansModal })),
+export const loadGenerateModal = memoizedLoader(
+  () => import('../generate/GeneratePlansModal'),
+  (mod) => ({ default: mod.GeneratePlansModal }),
 );
 
 const DIALOG_LOADERS = {

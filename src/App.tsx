@@ -718,7 +718,7 @@ export default function App() {
 
       <SuppressFocusRestoreContext.Provider value={suppressFocusRestoreRef}>
       <DialogReplaceAppearContext.Provider value={replaceAppear}>
-      <DeferredDialog key={`course-${courseSession}`} open={isCourseModalOpen} onClose={handleCloseCourseModal} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`course-${courseSession}`} open={isCourseModalOpen} onClose={handleCloseCourseModal} onReset={CourseModal.reset} instantDismiss={instantDismiss}>
         <CourseModal
           isOpen={isCourseModalOpen}
           onClose={handleCloseCourseModal}
@@ -731,7 +731,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog key={`export-${exportSession}`} open={isExportOpen} onClose={handleCloseExport} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`export-${exportSession}`} open={isExportOpen} onClose={handleCloseExport} onReset={ExportModal.reset} instantDismiss={instantDismiss}>
         <ExportModal
           isOpen={isExportOpen}
           initialTab={exportInitialTab}
@@ -741,7 +741,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isImportOpen} onClose={handleCloseImport} instantDismiss={instantDismiss}>
+      <DeferredDialog open={isImportOpen} onClose={handleCloseImport} onReset={ImportModal.reset} instantDismiss={instantDismiss}>
         <ImportModal
           isOpen={isImportOpen}
           initialTab={importInitialTab}
@@ -749,7 +749,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog key={`help-${helpSession}`} open={isHelpOpen} onClose={handleCloseHelp} instantDismiss={instantDismiss}>
+      <DeferredDialog key={`help-${helpSession}`} open={isHelpOpen} onClose={handleCloseHelp} onReset={HelpModal.reset} instantDismiss={instantDismiss}>
         <HelpModal
           isOpen={isHelpOpen}
           initialTab={helpInitialTab}
@@ -761,7 +761,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isGenerateOpen} onClose={() => setIsGenerateOpen(false)} instantDismiss={instantDismiss}>
+      <DeferredDialog open={isGenerateOpen} onClose={() => setIsGenerateOpen(false)} onReset={GeneratePlansModal.reset} instantDismiss={instantDismiss}>
         <GeneratePlansModal
           isOpen={isGenerateOpen}
           onClose={() => setIsGenerateOpen(false)}
@@ -780,7 +780,7 @@ export default function App() {
         />
       </DeferredDialog>
 
-      <DeferredDialog open={isShareImportOpen} onClose={handleCloseShareImport} instantDismiss={instantDismiss}>
+      <DeferredDialog open={isShareImportOpen} onClose={handleCloseShareImport} onReset={ShareImportModal.reset} instantDismiss={instantDismiss}>
         <ShareImportModal
           isOpen={isShareImportOpen}
           onClose={handleCloseShareImport}

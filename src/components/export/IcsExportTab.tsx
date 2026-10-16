@@ -1,11 +1,15 @@
 import React, { Component, Suspense, type ReactNode } from 'react';
 import { Download } from 'lucide-react';
 import { Course, SchedulePlan } from '../../types/schedule';
-import { lazyWithRetry } from '../app/dialogLoaders';
+import { lazyWithRetry, memoizedLoader } from '../app/dialogLoaders';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 
-const GoogleCalendarSync = lazyWithRetry(() => import('../GoogleCalendarSync'));
+const loadGoogleCalendarSync = memoizedLoader(
+  () => import('../GoogleCalendarSync'),
+  (mod) => mod,
+);
+const GoogleCalendarSync = lazyWithRetry(loadGoogleCalendarSync);
 
 /**
  * Keeps a failed Google Calendar chunk (for example while offline) from taking down the

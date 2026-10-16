@@ -85,33 +85,44 @@ function resetLazyChild(children: ReactNode, onReset?: () => void): void {
 
 class DialogErrorBoundary extends Component<
   { open: boolean; onClose: () => void; onReset?: () => void; children: ReactNode },
-  { failed: boolean; wasOpen: boolean }
+  { failed: boolean; wasOpen: boolean; retryOnOpen: boolean }
 > {
-  public state = { failed: false, wasOpen: this.props.open };
+  public state = { failed: false, wasOpen: this.props.open, retryOnOpen: false };
 
   public static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };
   }
 
-  /** A new open gets a fresh try, so one offline failure does not outlive the connection. */
+  /**
+   * A new open gets a fresh try, so one offline failure does not outlive the connection.
+   * `reset()` swaps the lazy component and must not run during render; componentDidUpdate does it.
+   */
   public static getDerivedStateFromProps(
-    props: { open: boolean; onReset?: () => void; children: ReactNode },
-    state: { failed: boolean; wasOpen: boolean },
-  ): Partial<{ failed: boolean; wasOpen: boolean }> | null {
+    props: { open: boolean },
+    state: { failed: boolean; wasOpen: boolean; retryOnOpen: boolean },
+  ): Partial<{ failed: boolean; wasOpen: boolean; retryOnOpen: boolean }> | null {
     if (props.open === state.wasOpen) return null;
-    if (props.open) {
-      if (state.failed) resetLazyChild(props.children, props.onReset);
-      return { failed: false, wasOpen: true };
-    }
-    return { wasOpen: false };
+    if (!props.open) return { wasOpen: false, retryOnOpen: false };
+    return { wasOpen: true, retryOnOpen: state.failed };
+  }
+
+  public componentDidUpdate(
+    _prevProps: { open: boolean },
+    prevState: { retryOnOpen: boolean },
+  ): void {
+    if (!this.state.retryOnOpen || prevState.retryOnOpen) return;
+    resetLazyChild(this.props.children, this.props.onReset);
+    this.setState({ failed: false, retryOnOpen: false });
   }
 
   private handleRetry = () => {
     resetLazyChild(this.props.children, this.props.onReset);
-    this.setState({ failed: false });
+    this.setState({ failed: false, retryOnOpen: false });
   };
 
   public render() {
+    // Hold the previous failure off screen until the chunk has been reset.
+    if (this.state.retryOnOpen) return null;
     if (this.state.failed) {
       if (!this.props.open) return null;
       return <DialogLoadError onClose={this.props.onClose} onRetry={this.handleRetry} />;
