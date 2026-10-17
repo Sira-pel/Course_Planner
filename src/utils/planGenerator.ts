@@ -145,7 +145,10 @@ interface PreparedGroup {
 
 interface MixJob {
   groups: PreparedGroup[];
-  indexes: number[] | null;
+  /** Next section index to try at each depth. Null until the job starts. */
+  nextIndex: number[] | null;
+  /** Sections accepted along the current path. */
+  chosen: Course[];
   done: boolean;
 }
 
@@ -282,11 +285,15 @@ function mixProduct(groups: PreparedGroup[]): number {
   return product;
 }
 
-function bump(indexes: number[], groups: PreparedGroup[]): boolean {
-  for (let index = indexes.length - 1; index >= 0; index -= 1) {
-    indexes[index] += 1;
-    if (indexes[index] < groups[index].sections.length) return true;
-    indexes[index] = 0;
+function sectionClashesWithChosen(section: Course, chosen: Course[]): boolean {
+  const sessions = section.sessions || [];
+  for (const other of chosen) {
+    const otherSessions = other.sessions || [];
+    for (const left of sessions) {
+      for (const right of otherSessions) {
+        if (checkSessionCollision(left, right)) return true;
+      }
+    }
   }
   return false;
 }
@@ -622,7 +629,8 @@ class PlanSearch implements GeneratorSearch {
       estimate = Math.min(1_000_000, estimate + product);
       this.jobs.push({
         groups: subset,
-        indexes: null,
+        nextIndex: null,
+        chosen: [],
         done: false,
       });
     }
@@ -715,19 +723,14 @@ class PlanSearch implements GeneratorSearch {
         continue;
       }
       idle = 0;
-      let indexes = job.indexes;
-      if (!indexes) {
-        indexes = new Array<number>(job.groups.length).fill(0);
-        job.indexes = indexes;
+      const outcome = this.stepJob(job);
+      if (outcome === 'done') {
+        job.done = true;
+        this.cursor = (this.cursor + 1) % this.jobs.length;
+        continue;
       }
-      const courses = indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
       this.evaluated += 1;
       steps += 1;
-      if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) {
-        if (withinDailyCap(courses, this.prefs)) this.consider(courses);
-        else this.overDailyCap += 1;
-      }
-      job.done = !bump(indexes, job.groups);
       this.cursor = (this.cursor + 1) % this.jobs.length;
       if (this.evaluated >= this.evaluationLimit) {
         this.capped = this.jobs.some((item) => !item.done);
@@ -736,6 +739,72 @@ class PlanSearch implements GeneratorSearch {
       }
     }
     if (this.jobs.every((job) => job.done)) this.done = true;
+  }
+
+  /**
+   * Walk one branch of the section tree. A section that clashes with the ones
+   * already chosen is skipped, along with every mix under it. A finished mix,
+   * including one whose last section clashes, counts as one evaluation.
+   */
+  private stepJob(job: MixJob): 'evaluated' | 'done' {
+    if (!job.nextIndex) {
+      job.nextIndex = [0];
+      job.chosen = [];
+    }
+    const groups = job.groups;
+    const nextIndex = job.nextIndex;
+    const chosen = job.chosen;
+
+    while (true) {
+      const depth = chosen.length;
+      if (depth === groups.length) {
+        const courses = chosen.slice();
+        if (mixCreditsOk(courses, this.prefs)) {
+          if (withinDailyCap(courses, this.prefs)) this.consider(courses);
+          else this.overDailyCap += 1;
+        }
+        chosen.pop();
+        this.exhaustMix(job);
+        return 'evaluated';
+      }
+
+      const sectionIndex = nextIndex[depth] ?? 0;
+      if (sectionIndex >= groups[depth].sections.length) {
+        if (depth === 0) return 'done';
+        chosen.pop();
+        continue;
+      }
+
+      nextIndex[depth] = sectionIndex + 1;
+      const section = groups[depth].sections[sectionIndex];
+      if (sectionClashesWithChosen(section, chosen)) {
+        if (depth === groups.length - 1) {
+          this.exhaustMix(job);
+          return 'evaluated';
+        }
+        continue;
+      }
+
+      chosen.push(section);
+      nextIndex[depth + 1] = 0;
+    }
+  }
+
+  /** Pop finished depths so a paused search resumes at the next sibling. */
+  private exhaustMix(job: MixJob): void {
+    const nextIndex = job.nextIndex;
+    if (!nextIndex) return;
+    const groups = job.groups;
+    const chosen = job.chosen;
+    while (true) {
+      const depth = chosen.length;
+      if ((nextIndex[depth] ?? 0) < groups[depth].sections.length) return;
+      if (depth === 0) {
+        job.done = true;
+        return;
+      }
+      chosen.pop();
+    }
   }
 
   private remember(buckets: Map<string, Bucket>, setKey: string, item: ScoredMix): void {

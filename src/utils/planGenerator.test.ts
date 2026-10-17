@@ -252,6 +252,38 @@ describe('plan generator', () => {
     assert.equal(search.capped, false);
   });
 
+  it('finds the one clash-free mix of 15 courses without searching deeper', () => {
+    const groups = Array.from({ length: 15 }, (_, courseIndex) => {
+      const code = `C${courseIndex + 1}`;
+      const goodStart = 8 * 60 + courseIndex * 30;
+      const sections = [0, 1, 2].map((sectionIndex) => {
+        if (sectionIndex === 2) {
+          return section(`${code}-good`, code, clock(goodStart), clock(goodStart + 25), '003');
+        }
+        return section(
+          `${code}-bad-${sectionIndex}`,
+          code,
+          '08:00',
+          '20:00',
+          sectionIndex === 0 ? '001' : '002',
+        );
+      });
+      return group(code, sections);
+    });
+
+    const result = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({ courseCount: 15 }),
+    });
+    assert.equal(result.capped, false);
+    assert.equal(result.plans.length, 1);
+    assert.equal(result.plans[0].courses.length, 15);
+    assert.ok(result.plans[0].courses.every((course) => course.section === '003'));
+    assert.ok(result.evaluated < MAX_EVALUATIONS);
+    assert.equal(result.validCount, 1);
+  });
+
   it('supports up to 15 candidate course groups and slices beyond MAX_CANDIDATES', () => {
     assert.equal(MAX_CANDIDATES, 15);
     const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
