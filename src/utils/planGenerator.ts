@@ -217,6 +217,19 @@ function pairAlwaysClashes(left: Course[], right: Course[]): boolean {
   return true;
 }
 
+/** True when some course pair inside this set can never share a plan. Large pairs stay in the search. */
+function subsetNeverFits(groups: PreparedGroup[]): boolean {
+  for (let i = 0; i < groups.length; i += 1) {
+    for (let j = i + 1; j < groups.length; j += 1) {
+      const left = groups[i];
+      const right = groups[j];
+      if (left.sections.length * right.sections.length > 240) continue;
+      if (pairAlwaysClashes(left.sections, right.sections)) return true;
+    }
+  }
+  return false;
+}
+
 function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string | null {
   const excluded = new Set(prefs.excludedSectionIds);
   const locked = new Set(prefs.lockedSectionIds);
@@ -623,6 +636,12 @@ class PlanSearch implements GeneratorSearch {
       return;
     }
 
+    if (subsets.every(subsetNeverFits)) {
+      this.emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, false, 0);
+      this.done = true;
+      return;
+    }
+
     let estimate = 0;
     for (const subset of subsets) {
       const product = mixProduct(subset);
@@ -729,8 +748,10 @@ class PlanSearch implements GeneratorSearch {
         this.cursor = (this.cursor + 1) % this.jobs.length;
         continue;
       }
-      this.evaluated += 1;
+      // Every section tried, including one that skips a clashing branch, spends one step.
       steps += 1;
+      if (outcome === 'step') continue;
+      this.evaluated += 1;
       this.cursor = (this.cursor + 1) % this.jobs.length;
       if (this.evaluated >= this.evaluationLimit) {
         this.capped = this.jobs.some((item) => !item.done);
@@ -742,11 +763,11 @@ class PlanSearch implements GeneratorSearch {
   }
 
   /**
-   * Walk one branch of the section tree. A section that clashes with the ones
-   * already chosen is skipped, along with every mix under it. A finished mix,
-   * including one whose last section clashes, counts as one evaluation.
+   * Try one section. A clash with the sections already chosen skips that branch
+   * and returns immediately so advance() can honor its step budget. A finished
+   * mix, including one whose last section clashes, counts as one evaluation.
    */
-  private stepJob(job: MixJob): 'evaluated' | 'done' {
+  private stepJob(job: MixJob): 'step' | 'evaluated' | 'done' {
     if (!job.nextIndex) {
       job.nextIndex = [0];
       job.chosen = [];
@@ -758,13 +779,7 @@ class PlanSearch implements GeneratorSearch {
     while (true) {
       const depth = chosen.length;
       if (depth === groups.length) {
-        const courses = chosen.slice();
-        if (mixCreditsOk(courses, this.prefs)) {
-          if (withinDailyCap(courses, this.prefs)) this.consider(courses);
-          else this.overDailyCap += 1;
-        }
-        chosen.pop();
-        this.exhaustMix(job);
+        this.scoreChosen(job);
         return 'evaluated';
       }
 
@@ -782,12 +797,27 @@ class PlanSearch implements GeneratorSearch {
           this.exhaustMix(job);
           return 'evaluated';
         }
-        continue;
+        return 'step';
       }
 
       chosen.push(section);
       nextIndex[depth + 1] = 0;
+      if (depth + 1 === groups.length) {
+        this.scoreChosen(job);
+        return 'evaluated';
+      }
+      return 'step';
     }
+  }
+
+  private scoreChosen(job: MixJob): void {
+    const courses = job.chosen.slice();
+    if (mixCreditsOk(courses, this.prefs)) {
+      if (withinDailyCap(courses, this.prefs)) this.consider(courses);
+      else this.overDailyCap += 1;
+    }
+    job.chosen.pop();
+    this.exhaustMix(job);
   }
 
   /** Pop finished depths so a paused search resumes at the next sibling. */

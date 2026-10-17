@@ -284,6 +284,61 @@ describe('plan generator', () => {
     assert.equal(result.validCount, 1);
   });
 
+  it('says when two picked courses can never fit together without walking the mix tree', { timeout: 1_000 }, () => {
+    const groups = Array.from({ length: 15 }, (_, courseIndex) => {
+      const code = `C${courseIndex + 1}`;
+      const clashPair = courseIndex >= 13;
+      const sections = [0, 1, 2, 3].map((sectionIndex) => {
+        if (clashPair) {
+          return section(`${code}-${sectionIndex}`, code, '08:00', '09:00', String(sectionIndex + 1).padStart(3, '0'));
+        }
+        const start = 10 * 60 + courseIndex * 4 + sectionIndex;
+        return section(`${code}-${sectionIndex}`, code, clock(start), clock(start + 1), String(sectionIndex + 1).padStart(3, '0'));
+      });
+      return group(code, sections);
+    });
+    const started = Date.now();
+    const result = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({ courseCount: 15 }),
+    });
+    assert.ok(Date.now() - started < 500, 'impossible course pair should not walk the section tree');
+    assert.equal(result.plans.length, 0);
+    assert.equal(result.evaluated, 0);
+    assert.equal(result.capped, false);
+    assert.equal(result.emptyReason, 'C14 overlaps every section of C15.');
+  });
+
+  it('pauses while skipping clashing sections and resumes the same plans', () => {
+    const groups = Array.from({ length: 8 }, (_, courseIndex) => {
+      const code = `C${courseIndex + 1}`;
+      const goodStart = 8 * 60 + courseIndex * 30;
+      const sections = [0, 1, 2].map((sectionIndex) => {
+        if (sectionIndex === 2) {
+          return section(`${code}-good`, code, clock(goodStart), clock(goodStart + 25), '003');
+        }
+        return section(`${code}-bad-${sectionIndex}`, code, '08:00', '20:00', sectionIndex === 0 ? '001' : '002');
+      });
+      return group(code, sections);
+    });
+    const input = {
+      groups,
+      pinnedKeys: [] as string[],
+      preferences: preferences({ courseCount: 8 }),
+    };
+    const search = startGeneratorSearch(input);
+    search.advance(5);
+    assert.equal(search.done, false);
+    assert.equal(search.capped, false);
+    while (!search.done) search.advance(40);
+    const resumed = search.result();
+    const fresh = generatePlans(input);
+    assert.deepEqual(resumed.plans.map((plan) => plan.id), fresh.plans.map((plan) => plan.id));
+    assert.equal(resumed.plans.length, 1);
+    assert.ok(resumed.plans[0].courses.every((course) => course.section === '003'));
+  });
+
   it('supports up to 15 candidate course groups and slices beyond MAX_CANDIDATES', () => {
     assert.equal(MAX_CANDIDATES, 15);
     const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
