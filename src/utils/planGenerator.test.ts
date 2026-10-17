@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Course, DayOfWeek } from '../types/schedule';
 import { timeToMinutes } from './timeUtils';
+import { sanitizeGeneratorPrefs } from './generatorPrefs';
 import { nextShownCount } from './generatorSession';
 import {
   gapFallbackNotice,
@@ -268,6 +269,12 @@ describe('plan generator', () => {
     assert.ok(result.plans.length > 0);
     assert.ok(result.plans.every((plan) => plan.courses.some((course) => course.code === 'C15')));
     assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'C16')), false);
+  });
+
+  it('accepts courseCount up to 15 and caps higher values to MAX_CANDIDATES in sanitizeGeneratorPrefs', () => {
+    assert.equal(sanitizeGeneratorPrefs({ courseCount: 15 }).courseCount, 15);
+    assert.equal(sanitizeGeneratorPrefs({ courseCount: 16 }).courseCount, MAX_CANDIDATES);
+    assert.equal(sanitizeGeneratorPrefs({ courseCount: 1 }).courseCount, 2);
   });
 });
 

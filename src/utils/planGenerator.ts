@@ -1,10 +1,10 @@
 import type { ClassSession, Course, DayOfWeek } from '../types/schedule';
 import { DAYS_LIST } from '../types/schedule';
 import { displayCourseTitle } from './courseIdentity';
-import type { GapLimit } from './generatorPrefs';
+import { MAX_CANDIDATES, type GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
-export const MAX_CANDIDATES = 15;
+export { MAX_CANDIDATES };
 /** Mixes evaluated before a search pauses. The same search can raise this and continue. */
 export const MAX_EVALUATIONS = 5000;
 /** Course groups revealed at a time. The search keeps every group it has ranked. */
@@ -145,8 +145,7 @@ interface PreparedGroup {
 
 interface MixJob {
   groups: PreparedGroup[];
-  indexes: number[];
-  radix: number[];
+  indexes: number[] | null;
   done: boolean;
 }
 
@@ -257,27 +256,6 @@ function prepareGroup(group: CourseGroup, prefs: GeneratorPreferences): Prepared
   };
 }
 
-function combinations(items: PreparedGroup[], count: number): PreparedGroup[][] {
-  if (count === 0) return [[]];
-  if (count > items.length || count < 0) return [];
-  const out: PreparedGroup[][] = [];
-  const current: PreparedGroup[] = [];
-  const visit = (start: number) => {
-    if (current.length === count) {
-      out.push(current.slice());
-      return;
-    }
-    const need = count - current.length;
-    for (let index = start; index <= items.length - need; index += 1) {
-      current.push(items[index]);
-      visit(index + 1);
-      current.pop();
-    }
-  };
-  visit(0);
-  return out;
-}
-
 function subsetCreditsOk(groups: PreparedGroup[], prefs: GeneratorPreferences): boolean {
   if (prefs.mode !== 'credits') return true;
   const min = groups.reduce((sum, group) => sum + group.minCredits, 0);
@@ -300,10 +278,10 @@ function mixProduct(groups: PreparedGroup[]): number {
   return product;
 }
 
-function bump(indexes: number[], radix: number[]): boolean {
+function bump(indexes: number[], groups: PreparedGroup[]): boolean {
   for (let index = indexes.length - 1; index >= 0; index -= 1) {
     indexes[index] += 1;
-    if (indexes[index] < radix[index]) return true;
+    if (indexes[index] < groups[index].sections.length) return true;
     indexes[index] = 0;
   }
   return false;
@@ -640,8 +618,7 @@ class PlanSearch implements GeneratorSearch {
       estimate = Math.min(1_000_000, estimate + product);
       this.jobs.push({
         groups: subset,
-        indexes: subset.map(() => 0),
-        radix: subset.map((group) => group.sections.length),
+        indexes: null,
         done: false,
       });
     }
@@ -658,9 +635,24 @@ class PlanSearch implements GeneratorSearch {
         }
         return [];
       }
-      return combinations(optional, extra)
-        .map((extraGroups) => [...pins, ...extraGroups])
-        .filter((subset) => subset.length >= 2 && subsetCreditsOk(subset, this.prefs));
+      const subsets: PreparedGroup[][] = [];
+      const current = pins.slice();
+      const visit = (start: number, remaining: number) => {
+        if (remaining === 0) {
+          if (current.length >= 2 && subsetCreditsOk(current, this.prefs)) {
+            subsets.push(current.slice());
+          }
+          return;
+        }
+        const limit = optional.length - remaining;
+        for (let index = start; index <= limit; index += 1) {
+          current.push(optional[index]);
+          visit(index + 1, remaining - 1);
+          current.pop();
+        }
+      };
+      visit(0, extra);
+      return subsets;
     }
 
     const pinMin = pins.reduce((sum, group) => sum + group.minCredits, 0);
@@ -670,18 +662,23 @@ class PlanSearch implements GeneratorSearch {
       return [];
     }
 
+    const pinMax = pins.reduce((sum, group) => sum + group.maxCredits, 0);
     const subsets: PreparedGroup[][] = [];
-    const current: PreparedGroup[] = [];
-    const visit = (start: number) => {
-      const subset = [...pins, ...current];
-      if (subset.length >= 2 && subsetCreditsOk(subset, this.prefs)) subsets.push(subset);
+    const current = pins.slice();
+    const visit = (start: number, minSum: number, maxSum: number) => {
+      if (current.length >= 2 && minSum <= this.prefs.creditMax && maxSum >= this.prefs.creditMin) {
+        subsets.push(current.slice());
+      }
       for (let index = start; index < optional.length; index += 1) {
-        current.push(optional[index]);
-        visit(index + 1);
+        const group = optional[index];
+        const nextMin = minSum + group.minCredits;
+        if (group.minCredits >= 0 && nextMin > this.prefs.creditMax) continue;
+        current.push(group);
+        visit(index + 1, nextMin, maxSum + group.maxCredits);
         current.pop();
       }
     };
-    visit(0);
+    visit(0, pinMin, pinMax);
     return subsets;
   }
 
@@ -714,14 +711,19 @@ class PlanSearch implements GeneratorSearch {
         continue;
       }
       idle = 0;
-      const courses = job.indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
+      let indexes = job.indexes;
+      if (!indexes) {
+        indexes = new Array<number>(job.groups.length).fill(0);
+        job.indexes = indexes;
+      }
+      const courses = indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
       this.evaluated += 1;
       steps += 1;
       if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) {
         if (withinDailyCap(courses, this.prefs)) this.consider(courses);
         else this.overDailyCap += 1;
       }
-      job.done = !bump(job.indexes, job.radix);
+      job.done = !bump(indexes, job.groups);
       this.cursor = (this.cursor + 1) % this.jobs.length;
       if (this.evaluated >= this.evaluationLimit) {
         this.capped = this.jobs.some((item) => !item.done);

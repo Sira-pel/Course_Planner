@@ -66,6 +66,7 @@ export const LUNCH_MINUTE_MAX = 90;
 export const LUNCH_MINUTE_STEP = 15;
 export const DAILY_COURSE_MIN = 1;
 export const DAILY_COURSE_MAX = 6;
+export const MAX_CANDIDATES = 15;
 
 function snapLunchMinutes(value: unknown): number {
   const snapped = clampInt(value, LUNCH_MINUTE_MIN, LUNCH_MINUTE_MAX, DEFAULT_GENERATOR_PREFS.lunchMinutes);
@@ -88,7 +89,7 @@ export function sanitizeGeneratorPrefs(raw: unknown): StoredGeneratorPrefs {
 
   return {
     mode: record.mode === 'credits' ? 'credits' : 'courses',
-    courseCount: clampInt(record.courseCount, 2, 15, DEFAULT_GENERATOR_PREFS.courseCount),
+    courseCount: clampInt(record.courseCount, 2, MAX_CANDIDATES, DEFAULT_GENERATOR_PREFS.courseCount),
     creditTarget: clampInt(record.creditTarget, 1, 40, DEFAULT_GENERATOR_PREFS.creditTarget),
     gapsEnabled: typeof record.gapsEnabled === 'boolean' ? record.gapsEnabled : DEFAULT_GENERATOR_PREFS.gapsEnabled,
     gapLimit: isGapLimit(record.gapLimit) ? record.gapLimit : DEFAULT_GENERATOR_PREFS.gapLimit,
