@@ -88,7 +88,7 @@ export function sanitizeGeneratorPrefs(raw: unknown): StoredGeneratorPrefs {
 
   return {
     mode: record.mode === 'credits' ? 'credits' : 'courses',
-    courseCount: clampInt(record.courseCount, 2, 12, DEFAULT_GENERATOR_PREFS.courseCount),
+    courseCount: clampInt(record.courseCount, 2, 15, DEFAULT_GENERATOR_PREFS.courseCount),
     creditTarget: clampInt(record.creditTarget, 1, 40, DEFAULT_GENERATOR_PREFS.creditTarget),
     gapsEnabled: typeof record.gapsEnabled === 'boolean' ? record.gapsEnabled : DEFAULT_GENERATOR_PREFS.gapsEnabled,
     gapLimit: isGapLimit(record.gapLimit) ? record.gapLimit : DEFAULT_GENERATOR_PREFS.gapLimit,

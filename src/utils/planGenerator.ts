@@ -4,7 +4,7 @@ import { displayCourseTitle } from './courseIdentity';
 import type { GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
-export const MAX_CANDIDATES = 12;
+export const MAX_CANDIDATES = 15;
 /** Mixes evaluated before a search pauses. The same search can raise this and continue. */
 export const MAX_EVALUATIONS = 5000;
 /** Course groups revealed at a time. The search keeps every group it has ranked. */

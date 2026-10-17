@@ -6,6 +6,7 @@ import { nextShownCount } from './generatorSession';
 import {
   gapFallbackNotice,
   generatePlans,
+  MAX_CANDIDATES,
   MAX_EVALUATIONS,
   startGeneratorSearch,
   type CourseGroup,
@@ -247,6 +248,26 @@ describe('plan generator', () => {
     assert.ok(second.plans.length > 0);
     assert.ok(second.plans.every((plan) => longestGap(plan.courses) <= 60));
     assert.equal(search.capped, false);
+  });
+
+  it('supports up to 15 candidate course groups and slices beyond MAX_CANDIDATES', () => {
+    assert.equal(MAX_CANDIDATES, 15);
+    const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const groups = Array.from({ length: 16 }, (_, index) => {
+      const code = `C${index + 1}`;
+      const day = days[index % days.length];
+      const start = 8 * 60 + Math.floor(index / days.length) * 60;
+      return group(code, [section(code.toLowerCase(), code, clock(start), clock(start + 50), '001', day)]);
+    });
+
+    const result = generatePlans({
+      groups,
+      pinnedKeys: ['C15'],
+      preferences: preferences({ courseCount: 2 }),
+    });
+    assert.ok(result.plans.length > 0);
+    assert.ok(result.plans.every((plan) => plan.courses.some((course) => course.code === 'C15')));
+    assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'C16')), false);
   });
 });
 
