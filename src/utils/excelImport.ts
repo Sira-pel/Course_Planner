@@ -1530,6 +1530,72 @@ function splitCsvLine(line: string): string[] {
   return splitDelimitedLine(line, ',');
 }
 
+const WEEKDAY_NAME = String.raw`mon(?:day)?|tues(?:day)?|tue|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?`;
+const DAY_LIST_COMMA = new RegExp(
+  `\\b(?:${WEEKDAY_NAME})\\s*,\\s*(?=(?:${WEEKDAY_NAME})\\b)`,
+  'gi'
+);
+const CLOCK_IN_CELL = /\d{1,2}\s*:\s*\d{2}|\b\d{3,4}\s*[-–—]\s*\d{3,4}\b/;
+
+/** "Mon, Wed" is a day list inside one course line, not two spreadsheet cells. */
+function hideDayListCommas(line: string): string {
+  return line.replace(DAY_LIST_COMMA, (match) => match.replace(',', ' '));
+}
+
+/** "9:00-10:00; Fri 11:00-12:00" separates meetings, not columns. */
+function hideSessionSemicolons(line: string): string {
+  if (!line.includes(';')) return line;
+  const parts = splitDelimitedLine(line, ';').map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2 || !parts.every((part) => CLOCK_IN_CELL.test(part))) return line;
+  return line.replace(/;/g, ' ');
+}
+
+function contentWidth(row: string[]): number {
+  let width = 0;
+  for (let i = 0; i < row.length; i++) {
+    if (row[i].trim()) width = i + 1;
+  }
+  return width;
+}
+
+/**
+ * A comma or semicolon paste is a table when it has a header or a stable wide grid.
+ * A course sentence that merely contains a comma or a second meeting is not.
+ */
+function delimitedRowsAreTable(rows: string[][]): boolean {
+  if (rows.length === 0) return false;
+  const widths = rows.map(contentWidth);
+  const maxCols = Math.max(...widths, 0);
+  const wideEnough = widths.filter((width) => width >= 2).length;
+  if (maxCols < 2 || wideEnough / rows.length < 0.7) return false;
+
+  const scan = Math.min(rows.length, 3);
+  for (let i = 0; i < scan; i++) {
+    const hits = rows[i].filter((cell) => headerCellHit(cell)).length;
+    if (hits >= 2) return true;
+  }
+
+  const counts = new Map<number, number>();
+  for (const width of widths) counts.set(width, (counts.get(width) ?? 0) + 1);
+  let mode = 0;
+  let modeCount = 0;
+  for (const [width, count] of counts) {
+    if (count > modeCount || (count === modeCount && width > mode)) {
+      mode = width;
+      modeCount = count;
+    }
+  }
+  return mode >= 4 && modeCount / rows.length >= 0.7;
+}
+
+function padRows(rows: string[][], width: number): string[][] {
+  return rows.map((row) => {
+    const padded = [...row];
+    while (padded.length < width) padded.push('');
+    return padded;
+  });
+}
+
 /** School SIS rows: term, code, section, title, instructor, room, days+time. Later columns are ignored. */
 export function looksLikeSisRow(cols: string[]): boolean {
   if (cols.length < 7) return false;
@@ -1563,26 +1629,16 @@ export function parseDelimitedText(text: string): DelimitedTable | null {
   if (tabLines.length / nonEmpty.length >= 0.8 && tabLines.some((line) => line.split('\t').length >= 2)) {
     rows = nonEmpty.map((line) => line.split('\t').map((cell) => cell.trim().replace(/^"(.*)"$/, '$1').trim()));
   } else if (tabLines.length === 0) {
-    const csvRows = nonEmpty.map(splitCsvLine);
-    const maxCsvCols = Math.max(...csvRows.map((r) => r.length), 0);
-    const validCsvCount = csvRows.filter((r) => r.length >= 2).length;
-    if (maxCsvCols >= 2 && validCsvCount / csvRows.length >= 0.7) {
-      rows = csvRows.map((r) => {
-        const padded = [...r];
-        while (padded.length < maxCsvCols) padded.push('');
-        return padded;
-      });
+    const csvRows = nonEmpty.map(hideDayListCommas).map(splitCsvLine);
+    if (delimitedRowsAreTable(csvRows)) {
+      const original = nonEmpty.map(splitCsvLine);
+      rows = padRows(original, Math.max(...original.map((row) => row.length), 0));
     } else {
       // Fallback check for semicolon delimiter (common in European Excel exports)
-      const semiRows = nonEmpty.map((line) => splitDelimitedLine(line, ';'));
-      const maxSemiCols = Math.max(...semiRows.map((r) => r.length), 0);
-      const validSemiCount = semiRows.filter((r) => r.length >= 2).length;
-      if (maxSemiCols >= 2 && validSemiCount / semiRows.length >= 0.7) {
-        rows = semiRows.map((r) => {
-          const padded = [...r];
-          while (padded.length < maxSemiCols) padded.push('');
-          return padded;
-        });
+      const semiRows = nonEmpty.map(hideSessionSemicolons).map((line) => splitDelimitedLine(line, ';'));
+      if (delimitedRowsAreTable(semiRows)) {
+        const original = nonEmpty.map((line) => splitDelimitedLine(line, ';'));
+        rows = padRows(original, Math.max(...original.map((row) => row.length), 0));
       }
     }
   }

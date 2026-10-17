@@ -100,6 +100,28 @@ describe('quick add paste', () => {
     assert.match(parsed.items[2].error || '', /missing/i);
   });
 
+  it('keeps plain course lines with commas or semicolons on the line parser', () => {
+    const samples = [
+      'ITM 380-001: Cloud Computing | Mon, Wed 8:30 AM - 10:00 AM',
+      'CS 101 Intro to CS, MWF 09:00-10:00',
+      'CYBR 351-001: Intro to Cybersecurity | Mon, Wed 1:45 PM - 3:15 PM; Fri 9:00 AM - 10:00 AM',
+      'CS 220 Algorithms; TTh 10:15-11:45',
+    ];
+    for (const text of samples) {
+      const parsed = parseQuickAdd(text);
+      assert.equal(parsed.table, null, text);
+      assert.equal(parsed.items.length, 1, text);
+      assert.equal(parsed.items[0].success, true, text);
+      assert.ok(parsed.items[0].course?.code, text);
+      assert.ok((parsed.items[0].course?.sessions.length || 0) > 0, text);
+    }
+
+    const together = parseQuickAdd(samples.join('\n'));
+    assert.equal(together.table, null);
+    assert.equal(together.items.length, samples.length);
+    assert.equal(together.items.every((item) => item.success && (item.course?.sessions.length || 0) > 0), true);
+  });
+
   it('keeps 4 credits and still parses the sample chips that already include a time', () => {
     const credited = parseQuickAdd('CS 101 Computer science MWF 09:00-10:00 4 cr');
     assert.equal(credited.items[0].success, true);
