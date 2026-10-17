@@ -3902,15 +3902,29 @@ html.dark .up-gen-panel,
   margin: 6px;
   border: 0;
   border-radius: 8px;
-  background: transparent;
-  color: var(--up-muted);
   cursor: pointer;
   flex-shrink: 0;
 }
 
+.up-gen-pin:not([aria-pressed='true']) {
+  background: transparent;
+  color: var(--up-muted);
+}
+
 .up-gen-pin[aria-pressed='true'] {
-  background: var(--up-secondary);
-  color: var(--up-secondary-ink);
+  @apply bg-red-100 text-red-800;
+}
+
+.up-gen-pin[aria-pressed='true']:hover {
+  @apply bg-red-200;
+}
+
+html.dark .up-gen-pin[aria-pressed='true'] {
+  @apply bg-red-950 text-red-200;
+}
+
+html.dark .up-gen-pin[aria-pressed='true']:hover {
+  @apply bg-red-900;
 }
 
 .up-gen-empty,

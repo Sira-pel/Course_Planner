@@ -1,4 +1,4 @@
-import { Check, Pin, Search } from 'lucide-react';
+import { Check, Pin, Search, Trash2 } from 'lucide-react';
 import type { CourseGroup } from '../../utils/planGenerator';
 import { MAX_CANDIDATES } from '../../utils/planGenerator';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
@@ -25,6 +25,7 @@ export function CoursesStep({
   onSelectAll: () => void;
 }) {
   const atCap = picked.size >= MAX_CANDIDATES;
+  const allPicked = groups.length > 0 && groups.every((group) => picked.has(group.key));
   return (
     <div className="up-gen-step-body">
       <div className="up-gen-search-row">
@@ -44,8 +45,9 @@ export function CoursesStep({
           className="up-gen-outline up-chrome-btn"
           onClick={onSelectAll}
           disabled={groups.length === 0}
+          aria-label={allPicked ? 'Clear all' : undefined}
         >
-          Select all
+          {allPicked ? <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> : 'All'}
         </button>
       </div>
       <p className="up-gen-hint">
