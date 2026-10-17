@@ -21,13 +21,14 @@ function section(
   end: string,
   sectionName = '001',
   day: DayOfWeek = 'monday',
+  credits = 3,
 ): Course {
   return {
     id,
     code,
     name: code,
     section: sectionName,
-    credits: 3,
+    credits,
     color: '#3B82F6',
     sessions: [{ id: `${id}-s`, day, startTime: start, endTime: end }],
   };
@@ -275,6 +276,259 @@ describe('plan generator', () => {
     assert.equal(sanitizeGeneratorPrefs({ courseCount: 15 }).courseCount, 15);
     assert.equal(sanitizeGeneratorPrefs({ courseCount: 16 }).courseCount, MAX_CANDIDATES);
     assert.equal(sanitizeGeneratorPrefs({ courseCount: 1 }).courseCount, 2);
+  });
+
+  describe('unfeasible cases and error explanations', () => {
+    it('returns "Pick at least 2 courses." when fewer than 2 candidates provided', () => {
+      const res0 = generatePlans({ groups: [], pinnedKeys: [], preferences: preferences() });
+      assert.equal(res0.plans.length, 0);
+      assert.equal(res0.emptyReason, 'Pick at least 2 courses.');
+
+      const res1 = generatePlans({
+        groups: [group('CS101', [section('s1', 'CS101', '09:00', '10:00')])],
+        pinnedKeys: [],
+        preferences: preferences(),
+      });
+      assert.equal(res1.plans.length, 0);
+      assert.equal(res1.emptyReason, 'Pick at least 2 courses.');
+    });
+
+    it('explains when all sections are excluded or locked section is missing/excluded', () => {
+      const resExclude = generatePlans({
+        groups: [
+          group('CS101', [section('s1', 'CS101', '09:00', '10:00')]),
+          group('MATH101', [section('m1', 'MATH101', '10:00', '11:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ excludedSectionIds: ['s1'] }),
+      });
+      assert.equal(resExclude.plans.length, 0);
+      assert.equal(resExclude.emptyReason, 'CS101 has no section left after exclusions');
+
+      const resLock = generatePlans({
+        groups: [
+          group('CS101', [
+            section('s1', 'CS101', '09:00', '10:00', '001'),
+            section('s2', 'CS101', '11:00', '12:00', '002'),
+          ]),
+          group('MATH101', [section('m1', 'MATH101', '10:00', '11:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ lockedSectionIds: ['s1'], excludedSectionIds: ['s1'] }),
+      });
+      assert.equal(resLock.plans.length, 0);
+      assert.equal(resLock.emptyReason, 'CS101 has no section matching the lock');
+    });
+
+    it('explains section self-clashing and blocked time overlap', () => {
+      const badCourse: Course = {
+        id: 'bad1',
+        code: 'CS101',
+        name: 'CS101',
+        section: '001',
+        credits: 3,
+        color: '#3B82F6',
+        sessions: [
+          { id: 'sess1', day: 'monday', startTime: '09:00', endTime: '11:00' },
+          { id: 'sess2', day: 'monday', startTime: '10:00', endTime: '12:00' },
+        ],
+      };
+      const resSelf = generatePlans({
+        groups: [
+          group('CS101', [badCourse]),
+          group('MATH101', [section('m1', 'MATH101', '13:00', '14:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences(),
+      });
+      assert.equal(resSelf.plans.length, 0);
+      assert.equal(resSelf.emptyReason, 'CS101 has overlapping meetings in every section');
+
+      const resBlock = generatePlans({
+        groups: [
+          group('CS101', [section('s1', 'CS101', '09:00', '10:30')]),
+          group('MATH101', [section('m1', 'MATH101', '14:00', '15:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({
+          blocked: [{ day: 'monday', startMinutes: 9 * 60, endMinutes: 10 * 60 }],
+        }),
+      });
+      assert.equal(resBlock.plans.length, 0);
+      assert.equal(resBlock.emptyReason, 'CS101 has no section outside your blocked times');
+    });
+
+    it('explains plan size mismatches and credit range bounds', () => {
+      const resPinsOver = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00')]),
+          group('B', [section('b', 'B', '10:00', '11:00')]),
+          group('C', [section('c', 'C', '11:00', '12:00')]),
+        ],
+        pinnedKeys: ['A', 'B', 'C'],
+        preferences: preferences({ courseCount: 2 }),
+      });
+      assert.equal(resPinsOver.plans.length, 0);
+      assert.equal(resPinsOver.emptyReason, 'This plan size is smaller than your pinned courses.');
+
+      const resSizeTooBig = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00')]),
+          group('B', [section('b', 'B', '10:00', '11:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ courseCount: 4 }),
+      });
+      assert.equal(resSizeTooBig.plans.length, 0);
+      assert.equal(resSizeTooBig.emptyReason, 'No course set fits that plan size.');
+
+      const resCreditPinOver = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'monday', 4)]),
+          group('B', [section('b', 'B', '10:00', '11:00', '001', 'monday', 4)]),
+        ],
+        pinnedKeys: ['A', 'B'],
+        preferences: preferences({ mode: 'credits', creditMin: 4, creditMax: 6 }),
+      });
+      assert.equal(resCreditPinOver.plans.length, 0);
+      assert.equal(resCreditPinOver.emptyReason, 'A, B already total at least 8 credits, above the 6 credit limit.');
+
+      const resCreditBelow = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'monday', 2)]),
+          group('B', [section('b', 'B', '10:00', '11:00', '001', 'monday', 2)]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ mode: 'credits', creditMin: 10, creditMax: 15 }),
+      });
+      assert.equal(resCreditBelow.plans.length, 0);
+      assert.equal(resCreditBelow.emptyReason, 'No mix of at least 2 courses fits that credit range.');
+    });
+
+    it('explains schedule collisions between pinned courses and impossible daily caps', () => {
+      const resClash = generatePlans({
+        groups: [
+          group('CS101', [section('s1', 'CS101', '09:00', '10:30', 'SEC-A')]),
+          group('MATH101', [section('m1', 'MATH101', '10:00', '11:00', 'SEC-B')]),
+        ],
+        pinnedKeys: ['CS101', 'MATH101'],
+        preferences: preferences({ lockedSectionIds: ['s1', 'm1'] }),
+      });
+      assert.equal(resClash.plans.length, 0);
+      assert.equal(resClash.emptyReason, 'CS101 · SEC-A overlaps MATH101 · SEC-B.');
+
+      const resCap = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'monday')]),
+          group('B', [section('b', 'B', '10:00', '11:00', '001', 'monday')]),
+          group('C', [section('c', 'C', '11:00', '12:00', '001', 'monday')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ courseCount: 3, dailyCap: 2 }),
+      });
+      assert.equal(resCap.plans.length, 0);
+      assert.equal(resCap.emptyReason, 'Every clash-free mix puts more than 2 courses on one day.');
+    });
+
+    it('generates dayOffNotices when requested day off is unavoidable', () => {
+      const res = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'friday')]),
+          group('B', [section('b', 'B', '10:00', '11:00', '001', 'monday')]),
+        ],
+        pinnedKeys: ['A'],
+        preferences: preferences({ courseCount: 2, daysOff: ['friday'] }),
+      });
+      assert.equal(res.plans.length, 1);
+      assert.equal(res.dayOffNotices.length, 1);
+      assert.equal(res.dayOffNotices[0], "Friday off isn't possible: A meets every Friday.");
+    });
+  });
+
+  describe('all preferences and exact scoring', () => {
+    it('honors creditMin and creditMax with varying credit values', () => {
+      const groups = [
+        group('C1', [section('c1', 'C1', '08:00', '09:00', '001', 'monday', 1)]),
+        group('C2', [section('c2', 'C2', '09:00', '10:00', '001', 'tuesday', 2)]),
+        group('C3', [section('c3', 'C3', '10:00', '11:00', '001', 'wednesday', 3)]),
+        group('C4', [section('c4', 'C4', '11:00', '12:00', '001', 'thursday', 4)]),
+        group('C5', [section('c5', 'C5', '12:00', '13:00', '001', 'friday', 5)]),
+      ];
+      const res = generatePlans({
+        groups,
+        pinnedKeys: [],
+        preferences: preferences({ mode: 'credits', creditMin: 7, creditMax: 9 }),
+      });
+      assert.ok(res.plans.length > 0);
+      for (const plan of res.plans) {
+        const tot = plan.courses.reduce((sum, c) => sum + (c.credits || 0), 0);
+        assert.ok(tot >= 7 && tot <= 9, `Credits ${tot} outside [7, 9]`);
+      }
+    });
+
+    it('evaluates lunch, days off, class hours, daily cap, and matches hand-calculated score', () => {
+      // Hand-calculated scenario:
+      // Monday:
+      // C1: 09:00 - 11:00 (starts 60m before classStart 10:00)
+      // C2: 13:00 - 15:00
+      // Gap: 13:00 (780) - 11:00 (660) = 120m. Gap limit: 60m -> gap penalty = 60.
+      // maxGap = 120 -> maxGap * 0.01 = 1.2
+      // Lunch: window 11:30 - 13:30 (120m). Free interval: 11:00 to 13:00 (90m free in window >= 45m) -> Lunch free (0 penalty)
+      // Tuesday:
+      // C3: 14:00 - 16:30 (ends 30m after classEnd 16:00)
+      // Days off requested: Friday (-25 reward)
+      // Active days: 2 (Monday, Tuesday) -> 2 * 0.5 = 1.0
+      // Total score = 60 (gap) + 1.2 (tie break) + 0 (lunch) - 25 (day off) + 60 (start) + 30 (end) + 1.0 (active days) = 127.20
+      const groups = [
+        group('C1', [section('c1', 'C1', '09:00', '11:00', '001', 'monday')]),
+        group('C2', [section('c2', 'C2', '13:00', '15:00', '001', 'monday')]),
+        group('C3', [section('c3', 'C3', '14:00', '16:30', '001', 'tuesday')]),
+      ];
+      const res = generatePlans({
+        groups,
+        pinnedKeys: ['C1', 'C2', 'C3'],
+        preferences: preferences({
+          courseCount: 3,
+          gapsEnabled: true,
+          gapLimit: 60,
+          lunchEnabled: true,
+          lunchStart: 11 * 60 + 30,
+          lunchEnd: 13 * 60 + 30,
+          lunchMinutes: 45,
+          daysOff: ['friday'],
+          classStart: 10 * 60,
+          classEnd: 16 * 60,
+        }),
+      });
+      assert.equal(res.plans.length, 1);
+      const plan = res.plans[0];
+      assert.equal(Math.round(plan.score * 100) / 100, 127.20);
+      assert.ok(plan.tags.includes('Lunch free'));
+      assert.ok(plan.tags.includes('Max gap 2h'));
+      assert.ok(plan.tags.some((t) => t.includes('Fri off')));
+    });
+
+    it('supports 15 non-clashing candidate courses and selects all 15', () => {
+      const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      const groups = Array.from({ length: 15 }, (_, i) => {
+        const day = days[Math.floor(i / 3)];
+        const slot = i % 3;
+        const start = 8 * 60 + slot * 120;
+        const end = start + 90;
+        const code = `COURSE_${i + 1}`;
+        return group(code, [section(`s_${i}`, code, clock(start), clock(end), '001', day)]);
+      });
+
+      const res = generatePlans({
+        groups,
+        pinnedKeys: [],
+        preferences: preferences({ courseCount: 15 }),
+      });
+      assert.equal(res.plans.length, 1);
+      assert.equal(res.plans[0].courses.length, 15);
+      assert.equal(res.plans[0].includedCodes.length, 15);
+      assert.equal(res.plans[0].skippedCodes.length, 0);
+    });
   });
 });
 

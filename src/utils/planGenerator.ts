@@ -221,9 +221,11 @@ function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string
   if (group.sections.length > 0 && afterExclude.length === 0) {
     return `${group.code} has no section left after exclusions`;
   }
-  const groupLocks = afterExclude.filter((section) => locked.has(section.id));
-  const afterLock = groupLocks.length > 0 ? groupLocks : afterExclude;
-  if (afterExclude.length > 0 && afterLock.length === 0) {
+  const hasLock = group.sections.some((section) => locked.has(section.id));
+  const afterLock = hasLock
+    ? afterExclude.filter((section) => locked.has(section.id))
+    : afterExclude;
+  if (hasLock && afterLock.length === 0) {
     return `${group.code} has no section matching the lock`;
   }
   const afterSelf = afterLock.filter((section) => !sectionSelfClashes(section));
@@ -241,9 +243,11 @@ function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string
 function prepareGroup(group: CourseGroup, prefs: GeneratorPreferences): PreparedGroup {
   const excluded = new Set(prefs.excludedSectionIds);
   const locked = new Set(prefs.lockedSectionIds);
+  const hasLock = group.sections.some((section) => locked.has(section.id));
   let sections = group.sections.filter((section) => !excluded.has(section.id) && !sectionSelfClashes(section));
-  const lockedSections = sections.filter((section) => locked.has(section.id));
-  if (lockedSections.length > 0) sections = lockedSections;
+  if (hasLock) {
+    sections = sections.filter((section) => locked.has(section.id));
+  }
   sections = sections.filter((section) => !overlapsBlocked(section, prefs.blocked));
   const credits = sections.map(courseCredits);
   return {
