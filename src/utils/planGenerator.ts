@@ -1,10 +1,10 @@
 import type { ClassSession, Course, DayOfWeek } from '../types/schedule';
 import { DAYS_LIST } from '../types/schedule';
 import { displayCourseTitle } from './courseIdentity';
-import type { GapLimit } from './generatorPrefs';
+import { MAX_CANDIDATES, type GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
-export const MAX_CANDIDATES = 12;
+export { MAX_CANDIDATES };
 /** Mixes evaluated before a search pauses. The same search can raise this and continue. */
 export const MAX_EVALUATIONS = 5000;
 /** Course groups revealed at a time. The search keeps every group it has ranked. */
@@ -145,8 +145,10 @@ interface PreparedGroup {
 
 interface MixJob {
   groups: PreparedGroup[];
-  indexes: number[];
-  radix: number[];
+  /** Next section index to try at each depth. Null until the job starts. */
+  nextIndex: number[] | null;
+  /** Sections accepted along the current path. */
+  chosen: Course[];
   done: boolean;
 }
 
@@ -215,6 +217,37 @@ function pairAlwaysClashes(left: Course[], right: Course[]): boolean {
   return true;
 }
 
+function buildClashingPairs(groups: PreparedGroup[]): Map<string, Set<string>> {
+  const clashes = new Map<string, Set<string>>();
+  for (let i = 0; i < groups.length; i += 1) {
+    for (let j = i + 1; j < groups.length; j += 1) {
+      const left = groups[i];
+      const right = groups[j];
+      if (left.sections.length * right.sections.length > 240) continue;
+      if (!pairAlwaysClashes(left.sections, right.sections)) continue;
+      let leftSet = clashes.get(left.key);
+      if (!leftSet) {
+        leftSet = new Set();
+        clashes.set(left.key, leftSet);
+      }
+      leftSet.add(right.key);
+    }
+  }
+  return clashes;
+}
+
+/** True when some course pair inside this set can never share a plan. Large pairs stay in the search. */
+function subsetNeverFits(groups: PreparedGroup[], clashes: Map<string, Set<string>>): boolean {
+  for (let i = 0; i < groups.length; i += 1) {
+    const leftSet = clashes.get(groups[i].key);
+    if (!leftSet) continue;
+    for (let j = i + 1; j < groups.length; j += 1) {
+      if (leftSet.has(groups[j].key)) return true;
+    }
+  }
+  return false;
+}
+
 function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string | null {
   const excluded = new Set(prefs.excludedSectionIds);
   const locked = new Set(prefs.lockedSectionIds);
@@ -222,9 +255,11 @@ function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string
   if (group.sections.length > 0 && afterExclude.length === 0) {
     return `${group.code} has no section left after exclusions`;
   }
-  const groupLocks = afterExclude.filter((section) => locked.has(section.id));
-  const afterLock = groupLocks.length > 0 ? groupLocks : afterExclude;
-  if (afterExclude.length > 0 && afterLock.length === 0) {
+  const hasLock = group.sections.some((section) => locked.has(section.id));
+  const afterLock = hasLock
+    ? afterExclude.filter((section) => locked.has(section.id))
+    : afterExclude;
+  if (hasLock && afterLock.length === 0) {
     return `${group.code} has no section matching the lock`;
   }
   const afterSelf = afterLock.filter((section) => !sectionSelfClashes(section));
@@ -242,9 +277,11 @@ function unusableReason(group: CourseGroup, prefs: GeneratorPreferences): string
 function prepareGroup(group: CourseGroup, prefs: GeneratorPreferences): PreparedGroup {
   const excluded = new Set(prefs.excludedSectionIds);
   const locked = new Set(prefs.lockedSectionIds);
+  const hasLock = group.sections.some((section) => locked.has(section.id));
   let sections = group.sections.filter((section) => !excluded.has(section.id) && !sectionSelfClashes(section));
-  const lockedSections = sections.filter((section) => locked.has(section.id));
-  if (lockedSections.length > 0) sections = lockedSections;
+  if (hasLock) {
+    sections = sections.filter((section) => locked.has(section.id));
+  }
   sections = sections.filter((section) => !overlapsBlocked(section, prefs.blocked));
   const credits = sections.map(courseCredits);
   return {
@@ -255,27 +292,6 @@ function prepareGroup(group: CourseGroup, prefs: GeneratorPreferences): Prepared
     minCredits: credits.length > 0 ? Math.min(...credits) : 0,
     maxCredits: credits.length > 0 ? Math.max(...credits) : 0,
   };
-}
-
-function combinations(items: PreparedGroup[], count: number): PreparedGroup[][] {
-  if (count === 0) return [[]];
-  if (count > items.length || count < 0) return [];
-  const out: PreparedGroup[][] = [];
-  const current: PreparedGroup[] = [];
-  const visit = (start: number) => {
-    if (current.length === count) {
-      out.push(current.slice());
-      return;
-    }
-    const need = count - current.length;
-    for (let index = start; index <= items.length - need; index += 1) {
-      current.push(items[index]);
-      visit(index + 1);
-      current.pop();
-    }
-  };
-  visit(0);
-  return out;
 }
 
 function subsetCreditsOk(groups: PreparedGroup[], prefs: GeneratorPreferences): boolean {
@@ -300,11 +316,15 @@ function mixProduct(groups: PreparedGroup[]): number {
   return product;
 }
 
-function bump(indexes: number[], radix: number[]): boolean {
-  for (let index = indexes.length - 1; index >= 0; index -= 1) {
-    indexes[index] += 1;
-    if (indexes[index] < radix[index]) return true;
-    indexes[index] = 0;
+function sectionClashesWithChosen(section: Course, chosen: Course[]): boolean {
+  const sessions = section.sessions || [];
+  for (const other of chosen) {
+    const otherSessions = other.sessions || [];
+    for (const left of sessions) {
+      for (const right of otherSessions) {
+        if (checkSessionCollision(left, right)) return true;
+      }
+    }
   }
   return false;
 }
@@ -473,6 +493,12 @@ function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+/** Hint above Search deeper. An empty capped search may still have plans; one that already found some may have better ones. */
+export function cappedSearchHint(evaluated: number, planCount: number): string {
+  const prospect = planCount === 0 ? 'There may still be plans' : 'There may be better plans';
+  return `Checked ${formatCount(evaluated)} mixes. ${prospect}`;
+}
+
 function explainEmpty(
   groups: PreparedGroup[],
   pinned: Set<string>,
@@ -513,7 +539,7 @@ function explainEmpty(
     }
   }
   if (capped) {
-    return `Checked ${formatCount(evaluated)} mixes and none were clash-free. Narrow the list or clear a blocked time.`;
+    return `Checked ${formatCount(evaluated)} mixes and none were clash-free yet. Search deeper, narrow the list, or clear a blocked time.`;
   }
   return 'No clash-free mix fits these courses and filters.';
 }
@@ -634,14 +660,24 @@ class PlanSearch implements GeneratorSearch {
       return;
     }
 
+    const clashingPairs = buildClashingPairs(this.prepared);
+    const fitSubsets = clashingPairs.size > 0
+      ? subsets.filter((subset) => !subsetNeverFits(subset, clashingPairs))
+      : subsets;
+    if (fitSubsets.length === 0) {
+      this.emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, false, 0);
+      this.done = true;
+      return;
+    }
+
     let estimate = 0;
-    for (const subset of subsets) {
+    for (const subset of fitSubsets) {
       const product = mixProduct(subset);
       estimate = Math.min(1_000_000, estimate + product);
       this.jobs.push({
         groups: subset,
-        indexes: subset.map(() => 0),
-        radix: subset.map((group) => group.sections.length),
+        nextIndex: null,
+        chosen: [],
         done: false,
       });
     }
@@ -658,9 +694,24 @@ class PlanSearch implements GeneratorSearch {
         }
         return [];
       }
-      return combinations(optional, extra)
-        .map((extraGroups) => [...pins, ...extraGroups])
-        .filter((subset) => subset.length >= 2 && subsetCreditsOk(subset, this.prefs));
+      const subsets: PreparedGroup[][] = [];
+      const current = pins.slice();
+      const visit = (start: number, remaining: number) => {
+        if (remaining === 0) {
+          if (current.length >= 2 && subsetCreditsOk(current, this.prefs)) {
+            subsets.push(current.slice());
+          }
+          return;
+        }
+        const limit = optional.length - remaining;
+        for (let index = start; index <= limit; index += 1) {
+          current.push(optional[index]);
+          visit(index + 1, remaining - 1);
+          current.pop();
+        }
+      };
+      visit(0, extra);
+      return subsets;
     }
 
     const pinMin = pins.reduce((sum, group) => sum + group.minCredits, 0);
@@ -670,18 +721,23 @@ class PlanSearch implements GeneratorSearch {
       return [];
     }
 
+    const pinMax = pins.reduce((sum, group) => sum + group.maxCredits, 0);
     const subsets: PreparedGroup[][] = [];
-    const current: PreparedGroup[] = [];
-    const visit = (start: number) => {
-      const subset = [...pins, ...current];
-      if (subset.length >= 2 && subsetCreditsOk(subset, this.prefs)) subsets.push(subset);
+    const current = pins.slice();
+    const visit = (start: number, minSum: number, maxSum: number) => {
+      if (current.length >= 2 && minSum <= this.prefs.creditMax && maxSum >= this.prefs.creditMin) {
+        subsets.push(current.slice());
+      }
       for (let index = start; index < optional.length; index += 1) {
-        current.push(optional[index]);
-        visit(index + 1);
+        const group = optional[index];
+        const nextMin = minSum + group.minCredits;
+        if (group.minCredits >= 0 && nextMin > this.prefs.creditMax) continue;
+        current.push(group);
+        visit(index + 1, nextMin, maxSum + group.maxCredits);
         current.pop();
       }
     };
-    visit(0);
+    visit(0, pinMin, pinMax);
     return subsets;
   }
 
@@ -714,14 +770,16 @@ class PlanSearch implements GeneratorSearch {
         continue;
       }
       idle = 0;
-      const courses = job.indexes.map((sectionIndex, groupIndex) => job.groups[groupIndex].sections[sectionIndex]);
-      this.evaluated += 1;
-      steps += 1;
-      if (!mixClashes(courses) && mixCreditsOk(courses, this.prefs)) {
-        if (withinDailyCap(courses, this.prefs)) this.consider(courses);
-        else this.overDailyCap += 1;
+      const outcome = this.stepJob(job);
+      if (outcome === 'done') {
+        job.done = true;
+        this.cursor = (this.cursor + 1) % this.jobs.length;
+        continue;
       }
-      job.done = !bump(job.indexes, job.radix);
+      // Every section tried, including one that skips a clashing branch, spends one step.
+      steps += 1;
+      if (outcome === 'step') continue;
+      this.evaluated += 1;
       this.cursor = (this.cursor + 1) % this.jobs.length;
       if (this.evaluated >= this.evaluationLimit) {
         this.capped = this.jobs.some((item) => !item.done);
@@ -730,6 +788,78 @@ class PlanSearch implements GeneratorSearch {
       }
     }
     if (this.jobs.every((job) => job.done)) this.done = true;
+  }
+
+  /**
+   * Try one section. A clash with the sections already chosen skips that branch
+   * and counts as one evaluation so a deep clash tree still caps cleanly and
+   * advances round-robin across course sets.
+   */
+  private stepJob(job: MixJob): 'step' | 'evaluated' | 'done' {
+    if (!job.nextIndex) {
+      job.nextIndex = [0];
+      job.chosen = [];
+    }
+    const groups = job.groups;
+    const nextIndex = job.nextIndex;
+    const chosen = job.chosen;
+
+    while (true) {
+      const depth = chosen.length;
+      if (depth === groups.length) {
+        this.scoreChosen(job);
+        return 'evaluated';
+      }
+
+      const sectionIndex = nextIndex[depth] ?? 0;
+      if (sectionIndex >= groups[depth].sections.length) {
+        if (depth === 0) return 'done';
+        chosen.pop();
+        continue;
+      }
+
+      nextIndex[depth] = sectionIndex + 1;
+      const section = groups[depth].sections[sectionIndex];
+      if (sectionClashesWithChosen(section, chosen)) {
+        this.exhaustMix(job);
+        return 'evaluated';
+      }
+
+      chosen.push(section);
+      nextIndex[depth + 1] = 0;
+      if (depth + 1 === groups.length) {
+        this.scoreChosen(job);
+        return 'evaluated';
+      }
+      return 'step';
+    }
+  }
+
+  private scoreChosen(job: MixJob): void {
+    const courses = job.chosen.slice();
+    if (mixCreditsOk(courses, this.prefs)) {
+      if (withinDailyCap(courses, this.prefs)) this.consider(courses);
+      else this.overDailyCap += 1;
+    }
+    job.chosen.pop();
+    this.exhaustMix(job);
+  }
+
+  /** Pop finished depths so a paused search resumes at the next sibling. */
+  private exhaustMix(job: MixJob): void {
+    const nextIndex = job.nextIndex;
+    if (!nextIndex) return;
+    const groups = job.groups;
+    const chosen = job.chosen;
+    while (true) {
+      const depth = chosen.length;
+      if ((nextIndex[depth] ?? 0) < groups[depth].sections.length) return;
+      if (depth === 0) {
+        job.done = true;
+        return;
+      }
+      chosen.pop();
+    }
   }
 
   private remember(buckets: Map<string, Bucket>, setKey: string, item: ScoredMix): void {

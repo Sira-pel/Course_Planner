@@ -1,7 +1,7 @@
 import { Pin, X } from 'lucide-react';
 import type { Course } from '../../types/schedule';
 import { sectionSetKey } from '../../utils/courseIdentity';
-import type { GeneratedPlan, GeneratorResult } from '../../utils/planGenerator';
+import { cappedSearchHint, type GeneratedPlan, type GeneratorResult } from '../../utils/planGenerator';
 import { MiniWeekPreview } from './MiniWeekPreview';
 
 function SearchProgress({ checked }: { checked: number }) {
@@ -18,17 +18,19 @@ function SearchProgress({ checked }: { checked: number }) {
 function DeeperPrompt({
   capped,
   evaluated,
+  hasPlans,
   onSearchDeeper,
 }: {
   capped: boolean;
   evaluated: number;
+  hasPlans: boolean;
   onSearchDeeper: () => void;
 }) {
   return (
     <div className="up-gen-deeper">
       {capped && (
         <p className="up-gen-hint">
-          {`Checked ${evaluated.toLocaleString('en-US')} mixes. There may be better plans`}
+          {cappedSearchHint(evaluated, hasPlans ? 1 : 0)}
         </p>
       )}
       <button type="button" className="up-gen-outline up-chrome-btn up-gen-follow-btn" onClick={onSearchDeeper}>
@@ -86,7 +88,12 @@ export function ResultsStep({
   const showDeeper = !running && !outdated && canSearchDeeper;
   const visiblePlans = result.plans.slice(0, shownCount);
   const deeper = showDeeper ? (
-    <DeeperPrompt capped={result.capped} evaluated={result.evaluated} onSearchDeeper={onSearchDeeper} />
+    <DeeperPrompt
+      capped={result.capped}
+      evaluated={result.evaluated}
+      hasPlans={result.plans.length > 0}
+      onSearchDeeper={onSearchDeeper}
+    />
   ) : null;
 
   if (result.plans.length === 0) {

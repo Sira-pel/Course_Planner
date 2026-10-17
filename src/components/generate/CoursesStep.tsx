@@ -51,7 +51,7 @@ export function CoursesStep({
       <p className="up-gen-hint">
         Tick candidates (max {MAX_CANDIDATES}). Tap the pin to make one a must-take.
       </p>
-      {atCap && <p className="up-gen-hint">12 course maximum.</p>}
+      {atCap && <p className="up-gen-hint">{MAX_CANDIDATES} course maximum.</p>}
 
       <div className="up-gen-course-list">
         {groups.length === 0 ? (
