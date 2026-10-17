@@ -339,6 +339,48 @@ describe('plan generator', () => {
     assert.ok(resumed.plans[0].courses.every((course) => course.section === '003'));
   });
 
+  it('caps cleanly and rotates across course sets when clashes occur before the last course', { timeout: 1_000 }, () => {
+    const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const baseGroups = Array.from({ length: 8 }, (_, index) => {
+      const code = `C${index + 1}`;
+      const day = days[index % days.length];
+      const start = 8 * 60 + Math.floor(index / days.length) * 60;
+      const sections = Array.from({ length: 10 }, (__, secIndex) => (
+        section(`${code}-${secIndex}`, code, clock(start), clock(start + 45), String(secIndex + 1).padStart(3, '0'), day)
+      ));
+      return group(code, sections);
+    });
+    // C9 has 25 sections colliding with C1 (10 * 25 = 250 > 240, so it enters the mix search at depth < last).
+    const clashingC9 = group(
+      'C9',
+      Array.from({ length: 25 }, (_, secIndex) => (
+        section(`C9-${secIndex}`, 'C9', '08:00', '08:45', String(secIndex + 1).padStart(3, '0'), 'monday')
+      )),
+    );
+    const tailC10 = group('C10', [section('C10-0', 'C10', '16:00', '16:45', '001', 'friday')]);
+
+    const started = Date.now();
+    const cappedResult = generatePlans({
+      groups: [...baseGroups, clashingC9, tailC10],
+      pinnedKeys: [],
+      preferences: preferences({ courseCount: 10 }),
+    });
+    assert.ok(Date.now() - started < 500, 'intermediate clash tree must cap promptly');
+    assert.equal(cappedResult.evaluated, MAX_EVALUATIONS);
+    assert.equal(cappedResult.capped, true);
+    assert.equal(cappedResult.plans.length, 0);
+
+    // When another course set (replacing C9 with C11) fits, round-robin reaches it without being starved by C9.
+    const validC11 = group('C11', [section('C11-0', 'C11', '17:00', '17:45', '001', 'friday')]);
+    const mixedResult = generatePlans({
+      groups: [...baseGroups, clashingC9, tailC10, validC11],
+      pinnedKeys: [...baseGroups.map((item) => item.key), 'C10'],
+      preferences: preferences({ courseCount: 10 }),
+    });
+    assert.ok(mixedResult.plans.length > 0);
+    assert.ok(mixedResult.plans[0].courses.some((course) => course.code === 'C11'));
+  });
+
   it('supports up to 15 candidate course groups and slices beyond MAX_CANDIDATES', () => {
     assert.equal(MAX_CANDIDATES, 15);
     const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];

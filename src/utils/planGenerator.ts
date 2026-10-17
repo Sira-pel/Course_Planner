@@ -217,14 +217,32 @@ function pairAlwaysClashes(left: Course[], right: Course[]): boolean {
   return true;
 }
 
-/** True when some course pair inside this set can never share a plan. Large pairs stay in the search. */
-function subsetNeverFits(groups: PreparedGroup[]): boolean {
+function buildClashingPairs(groups: PreparedGroup[]): Map<string, Set<string>> {
+  const clashes = new Map<string, Set<string>>();
   for (let i = 0; i < groups.length; i += 1) {
     for (let j = i + 1; j < groups.length; j += 1) {
       const left = groups[i];
       const right = groups[j];
       if (left.sections.length * right.sections.length > 240) continue;
-      if (pairAlwaysClashes(left.sections, right.sections)) return true;
+      if (!pairAlwaysClashes(left.sections, right.sections)) continue;
+      let leftSet = clashes.get(left.key);
+      if (!leftSet) {
+        leftSet = new Set();
+        clashes.set(left.key, leftSet);
+      }
+      leftSet.add(right.key);
+    }
+  }
+  return clashes;
+}
+
+/** True when some course pair inside this set can never share a plan. Large pairs stay in the search. */
+function subsetNeverFits(groups: PreparedGroup[], clashes: Map<string, Set<string>>): boolean {
+  for (let i = 0; i < groups.length; i += 1) {
+    const leftSet = clashes.get(groups[i].key);
+    if (!leftSet) continue;
+    for (let j = i + 1; j < groups.length; j += 1) {
+      if (leftSet.has(groups[j].key)) return true;
     }
   }
   return false;
@@ -636,14 +654,18 @@ class PlanSearch implements GeneratorSearch {
       return;
     }
 
-    if (subsets.every(subsetNeverFits)) {
+    const clashingPairs = buildClashingPairs(this.prepared);
+    const fitSubsets = clashingPairs.size > 0
+      ? subsets.filter((subset) => !subsetNeverFits(subset, clashingPairs))
+      : subsets;
+    if (fitSubsets.length === 0) {
       this.emptyReason = explainEmpty(this.prepared, this.pinned, this.prefs, false, 0);
       this.done = true;
       return;
     }
 
     let estimate = 0;
-    for (const subset of subsets) {
+    for (const subset of fitSubsets) {
       const product = mixProduct(subset);
       estimate = Math.min(1_000_000, estimate + product);
       this.jobs.push({
@@ -764,8 +786,8 @@ class PlanSearch implements GeneratorSearch {
 
   /**
    * Try one section. A clash with the sections already chosen skips that branch
-   * and returns immediately so advance() can honor its step budget. A finished
-   * mix, including one whose last section clashes, counts as one evaluation.
+   * and counts as one evaluation so a deep clash tree still caps cleanly and
+   * advances round-robin across course sets.
    */
   private stepJob(job: MixJob): 'step' | 'evaluated' | 'done' {
     if (!job.nextIndex) {
@@ -793,11 +815,8 @@ class PlanSearch implements GeneratorSearch {
       nextIndex[depth] = sectionIndex + 1;
       const section = groups[depth].sections[sectionIndex];
       if (sectionClashesWithChosen(section, chosen)) {
-        if (depth === groups.length - 1) {
-          this.exhaustMix(job);
-          return 'evaluated';
-        }
-        return 'step';
+        this.exhaustMix(job);
+        return 'evaluated';
       }
 
       chosen.push(section);
