@@ -147,7 +147,7 @@ describe('school SIS spreadsheet', () => {
     ['Schedules may change. Check the student portal before the first meeting.', '', '', '', '', '', '', '', '', '', ''],
   ];
 
-  it('keeps the current school-layout import, including blanks, online rows, and the footer note', () => {
+  it('keeps the current school-layout import, including blanks and online rows, and skips the footer note', () => {
     const { analyzed, parsed } = imported(SCHOOL_SHEET);
     assert.equal(analyzed.dataStartRow, 1);
     assert.deepEqual(analyzed.detectedMapping, {
@@ -167,7 +167,7 @@ describe('school SIS spreadsheet', () => {
     });
     assert.equal(parsed.success, true);
     assert.equal(parsed.totalRows, 6);
-    assert.equal(parsed.skippedRows, 2);
+    assert.equal(parsed.skippedRows, 3);
     assert.deepEqual(parsed.issues, []);
     assert.deepEqual(parsed.warnings, [
       'Row 5: "ACCT 400E (UA)" marked as Online / Asynchronous (no calendar meetings assigned)',
@@ -218,16 +218,33 @@ describe('school SIS spreadsheet', () => {
           color: '#F97316',
           sessions: [],
         },
-        {
-          code: 'SCHEDULES ',
-          name: 'Schedules may change. Check the student portal before the first meeting.',
-          section: undefined,
-          instructor: undefined,
-          credits: 3,
-          color: '#8B5CF6',
-          sessions: [],
-        },
       ],
+    );
+    assert.equal(parsed.courses.some((course) => course.code.startsWith('SCHEDULE')), false);
+  });
+
+  it('skips a synthetic footer row unless it has a parseable meeting time', () => {
+    const rows = [
+      ['Acad. Dept', 'Course Code', 'Section', 'Course Title', 'Time'],
+      ['ACCT', 'ACCT 201', '001', 'Financial Accounting', 'MW 03:30PM - 05:00PM'],
+      ['Schedules may change. Check the student portal before the first meeting.', '', '', '', ''],
+      ['Bring a laptop', '', '', '', 'MW 1:00 PM - 2:15 PM'],
+    ];
+    const { parsed } = imported(rows);
+    assert.equal(parsed.skippedRows, 1);
+    assert.equal(parsed.courses.some((course) => /schedule/i.test(course.code) || /student portal/i.test(course.name)), false);
+    assert.equal(parsed.courses[0]?.code, 'ACCT 201');
+    const meetingOnly = parsed.courses[1];
+    assert.ok(meetingOnly);
+    assert.equal(meetingOnly.code, 'BRING A LA');
+    assert.equal(meetingOnly.name, 'Bring a laptop');
+    assert.deepEqual(
+      [...new Set(meetingOnly.sessions.map((session) => session.day))].sort(),
+      ['monday', 'wednesday'],
+    );
+    assert.deepEqual(
+      [...new Set(meetingOnly.sessions.map((session) => `${session.startTime}-${session.endTime}`))],
+      ['13:00-14:15'],
     );
   });
 });
