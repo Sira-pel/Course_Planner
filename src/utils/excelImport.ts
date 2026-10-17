@@ -1303,29 +1303,26 @@ export function parseExcelRowsToCourses(
       }
     }
 
-    // If neither code nor name found, check if any cell has text
+    // A note with no code and no title is not a course. Keep it only when the
+    // row still has a real meeting, so a footer like "Schedules may change…"
+    // does not become a fake "SCHEDULES" section.
+    const resolved = resolveRowMeetings(row, mapping, getCell);
     if (!code && !name) {
       const firstText = row.find((c) => sanitizeString(c).length > 0);
-      if (firstText) {
-        const textVal = sanitizeString(firstText);
-        // Ignore department banner or page total lines
-        if (/^(?:total|page\s*\d+|department of|undergraduate|graduate|fall\s*\d+|spring\s*\d+|summer\s*\d+|winter\s*\d+)\b/i.test(textVal)) {
-          skippedRows++;
-          continue;
-        }
-        code = textVal.slice(0, 10).toUpperCase();
-        name = textVal;
-      } else {
+      const textVal = firstText ? sanitizeString(firstText) : '';
+      const banner = /^(?:total|page\s*\d+|department of|undergraduate|graduate|fall\s*\d+|spring\s*\d+|summer\s*\d+|winter\s*\d+)\b/i.test(textVal);
+      if (!textVal || banner || resolved.meetings.length === 0) {
         skippedRows++;
         continue;
       }
+      code = textVal.slice(0, 10).toUpperCase();
+      name = textVal;
     }
 
     // Parse Schedule Sessions for current row
     const safeTag = (code || name || `item_${r}`).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
     const courseId = prefixedId(`c_${safeTag}`);
     const label = code || name || `Row ${r + 1}`;
-    const resolved = resolveRowMeetings(row, mapping, getCell);
     const rowSessions: ClassSession[] = resolved.meetings.map((meeting, sIdx) => ({
       id: `s_${courseId}_${sIdx}`,
       day: meeting.day,
