@@ -55,7 +55,11 @@ export function CoursesStep({
 
       <div className="up-gen-course-list">
         {groups.length === 0 ? (
-          <p className="up-gen-empty">No courses match that search.</p>
+          <p className="up-gen-empty">
+            {query.trim()
+              ? 'No courses match that search.'
+              : 'Your course pool is empty. Add courses to your pool or import an Excel schedule first.'}
+          </p>
         ) : (
           groups.map((group) => {
             const on = picked.has(group.key);

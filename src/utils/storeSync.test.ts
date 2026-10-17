@@ -117,6 +117,31 @@ describe('updateCourse keeps plans and the pool in step', () => {
     assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.name, 'Edited 102');
     assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.sessions[0].day, 'tuesday');
   });
+
+  it('updateCatalogCourse merges into an existing pool entry and avoids duplicates in colliding plans', () => {
+    seed(
+      [
+        { id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] },
+        { id: 'b', name: 'B', courses: [course('c2', 'CS 101', '001'), course('c3', 'CS 102', '001')] },
+      ],
+      [course('cat_c1', 'CS 101', '001'), course('cat_c3', 'CS 102', '001')],
+    );
+
+    useScheduleStore.getState().updateCatalogCourse({
+      ...course('cat_c1', 'CS 102', '001', 'tuesday'),
+      name: 'Pool Edited 102',
+    });
+
+    const { plans, catalogCourses } = useScheduleStore.getState();
+    // Plan A had only CS 101 -> renamed to CS 102
+    assert.deepEqual(plans[0].courses.map((c) => c.code), ['CS 102']);
+    assert.equal(plans[0].courses[0].name, 'Pool Edited 102');
+    // Plan B already had CS 102 -> left untouched so it does not end up with two CS 102s
+    assert.deepEqual(plans[1].courses.map((c) => c.code), ['CS 101', 'CS 102']);
+    // Pool keeps CS 101 (still used by Plan B) and updates CS 102 without duplicating it
+    assert.deepEqual(catalogCourses.map((c) => c.code).sort(), ['CS 101', 'CS 102']);
+    assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.name, 'Pool Edited 102');
+  });
 });
 
 describe('backup restore settings', () => {

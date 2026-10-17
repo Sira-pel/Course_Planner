@@ -244,10 +244,7 @@ export default function App() {
       state.commitTheme(resolved);
     };
     media.addEventListener('change', syncSystemTheme);
-    const initial = useScheduleStore.getState();
-    if (initial.themePreference === 'system') {
-      initial.setThemePreference(resolveTheme('system'));
-    }
+    syncSystemTheme();
 
     return () => {
       cancelAnimationFrame(raf1);

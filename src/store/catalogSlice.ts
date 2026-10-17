@@ -67,32 +67,75 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       if (!oldCat) return;
 
       const oldKey = courseIdentityKey(oldCat.code, oldCat.section);
+      const newKey = courseIdentityKey(updatedCourse.code, updatedCourse.section);
 
-      const updatedCatalog = state.catalogCourses.map((c) =>
-        c.id === updatedCourse.id ? updatedCourse : c
-      );
+      // Keep enrolled courses in any plans in sync with edited catalog details.
+      // Leave a plan alone when renaming would collide with another course it already holds.
+      const updatedPlans = state.plans.map((p) => {
+        const holdsOld = p.courses.some(
+          (c) => courseIdentityKey(c.code, c.section) === oldKey || c.id === updatedCourse.id
+        );
+        if (!holdsOld) return p;
+        const wouldCollide =
+          oldKey !== newKey &&
+          p.courses.some(
+            (c) =>
+              courseIdentityKey(c.code, c.section) === newKey &&
+              courseIdentityKey(c.code, c.section) !== oldKey &&
+              c.id !== updatedCourse.id
+          );
+        if (wouldCollide) return p;
 
-      // Keep enrolled courses in any plans in sync with edited catalog details
-      const updatedPlans = state.plans.map((p) => ({
-        ...p,
-        courses: p.courses.map((c) => {
-          if (
-            courseIdentityKey(c.code, c.section) === oldKey ||
-            c.id === updatedCourse.id
-          ) {
-            return {
-              ...updatedCourse,
-              id: c.id,
-              color: c.color || updatedCourse.color,
-              sessions: updatedCourse.sessions.map((s, idx) => ({
-                ...s,
-                id: `s_${c.id}_${idx}`,
-              })),
-            };
+        return {
+          ...p,
+          courses: p.courses.map((c) => {
+            if (
+              courseIdentityKey(c.code, c.section) === oldKey ||
+              c.id === updatedCourse.id
+            ) {
+              return {
+                ...updatedCourse,
+                id: c.id,
+                color: c.color || updatedCourse.color,
+                sessions: updatedCourse.sessions.map((s, idx) => ({
+                  ...s,
+                  id: `s_${c.id}_${idx}`,
+                })),
+              };
+            }
+            return c;
+          }),
+        };
+      });
+
+      let updatedCatalog = [...state.catalogCourses];
+      const sourceIdx = updatedCatalog.findIndex((c) => c.id === updatedCourse.id);
+      const targetIdx =
+        oldKey === newKey
+          ? sourceIdx
+          : updatedCatalog.findIndex(
+              (c, idx) => idx !== sourceIdx && courseIdentityKey(c.code, c.section) === newKey
+            );
+
+      if (oldKey === newKey) {
+        updatedCatalog[sourceIdx] = updatedCourse;
+      } else {
+        const isOldUsedElsewhere = updatedPlans.some((p) =>
+          p.courses.some((c) => courseIdentityKey(c.code, c.section) === oldKey)
+        );
+
+        if (targetIdx !== -1) {
+          updatedCatalog[targetIdx] = { ...updatedCourse, id: updatedCatalog[targetIdx].id };
+          if (!isOldUsedElsewhere && sourceIdx !== -1 && sourceIdx !== targetIdx) {
+            updatedCatalog = updatedCatalog.filter((_, idx) => idx !== sourceIdx);
           }
-          return c;
-        }),
-      }));
+        } else if (isOldUsedElsewhere) {
+          const newCatId = prefixedId('cat');
+          updatedCatalog = [{ ...updatedCourse, id: newCatId }, ...updatedCatalog];
+        } else {
+          updatedCatalog[sourceIdx] = updatedCourse;
+        }
+      }
 
       commitWithHistory(set, get, {
         catalogCourses: updatedCatalog,

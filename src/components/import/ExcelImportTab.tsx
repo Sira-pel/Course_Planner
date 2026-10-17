@@ -13,6 +13,7 @@ import {
   Download,
   Info,
   X,
+  ClipboardPaste,
 } from 'lucide-react';
 import type { Course, SchedulePlan } from '../../types/schedule';
 import { withUnusedCourseColors } from '../../utils/courseColor';
@@ -23,6 +24,7 @@ import {
   readExcelFile,
   loadSheetData,
   parseExcelRowsToCourses,
+  parseDelimitedText,
   SpreadsheetRejectedError,
   type ColumnMapping,
   type ExcelWorkbook,
@@ -222,6 +224,83 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     }
   };
 
+  const processPastedText = useCallback((text: string) => {
+    setErrorMessage(null);
+    if (!text || !text.trim()) {
+      setErrorMessage('Pasted text is empty.');
+      return;
+    }
+    const delimited = parseDelimitedText(text);
+    if (!delimited || delimited.columns.length < 2) {
+      setErrorMessage(
+        'Pasted text was not recognized as a table (at least 2 columns required). For single lines, use Quick Add in the Add Course dialog.'
+      );
+      return;
+    }
+
+    const rowCount = Math.max(0, delimited.rawRows.length - delimited.dataStartRow);
+    if (rowCount === 0) {
+      setErrorMessage('Pasted table contains headers but no course rows.');
+      return;
+    }
+
+    setFileName('Pasted Table');
+    setFileSize(`${rowCount} ${rowCount === 1 ? 'row' : 'rows'}`);
+    setWorkbookRef(null);
+    setSheetData({
+      sheets: ['Pasted Table'],
+      currentSheet: 'Pasted Table',
+      columns: delimited.columns,
+      rawRows: delimited.rawRows,
+      dataStartRow: delimited.dataStartRow,
+      detectedMapping: delimited.detectedMapping,
+    });
+    setActiveMapping(delimited.detectedMapping);
+  }, []);
+
+  const handlePasteFromClipboard = async () => {
+    setErrorMessage(null);
+    try {
+      if (!navigator.clipboard?.readText) {
+        setErrorMessage('Clipboard access is not supported by your browser. Press Ctrl+V (or Cmd+V) to paste directly.');
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        processPastedText(text);
+      } else {
+        setErrorMessage('Clipboard is empty. Copy cells from Excel or Google Sheets first, then click Paste.');
+      }
+    } catch {
+      setErrorMessage('Clipboard permission was denied or blocked. Press Ctrl+V (or Cmd+V) to paste table data directly.');
+    }
+  };
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
+          e.preventDefault();
+          void processFile(file);
+          return;
+        }
+      }
+      const text = e.clipboardData?.getData('text');
+      if (text && text.trim() && !sheetData) {
+        e.preventDefault();
+        processPastedText(text);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [sheetData, processPastedText]);
+
   const handleSheetChange = (newSheet: string) => {
     if (!workbookRef) return;
     const parsedSheet = loadSheetData(workbookRef, newSheet);
@@ -416,13 +495,30 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 <strong className="text-slate-700 dark:text-slate-200">.csv</strong> spreadsheets
               </p>
             </div>
-            <button
-              type="button"
-              className="mt-1 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Browse Files
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Browse Files
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handlePasteFromClipboard();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <ClipboardPaste className="w-3.5 h-3.5" />
+                Paste Copied Table
+              </button>
+            </div>
 
             <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 w-full max-w-xs mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
               <Info className="w-3.5 h-3.5" />

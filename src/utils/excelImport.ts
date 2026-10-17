@@ -10,15 +10,51 @@ export type ExcelWorkbook = WorkBook;
 
 let xlsxModule: XlsxModule | null = null;
 let xlsxLoading: Promise<XlsxModule> | null = null;
+let xlsxAttempt = 0;
+let xlsxFailedUrl: string | undefined;
+
+function moduleUrlFromError(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : String(error);
+  const match = message.match(/https?:\/\/\S+/);
+  if (!match) return undefined;
+  try {
+    const url = new URL(match[0].replace(/[),.;]+$/, ''));
+    url.searchParams.delete('retry');
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function importXlsxRetried(failedUrl: string, attempt: number): Promise<XlsxModule> {
+  const parsed = new URL(failedUrl);
+  parsed.searchParams.set('retry', String(attempt));
+  const pending = import(/* @vite-ignore */ parsed.href) as Promise<XlsxModule>;
+  void pending.catch(() => {});
+  return pending;
+}
 
 /** Loads SheetJS the first time a workbook is read or written. */
 export function loadXlsx(): Promise<XlsxModule> {
   if (xlsxModule) return Promise.resolve(xlsxModule);
   if (!xlsxLoading) {
-    xlsxLoading = import('xlsx').then((mod) => {
-      xlsxModule = mod;
-      return mod;
-    });
+    const source =
+      xlsxAttempt > 0 && xlsxFailedUrl
+        ? importXlsxRetried(xlsxFailedUrl, xlsxAttempt)
+        : import('xlsx');
+    const next = source
+      .then((mod) => {
+        xlsxModule = mod;
+        return mod;
+      })
+      .catch((error: unknown) => {
+        const url = moduleUrlFromError(error);
+        if (url) xlsxFailedUrl = url;
+        xlsxAttempt += 1;
+        if (xlsxLoading === next) xlsxLoading = null;
+        throw error;
+      });
+    xlsxLoading = next;
   }
   return xlsxLoading;
 }
@@ -1460,7 +1496,7 @@ export interface DelimitedTable extends TabularAnalysis {
   sis: boolean;
 }
 
-function splitCsvLine(line: string): string[] {
+function splitDelimitedLine(line: string, delimiter: string): string[] {
   const cells: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -1479,15 +1515,19 @@ function splitCsvLine(line: string): string[] {
       }
     } else if (ch === '"') {
       inQuotes = true;
-    } else if (ch === ',') {
-      cells.push(current.trim());
+    } else if (ch === delimiter) {
+      cells.push(current.trim().replace(/^"(.*)"$/, '$1').trim());
       current = '';
     } else {
       current += ch;
     }
   }
-  cells.push(current.trim());
+  cells.push(current.trim().replace(/^"(.*)"$/, '$1').trim());
   return cells;
+}
+
+function splitCsvLine(line: string): string[] {
+  return splitDelimitedLine(line, ',');
 }
 
 /** School SIS rows: term, code, section, title, instructor, room, days+time. Later columns are ignored. */
@@ -1505,7 +1545,7 @@ export function looksLikeSisRow(cols: string[]): boolean {
 }
 
 /**
- * Split a paste on tabs or commas. Returns null when the text is not a table,
+ * Split a paste on tabs, commas, or semicolons. Returns null when the text is not a table,
  * so freeform course lines stay on the line parser.
  */
 export function parseDelimitedText(text: string): DelimitedTable | null {
@@ -1521,11 +1561,30 @@ export function parseDelimitedText(text: string): DelimitedTable | null {
   const tabLines = nonEmpty.filter((line) => line.includes('\t'));
   let rows: string[][] | null = null;
   if (tabLines.length / nonEmpty.length >= 0.8 && tabLines.some((line) => line.split('\t').length >= 2)) {
-    rows = nonEmpty.map((line) => line.split('\t').map((cell) => cell.trim()));
+    rows = nonEmpty.map((line) => line.split('\t').map((cell) => cell.trim().replace(/^"(.*)"$/, '$1').trim()));
   } else if (tabLines.length === 0) {
     const csvRows = nonEmpty.map(splitCsvLine);
-    const width = csvRows[0]?.length ?? 0;
-    if (width >= 2 && csvRows.every((row) => row.length === width)) rows = csvRows;
+    const maxCsvCols = Math.max(...csvRows.map((r) => r.length), 0);
+    const validCsvCount = csvRows.filter((r) => r.length >= 2).length;
+    if (maxCsvCols >= 2 && validCsvCount / csvRows.length >= 0.7) {
+      rows = csvRows.map((r) => {
+        const padded = [...r];
+        while (padded.length < maxCsvCols) padded.push('');
+        return padded;
+      });
+    } else {
+      // Fallback check for semicolon delimiter (common in European Excel exports)
+      const semiRows = nonEmpty.map((line) => splitDelimitedLine(line, ';'));
+      const maxSemiCols = Math.max(...semiRows.map((r) => r.length), 0);
+      const validSemiCount = semiRows.filter((r) => r.length >= 2).length;
+      if (maxSemiCols >= 2 && validSemiCount / semiRows.length >= 0.7) {
+        rows = semiRows.map((r) => {
+          const padded = [...r];
+          while (padded.length < maxSemiCols) padded.push('');
+          return padded;
+        });
+      }
+    }
   }
   if (!rows) return null;
 
