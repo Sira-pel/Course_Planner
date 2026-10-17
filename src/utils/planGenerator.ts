@@ -493,6 +493,12 @@ function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+/** Hint above Search deeper. An empty capped search may still have plans; one that already found some may have better ones. */
+export function cappedSearchHint(evaluated: number, planCount: number): string {
+  const prospect = planCount === 0 ? 'There may still be plans' : 'There may be better plans';
+  return `Checked ${formatCount(evaluated)} mixes. ${prospect}`;
+}
+
 function explainEmpty(
   groups: PreparedGroup[],
   pinned: Set<string>,
@@ -533,7 +539,7 @@ function explainEmpty(
     }
   }
   if (capped) {
-    return `Checked ${formatCount(evaluated)} mixes and none were clash-free. Narrow the list or clear a blocked time.`;
+    return `Checked ${formatCount(evaluated)} mixes and none were clash-free yet. Search deeper, narrow the list, or clear a blocked time.`;
   }
   return 'No clash-free mix fits these courses and filters.';
 }

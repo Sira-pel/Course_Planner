@@ -5,6 +5,7 @@ import { timeToMinutes } from './timeUtils';
 import { sanitizeGeneratorPrefs } from './generatorPrefs';
 import { nextShownCount } from './generatorSession';
 import {
+  cappedSearchHint,
   gapFallbackNotice,
   generatePlans,
   MAX_CANDIDATES,
@@ -133,6 +134,7 @@ describe('plan generator', () => {
     assert.equal(search.evaluated, MAX_EVALUATIONS);
     assert.equal(search.capped, true);
     assert.equal(first.plans.length, 3);
+    assert.equal(cappedSearchHint(first.evaluated, first.plans.length), 'Checked 5,000 mixes. There may be better plans');
     assert.equal(new Set(first.plans.map((plan) => plan.id)).size, 3);
     assert.equal(first.validCount, MAX_EVALUATIONS);
     const firstId = first.plans[0].id;
@@ -169,8 +171,26 @@ describe('plan generator', () => {
     });
     assert.equal(result.plans.length, 0);
     assert.equal(result.capped, true);
-    assert.equal(result.emptyReason, 'Checked 5,000 mixes and none were clash-free. Narrow the list or clear a blocked time.');
+    assert.equal(result.emptyReason, 'Checked 5,000 mixes and none were clash-free yet. Search deeper, narrow the list, or clear a blocked time.');
+    assert.equal(cappedSearchHint(result.evaluated, result.plans.length), 'Checked 5,000 mixes. There may still be plans');
     assert.equal(result.gapNotice, null);
+  });
+
+  it('keeps the finished empty reason when every mix was checked', () => {
+    const sectionsA = Array.from({ length: 16 }, (_, index) => (
+      section(`a${index}`, 'A', '09:00', '10:30', String(index + 1).padStart(3, '0'))
+    ));
+    const sectionsB = Array.from({ length: 16 }, (_, index) => (
+      section(`b${index}`, 'B', '10:00', '11:00', String(index + 1).padStart(3, '0'))
+    ));
+    const result = generatePlans({
+      groups: [group('A', sectionsA), group('B', sectionsB)],
+      pinnedKeys: ['A', 'B'],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 0);
+    assert.equal(result.capped, false);
+    assert.equal(result.emptyReason, 'No clash-free mix fits these courses and filters.');
   });
 
   it('drops plans whose longest gap is over the limit and keeps the max-gap tie break', () => {
