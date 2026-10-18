@@ -31,6 +31,7 @@ import {
 } from '../../utils/motion';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import { timeToMinutes } from '../../utils/timeUtils';
+import { shouldClearVisiblePicks } from '../../utils/visiblePicks';
 import {
   creditBounds,
   groupCoursesByCode,
@@ -424,9 +425,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const selectAll = () => {
     const visible = filteredGroups.map((group) => group.key);
-    const allOn = visible.length > 0 && visible.every((key) => picked.has(key));
     clearResults();
-    if (allOn) {
+    if (shouldClearVisiblePicks(visible, picked)) {
       setPicked((prev) => {
         const next = new Set(prev);
         for (const key of visible) next.delete(key);

@@ -1,6 +1,7 @@
 import { Check, Pin, Search, Trash2 } from 'lucide-react';
 import type { CourseGroup } from '../../utils/planGenerator';
 import { MAX_CANDIDATES } from '../../utils/planGenerator';
+import { shouldClearVisiblePicks } from '../../utils/visiblePicks';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 
 export function CoursesStep({
@@ -25,7 +26,7 @@ export function CoursesStep({
   onSelectAll: () => void;
 }) {
   const atCap = picked.size >= MAX_CANDIDATES;
-  const allPicked = groups.length > 0 && groups.every((group) => picked.has(group.key));
+  const clearPicks = shouldClearVisiblePicks(groups.map((group) => group.key), picked);
   return (
     <div className="up-gen-step-body">
       <div className="up-gen-search-row">
@@ -45,9 +46,9 @@ export function CoursesStep({
           className="up-gen-outline up-chrome-btn"
           onClick={onSelectAll}
           disabled={groups.length === 0}
-          aria-label={allPicked ? 'Clear all' : undefined}
+          aria-label={clearPicks ? 'Clear all' : undefined}
         >
-          {allPicked ? <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> : 'All'}
+          {clearPicks ? <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> : 'All'}
         </button>
       </div>
       <p className="up-gen-hint">
