@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   analyzeTabularRows,
+  applyManualColumnMapping,
   extractDays,
   extractTimeRange,
+  EXCEL_MAPPING_FIELDS,
+  getEmptyMapping,
   parseExcelRowsToCourses,
   spreadsheetRejectionReason,
 } from './excelImport';
@@ -517,5 +520,93 @@ describe('spreadsheet column auto-detect', () => {
     assert.equal(courseShape('COSC 221', noTitle).section, '001');
     assert.equal(courseShape('COSC 221', noTitle).room, 'B101');
     assert.deepEqual(courseShape('COSC 221', noTitle).days, ['monday', 'wednesday']);
+  });
+});
+
+describe('excel schedule cells and column mapping', () => {
+  it('splits a schedule cell on commas when each part has its own time', () => {
+    const mapping = {
+      ...getEmptyMapping(),
+      code: 'col_0',
+      name: 'col_1',
+      schedule: 'col_2',
+    };
+    const rows = [
+      ['Code', 'Title', 'Schedule'],
+      ['CS 210', 'Systems', 'MW 09:00-10:15, F 11:00-12:00'],
+      ['HIST 200', 'Survey', 'Mon, Wed 09:00-10:15'],
+    ];
+    const parsed = parseExcelRowsToCourses(rows, 1, mapping);
+    const systems = parsed.courses.find((course) => course.code === 'CS 210');
+    const survey = parsed.courses.find((course) => course.code === 'HIST 200');
+    assert.ok(systems);
+    assert.ok(survey);
+    assert.deepEqual(
+      systems.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      [
+        'monday 09:00-10:15',
+        'wednesday 09:00-10:15',
+        'friday 11:00-12:00',
+      ],
+    );
+    assert.deepEqual(
+      survey.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['monday 09:00-10:15', 'wednesday 09:00-10:15'],
+    );
+  });
+
+  it('offers Start Time and End Time, clears them when Schedule or Time is mapped, and falls back to Schedule when they are incomplete', () => {
+    assert.deepEqual(
+      EXCEL_MAPPING_FIELDS.filter((field) => field.field === 'startTime' || field.field === 'endTime').map((field) => field.label),
+      ['Start Time', 'End Time'],
+    );
+
+    const detected = {
+      ...getEmptyMapping(),
+      code: 'col_0',
+      startTime: 'col_2',
+      endTime: 'col_3',
+      schedule: 'col_4',
+    };
+    const scheduled = applyManualColumnMapping(detected, 'schedule', 'col_4');
+    assert.equal(scheduled.schedule, 'col_4');
+    assert.equal(scheduled.startTime, '');
+    assert.equal(scheduled.endTime, '');
+    const timed = applyManualColumnMapping(detected, 'time', 'col_5');
+    assert.equal(timed.time, 'col_5');
+    assert.equal(timed.startTime, '');
+    assert.equal(timed.endTime, '');
+
+    const mapping = {
+      ...getEmptyMapping(),
+      code: 'col_0',
+      name: 'col_1',
+      days: 'col_2',
+      startTime: 'col_3',
+      endTime: 'col_4',
+      schedule: 'col_5',
+    };
+    const parsed = parseExcelRowsToCourses(
+      [
+        ['Code', 'Title', 'Days', 'Start', 'End', 'Schedule'],
+        ['CS 310', 'Incomplete', 'MW', '09:00', '', 'MW 09:00-10:15, F 11:00-12:00'],
+        ['CS 311', 'Complete', 'TR', '13:00', '14:15', 'F 08:00-09:00'],
+      ],
+      1,
+      mapping,
+    );
+    const incomplete = parsed.courses.find((course) => course.code === 'CS 310');
+    const complete = parsed.courses.find((course) => course.code === 'CS 311');
+    assert.ok(incomplete);
+    assert.ok(complete);
+    assert.deepEqual(
+      incomplete.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['monday 09:00-10:15', 'wednesday 09:00-10:15', 'friday 11:00-12:00'],
+    );
+    assert.deepEqual(
+      complete.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['tuesday 13:00-14:15', 'thursday 13:00-14:15'],
+    );
+    assert.equal(parsed.issues.some((issue) => issue.courseId === incomplete.id), false);
   });
 });
