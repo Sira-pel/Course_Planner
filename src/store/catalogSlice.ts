@@ -86,6 +86,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
           );
         if (wouldCollide) return p;
 
+        const colorChanged = oldCat.color !== updatedCourse.color;
         return {
           ...p,
           courses: p.courses.map((c) => {
@@ -96,7 +97,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
               return {
                 ...updatedCourse,
                 id: c.id,
-                color: c.color || updatedCourse.color,
+                color: colorChanged ? updatedCourse.color : (c.color || updatedCourse.color),
                 sessions: updatedCourse.sessions.map((s, idx) => ({
                   ...s,
                   id: `s_${c.id}_${idx}`,
@@ -191,14 +192,13 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       const catalogItem = state.catalogCourses.find(c => c.id === catalogCourseId);
       if (!catalogItem) return;
 
-      const existingInPlan = targetPlan.courses.find(
-        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
-      );
-      if (!existingInPlan) return;
+      const matchesCatalog = (course: Course) =>
+        sameCourseIdentity(course, catalogItem) || course.id === catalogItem.id;
+      if (!targetPlan.courses.some(matchesCatalog)) return;
 
       const updatedPlans = state.plans.map(p =>
         p.id === targetId
-          ? { ...p, courses: p.courses.filter(c => c.id !== existingInPlan.id) }
+          ? { ...p, courses: p.courses.filter(c => !matchesCatalog(c)) }
           : p
       );
 

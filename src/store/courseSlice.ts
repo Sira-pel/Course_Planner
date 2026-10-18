@@ -12,19 +12,24 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
     addCourse: (course: Course, targetPlanId?: string) => {
       const state = get();
       const targetId = targetPlanId || state.activePlanId;
+      const targetPlan = state.plans.find((p) => p.id === targetId);
+      const alreadyInPlan = targetPlan?.courses.some((existing) => sameCourseIdentity(existing, course)) ?? false;
+      const inCatalog = state.catalogCourses.some(c => sameCourseIdentity(c, course));
+      if (alreadyInPlan && inCatalog) return;
 
-      const updatedPlans = state.plans.map(p => {
-        if (p.id === targetId) {
-          return {
-            ...p,
-            courses: [...p.courses, course],
-          };
-        }
-        return p;
-      });
+      const updatedPlans = alreadyInPlan
+        ? state.plans
+        : state.plans.map(p => {
+            if (p.id === targetId) {
+              return {
+                ...p,
+                courses: [...p.courses, course],
+              };
+            }
+            return p;
+          });
 
       // Also ensure it's saved in the shared course pool if not already there
-      const inCatalog = state.catalogCourses.some(c => sameCourseIdentity(c, course));
       const updatedCatalog = inCatalog
         ? state.catalogCourses
         : [...state.catalogCourses, { ...course, id: course.id.startsWith('cat_') ? course.id : `cat_${course.id}` }];
@@ -48,13 +53,39 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       // The same course (same code and section) in other plans follows the edit, as it
       // does when the course is edited from the pool. Each plan keeps its own ids and
       // color. A plan that already holds a different course with the new identity is
-      // left alone so the rename cannot create a duplicate in it.
+      // left alone so the rename cannot create a duplicate in it. The plan being edited
+      // merges into that existing course instead of adding a second copy.
       const updatedPlans = state.plans.map((p) => {
         if (p.id === targetId) {
-          return {
-            ...p,
-            courses: p.courses.map((c) => (c.id === updatedCourse.id ? updatedCourse : c)),
-          };
+          const sibling = oldKey !== newKey
+            ? p.courses.find(
+                (c) => c.id !== updatedCourse.id && courseIdentityKey(c.code, c.section) === newKey
+              )
+            : undefined;
+          if (!sibling) {
+            return {
+              ...p,
+              courses: p.courses.map((c) => (c.id === updatedCourse.id ? updatedCourse : c)),
+            };
+          }
+          // Renaming onto a code+section this plan already has: keep that course and drop the one being renamed.
+          let keptSibling = false;
+          const courses: Course[] = [];
+          for (const c of p.courses) {
+            if (c.id === updatedCourse.id) continue;
+            if (courseIdentityKey(c.code, c.section) === newKey) {
+              if (keptSibling) continue;
+              keptSibling = true;
+              courses.push({
+                ...updatedCourse,
+                id: c.id,
+                sessions: updatedCourse.sessions.map((s, idx) => ({ ...s, id: `s_${c.id}_${idx}` })),
+              });
+              continue;
+            }
+            courses.push(c);
+          }
+          return { ...p, courses };
         }
         const holdsOld = p.courses.some((c) => courseIdentityKey(c.code, c.section) === oldKey);
         if (!holdsOld) return p;
@@ -156,33 +187,48 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
       const state = get();
       const targetId = targetPlanId || state.activePlanId;
       const targetPlan = state.plans.find((plan) => plan.id === targetId);
+      const planKeys = new Set(
+        (targetPlan?.courses || []).map((course) => courseIdentityKey(course.code, course.section))
+      );
+      const fresh: Course[] = [];
+      for (const course of newCourses) {
+        const key = courseIdentityKey(course.code, course.section);
+        if (planKeys.has(key)) continue;
+        planKeys.add(key);
+        fresh.push(course);
+      }
       const coloredCourses = withUnusedCourseColors(
-        newCourses,
+        fresh,
         (targetPlan?.courses || []).map((course) => course.color)
       );
 
-      const updatedPlans = state.plans.map(p => {
-        if (p.id === targetId) {
-          return {
-            ...p,
-            courses: [...p.courses, ...coloredCourses],
-          };
-        }
-        return p;
-      });
+      const updatedPlans = coloredCourses.length === 0
+        ? state.plans
+        : state.plans.map(p => {
+            if (p.id === targetId) {
+              return {
+                ...p,
+                courses: [...p.courses, ...coloredCourses],
+              };
+            }
+            return p;
+          });
 
       // Add to catalog pool as well using a Set for O(1) lookups
       const catalogKeys = new Set(
         state.catalogCourses.map(cat => courseIdentityKey(cat.code, cat.section))
       );
       const currentCatalog = [...state.catalogCourses];
-      for (const c of coloredCourses) {
+      let catalogChanged = false;
+      for (const c of [...coloredCourses, ...newCourses]) {
         const key = courseIdentityKey(c.code, c.section);
         if (!catalogKeys.has(key)) {
           catalogKeys.add(key);
+          catalogChanged = true;
           currentCatalog.push({ ...c, id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}` });
         }
       }
+      if (coloredCourses.length === 0 && !catalogChanged) return;
 
       commitWithHistory(set, get, {
         plans: updatedPlans,

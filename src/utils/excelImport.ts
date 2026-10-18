@@ -628,6 +628,47 @@ export function getEmptyMapping(): ColumnMapping {
   };
 }
 
+export interface ExcelMappingField {
+  field: keyof ColumnMapping;
+  label: string;
+  required: boolean;
+  hint: string;
+}
+
+/** Fields shown on the Excel column-mapping screen, including separate start and end times. */
+export const EXCEL_MAPPING_FIELDS: ExcelMappingField[] = [
+  { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, CS 101' },
+  { field: 'subject', label: 'Subject / Dept (Optional)', required: false, hint: 'e.g. CS, MATH, BIO' },
+  { field: 'courseNum', label: 'Course # (Optional)', required: false, hint: 'e.g. 101, 2040, 380' },
+  { field: 'name', label: 'Course Name / Title', required: true, hint: 'e.g. Mobile App Dev' },
+  { field: 'schedule', label: 'Schedule (Days & Times)', required: false, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
+  { field: 'days', label: 'Days (Separate)', required: false, hint: 'e.g. MWF, TTH, Mon/Wed' },
+  { field: 'time', label: 'Time Range (Separate)', required: false, hint: 'e.g. 08:30AM - 10:00AM' },
+  { field: 'startTime', label: 'Start Time', required: false, hint: 'e.g. 09:00 AM' },
+  { field: 'endTime', label: 'End Time', required: false, hint: 'e.g. 10:15 AM' },
+  { field: 'section', label: 'Section', required: false, hint: 'e.g. 001, 101, A' },
+  { field: 'instructor', label: 'Professor / Instructor', required: false, hint: 'e.g. Kabin Antony' },
+  { field: 'credits', label: 'Credits', required: false, hint: 'e.g. 3, 4' },
+  { field: 'room', label: 'Room / Location', required: false, hint: 'e.g. TBD, Hall 101' },
+];
+
+/**
+ * A hand-picked Schedule or Time column owns the meeting.
+ * Clear Start and End so a leftover pair cannot override that choice.
+ */
+export function applyManualColumnMapping(
+  mapping: ColumnMapping,
+  field: keyof ColumnMapping,
+  colKey: string,
+): ColumnMapping {
+  const next: ColumnMapping = { ...mapping, [field]: colKey };
+  if ((field === 'schedule' || field === 'time') && colKey) {
+    next.startTime = '';
+    next.endTime = '';
+  }
+  return next;
+}
+
 type DetectField =
   | 'code'
   | 'subject'
@@ -1420,6 +1461,30 @@ function looksLikeClock(raw: string): boolean {
   return /\d{1,2}\s*:\s*\d{2}/.test(raw) || /\b\d{3,4}\s*[-–/]\s*\d{3,4}\b/.test(raw);
 }
 
+function commaMeetingParts(raw: string): string[] {
+  return raw.split(',').map((part) => part.trim()).filter(Boolean);
+}
+
+/** "MW 09:00-10:15, F 11:00-12:00" is two meetings. "Mon, Wed 09:00-10:15" is one. */
+function eachPartHasItsOwnTime(raw: string): boolean {
+  const parts = commaMeetingParts(raw);
+  if (parts.length < 2) return false;
+  return parts.every((part) => {
+    const parsed = parseScheduleString(part);
+    return Boolean(parsed?.startTime && parsed.endTime && parsed.days.length > 0);
+  });
+}
+
+function splitScheduleSegments(scheduleRaw: string): string[] {
+  const rough = scheduleRaw.split(/[;\n|]+|\s*\/\/\s*/).map((part) => part.trim()).filter(Boolean);
+  const segments: string[] = [];
+  for (const part of rough) {
+    if (eachPartHasItsOwnTime(part)) segments.push(...commaMeetingParts(part));
+    else segments.push(part);
+  }
+  return segments;
+}
+
 /**
  * Days and times stay in their own columns. A time-only schedule cell must not
  * invent Monday, and a missing or impossible clock must not become 09:00-10:15.
@@ -1440,14 +1505,11 @@ function resolveRowMeetings(
     for (const day of days) into.push({ day, start, end });
   };
 
-  if (timeRaw || startRaw || endRaw) {
-    let range: { start: string; end: string } | null = null;
-    if (timeRaw) range = extractTimeRange(timeRaw);
-    else range = combineStartAndEnd(startRaw, endRaw);
+  if (timeRaw) {
+    const range = extractTimeRange(timeRaw);
     const days = explicitDays.length > 0 ? explicitDays : extractDays(timeRaw);
     if (!range) {
-      const shown = timeRaw || `${startRaw}-${endRaw}`;
-      return { meetings: [], problem: `has an invalid time (${shown})` };
+      return { meetings: [], problem: `has an invalid time (${timeRaw})` };
     }
     if (days.length === 0) {
       return { meetings: [], problem: 'is missing days' };
@@ -1457,11 +1519,29 @@ function resolveRowMeetings(
     return { meetings };
   }
 
+  const startEndRange = startRaw || endRaw ? combineStartAndEnd(startRaw, endRaw) : null;
+  if (startEndRange) {
+    let days = explicitDays.length > 0 ? explicitDays : extractDays(`${startRaw} ${endRaw}`);
+    // Start and End have the clock, but the weekdays may live only in Schedule.
+    if (days.length === 0 && !mapping.days && scheduleRaw) days = extractDays(scheduleRaw);
+    if (days.length === 0) {
+      return { meetings: [], problem: 'is missing days' };
+    }
+    const meetings: ResolvedMeeting[] = [];
+    pushDays(days, startEndRange.start, startEndRange.end, meetings);
+    return { meetings };
+  }
+
+  // Start/End is missing or unparseable. Use the schedule cell when one is mapped.
+  if ((startRaw || endRaw) && !scheduleRaw) {
+    return { meetings: [], problem: `has an invalid time (${startRaw}-${endRaw})` };
+  }
+
   if (scheduleRaw) {
     if (isOnlineOrTBA(scheduleRaw) && !looksLikeClock(scheduleRaw)) {
       return { meetings: [], online: true };
     }
-    const segments = scheduleRaw.split(/[;\n|]+|\s*\/\/\s*/).map((part) => part.trim()).filter(Boolean);
+    const segments = splitScheduleSegments(scheduleRaw);
     const meetings: ResolvedMeeting[] = [];
     for (const segment of segments) {
       const parsed = parseScheduleString(segment);
