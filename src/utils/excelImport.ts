@@ -1521,7 +1521,9 @@ function resolveRowMeetings(
 
   const startEndRange = startRaw || endRaw ? combineStartAndEnd(startRaw, endRaw) : null;
   if (startEndRange) {
-    const days = explicitDays.length > 0 ? explicitDays : extractDays(`${startRaw} ${endRaw}`);
+    let days = explicitDays.length > 0 ? explicitDays : extractDays(`${startRaw} ${endRaw}`);
+    // Start and End have the clock, but the weekdays may live only in Schedule.
+    if (days.length === 0 && !mapping.days && scheduleRaw) days = extractDays(scheduleRaw);
     if (days.length === 0) {
       return { meetings: [], problem: 'is missing days' };
     }

@@ -609,4 +609,26 @@ describe('excel schedule cells and column mapping', () => {
     );
     assert.equal(parsed.issues.some((issue) => issue.courseId === incomplete.id), false);
   });
+
+  it('reads days from the schedule cell when start and end are set and no days column is mapped', () => {
+    const rows = [
+      ['Course', 'Title', 'Section', 'Schedule', 'Start Time', 'End Time'],
+      ['COSC 221', 'CS B', '001', 'MW 09:00-10:15', '09:00', '10:15'],
+    ];
+    const analyzed = analyzeTabularRows(rows);
+    const mapping = analyzed.detectedMapping;
+    assert.equal(mapping.days, '');
+    assert.ok(mapping.schedule);
+    assert.ok(mapping.startTime);
+    assert.ok(mapping.endTime);
+    const parsed = parseExcelRowsToCourses(analyzed.rawRows, analyzed.dataStartRow, mapping);
+    const course = parsed.courses.find((item) => item.code === 'COSC 221');
+    assert.ok(course);
+    assert.equal(course.section, '001');
+    assert.equal(parsed.issues.some((issue) => /missing days/i.test(issue.message)), false);
+    assert.deepEqual(
+      course.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['monday 09:00-10:15', 'wednesday 09:00-10:15'],
+    );
+  });
 });
