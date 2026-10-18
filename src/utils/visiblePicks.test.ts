@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { MAX_CANDIDATES } from './generatorPrefs';
-import { shouldClearVisiblePicks } from './visiblePicks';
+import { isAllControlDisabled, shouldClearVisiblePicks } from './visiblePicks';
 
 describe('visible course picks', () => {
   it('clears when every visible course is picked', () => {
@@ -18,5 +18,18 @@ describe('visible course picks', () => {
     assert.equal(visible.every((key) => capped.has(key)), false);
     assert.equal(shouldClearVisiblePicks(visible, capped), true);
     assert.equal(shouldClearVisiblePicks(visible, new Set(visible.slice(0, MAX_CANDIDATES - 1))), false);
+  });
+
+  it('keeps All disabled when the cap is full but none of the visible courses are picked', () => {
+    const picked = new Set(Array.from({ length: MAX_CANDIDATES }, (_, index) => `H${index + 1}`));
+    const visible = ['SEARCH 1', 'SEARCH 2'];
+    assert.equal(visible.some((key) => picked.has(key)), false);
+    assert.equal(shouldClearVisiblePicks(visible, picked), false);
+    assert.equal(isAllControlDisabled(visible, picked), true);
+
+    const oneVisible = new Set([...picked].slice(0, MAX_CANDIDATES - 1).concat('SEARCH 1'));
+    assert.equal(oneVisible.size, MAX_CANDIDATES);
+    assert.equal(shouldClearVisiblePicks(visible, oneVisible), true);
+    assert.equal(isAllControlDisabled(visible, oneVisible), false);
   });
 });
