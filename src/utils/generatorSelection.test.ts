@@ -40,12 +40,17 @@ describe('generator selection stays inside the pool', () => {
 });
 
 describe('saved picks survive a pool that has not loaded', () => {
-  it('keeps picked and pinned keys when the pool is empty and prunes once it has courses', () => {
-    const empty = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set());
-    assert.deepEqual(empty.picked, ['CS 101', 'MATH 201']);
-    assert.deepEqual(empty.pinned, ['CS 101']);
+  it('keeps picks before the pool loads and drops them all once an empty pool has loaded', () => {
+    const before = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set(), false);
+    assert.deepEqual(before.picked, ['CS 101', 'MATH 201']);
+    assert.deepEqual(before.pinned, ['CS 101']);
 
-    const loaded = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set(['MATH 201']));
+    const emptied = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set(), true);
+    assert.deepEqual(emptied.picked, []);
+    assert.deepEqual(emptied.pinned, []);
+    assert.equal(emptied.pickedCount, 0);
+
+    const loaded = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set(['MATH 201']), true);
     assert.deepEqual(loaded.picked, ['MATH 201']);
     assert.deepEqual(loaded.pinned, []);
   });

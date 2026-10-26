@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
@@ -128,11 +128,15 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
   const poolKeys = useMemo(() => new Set(groups.map((group) => group.key)), [groups]);
-  const poolLoaded = poolKeys.size > 0;
-  // An empty or not-yet-loaded pool must not erase saved picks, so only a loaded pool prunes.
+  // Saved picks must not be erased before the store has loaded, so only a loaded pool prunes.
+  const poolLoaded = useSyncExternalStore(
+    (onChange) => useScheduleStore.persist.onFinishHydration(onChange),
+    () => useScheduleStore.persist.hasHydrated(),
+    () => true,
+  );
   const selection = useMemo(
-    () => settledGeneratorSelection(picked, pinned, poolKeys),
-    [picked, pinned, poolKeys],
+    () => settledGeneratorSelection(picked, pinned, poolKeys, poolLoaded),
+    [picked, pinned, poolKeys, poolLoaded],
   );
   useEffect(() => {
     if (!poolLoaded) return;

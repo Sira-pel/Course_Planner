@@ -36,6 +36,8 @@ interface CourseModalProps {
   initialStartTime?: string;
   initialMode?: 'form' | 'quick';
   onModeChange?: (mode: 'form' | 'quick', editing: boolean) => void;
+  /** Called after Quick Add with how many courses were really added to the plan. */
+  onQuickAdded?: (added: number) => void;
 }
 
 const CLOSE_MS = 150;
@@ -65,6 +67,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   initialStartTime = '09:00',
   initialMode = 'form',
   onModeChange,
+  onQuickAdded,
 }) => {
   const suppressFocusRestoreRef = useContext(SuppressFocusRestoreContext);
   const onModeChangeRef = useRef(onModeChange);
@@ -518,7 +521,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       setError('Select at least one recognized course, or paste a syllabus line.');
       return;
     }
-    bulkAddCourses(selectedCourses, effectivePlanId);
+    const added = bulkAddCourses(selectedCourses, effectivePlanId);
+    onQuickAdded?.(added);
     onClose();
   };
 

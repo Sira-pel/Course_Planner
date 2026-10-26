@@ -91,8 +91,10 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
           courseIdentityKey(c.code, c.section) === oldKey || c.id === updatedCourse.id;
         // Plans keep their course colors distinct, so the pool color only carries over
         // when no other course in this plan already uses it.
-        const newColor = updatedCourse.color.toLowerCase();
-        const colorTaken = p.courses.some((c) => !isTarget(c) && c.color.toLowerCase() === newColor);
+        const newColor = (updatedCourse.color ?? '').toLowerCase();
+        const colorTaken = p.courses.some(
+          (c) => !isTarget(c) && (c.color ?? '').toLowerCase() === newColor
+        );
         return {
           ...p,
           courses: p.courses.map((c) => {

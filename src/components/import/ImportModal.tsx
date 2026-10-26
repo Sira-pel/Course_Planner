@@ -214,7 +214,9 @@ const ImportModalBody: React.FC<{
             >
               <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>
-                Successfully imported {successBanner.count} courses into {successBanner.destination}! Closing...
+                {successBanner.count === 0
+                  ? 'Already in this plan. Closing...'
+                  : `Successfully imported ${successBanner.count} ${successBanner.count === 1 ? 'course' : 'courses'} into ${successBanner.destination}! Closing...`}
               </span>
             </motion.div>
           )}

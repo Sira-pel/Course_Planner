@@ -38,16 +38,17 @@ export function liveGeneratorSelection(
 }
 
 /**
- * Same as liveGeneratorSelection, but an empty pool means the courses have not loaded
- * yet, so saved picks are kept as they are instead of being erased.
+ * Same as liveGeneratorSelection, but before the pool has loaded saved picks are kept
+ * as they are. Once it has loaded, an empty pool really is empty and drops every pick.
  */
 export function settledGeneratorSelection(
   picked: Iterable<string>,
   pinned: Iterable<string>,
   poolKeys: ReadonlySet<string>,
+  poolLoaded: boolean,
   maxCandidates = MAX_CANDIDATES,
 ): GeneratorSelection {
-  if (poolKeys.size > 0) return liveGeneratorSelection(picked, pinned, poolKeys, maxCandidates);
+  if (poolLoaded) return liveGeneratorSelection(picked, pinned, poolKeys, maxCandidates);
   const keptPicked = [...picked];
   const keptPinned = [...pinned];
   return liveGeneratorSelection(keptPicked, keptPinned, new Set([...keptPicked, ...keptPinned]), maxCandidates);

@@ -205,6 +205,22 @@ describe('updateCourse keeps plans and the pool in step', () => {
     assert.equal(catalogCourses[0].color, '#EF4444');
   });
 
+  it('updateCatalogCourse recolors plans that hold a course saved without a color', () => {
+    const noColor = { ...course('c2', 'MATH 200', '001') } as Partial<Course>;
+    delete noColor.color;
+    seed(
+      [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001'), noColor as Course] }],
+      [course('cat_c1', 'CS 101', '001')],
+    );
+
+    useScheduleStore.getState().updateCatalogCourse({
+      ...course('cat_c1', 'CS 101', '001'),
+      color: '#EF4444',
+    });
+
+    assert.equal(useScheduleStore.getState().plans[0].courses[0].color, '#EF4444');
+  });
+
   it('bulkAddCourses returns how many courses it actually added', () => {
     seed(
       [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] }],
