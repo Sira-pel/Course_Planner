@@ -1,0 +1,6 @@
+{
+  "name": "Uniplan",
+  "description": "University course schedule builder, scenario planner with multi-plan ghost comparison, collision detector, and calendar exporter.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
