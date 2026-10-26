@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000",
+    "dev:phone": "vite --port=3000 --host",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
@@ -13,9 +14,10 @@
     "test:e2e": "tsx --test e2e/*.test.ts"
   },
   "dependencies": {
+    "@firebase/app": "0.16.2",
+    "@firebase/auth": "1.13.6",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "firebase": "^12.19.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",

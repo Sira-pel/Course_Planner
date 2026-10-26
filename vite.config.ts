@@ -116,9 +116,9 @@ export default defineConfig(() => {
             },
           ],
         },
+        // The service worker only runs in the production build. In dev it can serve stale files.
         devOptions: {
-          enabled: true,
-          type: 'module',
+          enabled: false,
         },
       }),
     ],
@@ -133,7 +133,7 @@ export default defineConfig(() => {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom', 'react-dom/client'],
-            firebase: ['firebase/app', 'firebase/auth'],
+            firebase: ['@firebase/app', '@firebase/auth'],
             xlsx: ['xlsx'],
             motion: ['motion'],
           },

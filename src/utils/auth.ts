@@ -4,7 +4,7 @@ import {
   getApp,
   FirebaseError,
   type FirebaseOptions,
-} from 'firebase/app';
+} from '@firebase/app';
 import {
   getAuth,
   signInWithPopup,
@@ -13,7 +13,7 @@ import {
   type Auth,
   type User,
   type Unsubscribe,
-} from 'firebase/auth';
+} from '@firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { clearAccessToken, getUsableAccessToken, rememberAccessToken } from './authToken';
 
