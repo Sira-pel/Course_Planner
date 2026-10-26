@@ -1486,6 +1486,31 @@ function splitScheduleSegments(scheduleRaw: string): string[] {
 }
 
 /**
+ * Weekdays for a Start/End pair come from the Schedule meeting with that same time.
+ * With no matching meeting, the whole cell counts only when it holds a single meeting.
+ */
+function daysFromScheduleForRange(
+  scheduleRaw: string,
+  range: { start: string; end: string }
+): DayOfWeek[] {
+  const segments = splitScheduleSegments(scheduleRaw);
+  const matched: DayOfWeek[] = [];
+  for (const segment of segments) {
+    const parsed = parseScheduleString(segment);
+    if (!parsed?.startTime || !parsed.endTime) continue;
+    if (
+      timeToMinutes(parsed.startTime) !== timeToMinutes(range.start) ||
+      timeToMinutes(parsed.endTime) !== timeToMinutes(range.end)
+    ) {
+      continue;
+    }
+    for (const day of parsed.days) if (!matched.includes(day)) matched.push(day);
+  }
+  if (matched.length > 0) return matched;
+  return segments.length === 1 ? extractDays(scheduleRaw) : [];
+}
+
+/**
  * Days and times stay in their own columns. A time-only schedule cell must not
  * invent Monday, and a missing or impossible clock must not become 09:00-10:15.
  */
@@ -1523,7 +1548,9 @@ function resolveRowMeetings(
   if (startEndRange) {
     let days = explicitDays.length > 0 ? explicitDays : extractDays(`${startRaw} ${endRaw}`);
     // Start and End have the clock, but the weekdays may live only in Schedule.
-    if (days.length === 0 && !mapping.days && scheduleRaw) days = extractDays(scheduleRaw);
+    if (days.length === 0 && !mapping.days && scheduleRaw) {
+      days = daysFromScheduleForRange(scheduleRaw, startEndRange);
+    }
     if (days.length === 0) {
       return { meetings: [], problem: 'is missing days' };
     }

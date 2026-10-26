@@ -183,7 +183,7 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
     },
 
     bulkAddCourses: (newCourses: Course[], targetPlanId?: string) => {
-      if (newCourses.length === 0) return;
+      if (newCourses.length === 0) return 0;
       const state = get();
       const targetId = targetPlanId || state.activePlanId;
       const targetPlan = state.plans.find((plan) => plan.id === targetId);
@@ -228,12 +228,13 @@ export function createCourseSlice(set: StoreSet, get: StoreGet): Pick<
           currentCatalog.push({ ...c, id: c.id.startsWith('cat_') ? c.id : `cat_${c.id}` });
         }
       }
-      if (coloredCourses.length === 0 && !catalogChanged) return;
+      if (coloredCourses.length === 0 && !catalogChanged) return 0;
 
       commitWithHistory(set, get, {
         plans: updatedPlans,
         catalogCourses: currentCatalog,
       });
+      return targetPlan ? coloredCourses.length : 0;
     },
 
     getNextColor: (targetPlanId?: string) => {

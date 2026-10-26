@@ -58,7 +58,8 @@ export interface ScheduleState {
   addCourse: (course: Course, targetPlanId?: string) => void;
   updateCourse: (course: Course, targetPlanId?: string) => void;
   deleteCourse: (courseId: string, targetPlanId?: string) => void;
-  bulkAddCourses: (newCourses: Course[], targetPlanId?: string) => void;
+  /** Returns how many courses were actually added to the plan. */
+  bulkAddCourses: (newCourses: Course[], targetPlanId?: string) => number;
   getNextColor: (targetPlanId?: string) => string;
 
   // Catalog Pool actions

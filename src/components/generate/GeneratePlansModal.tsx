@@ -31,7 +31,7 @@ import {
 } from '../../utils/motion';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import { timeToMinutes } from '../../utils/timeUtils';
-import { liveGeneratorSelection } from '../../utils/generatorSelection';
+import { settledGeneratorSelection } from '../../utils/generatorSelection';
 import { shouldClearVisiblePicks } from '../../utils/visiblePicks';
 import {
   creditBounds,
@@ -128,12 +128,17 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
   const poolKeys = useMemo(() => new Set(groups.map((group) => group.key)), [groups]);
+  const poolLoaded = poolKeys.size > 0;
+  // An empty or not-yet-loaded pool must not erase saved picks, so only a loaded pool prunes.
   const selection = useMemo(
-    () => liveGeneratorSelection(picked, pinned, poolKeys),
+    () => settledGeneratorSelection(picked, pinned, poolKeys),
     [picked, pinned, poolKeys],
   );
-  if (selection.picked.length !== picked.size) setPicked(new Set(selection.picked));
-  if (selection.pinned.length !== pinned.size) setPinned(new Set(selection.pinned));
+  useEffect(() => {
+    if (!poolLoaded) return;
+    if (selection.picked.length !== picked.size) setPicked(new Set(selection.picked));
+    if (selection.pinned.length !== pinned.size) setPinned(new Set(selection.pinned));
+  }, [poolLoaded, selection, picked.size, pinned.size]);
   const activePicked = useMemo(() => new Set(selection.picked), [selection]);
   const activePinned = useMemo(() => new Set(selection.pinned), [selection]);
   const filteredGroups = useMemo(

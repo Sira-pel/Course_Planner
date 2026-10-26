@@ -111,7 +111,7 @@ const ImportModalBody: React.FC<{
   };
 
   const handleImportToPlanAndPool = (courses: Course[], planId: string) => {
-    bulkAddCourses(courses, planId);
+    return bulkAddCourses(courses, planId);
   };
 
   const handleImportToNewPlan = (courses: Course[], name: string) => {

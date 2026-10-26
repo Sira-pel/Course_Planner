@@ -631,4 +631,44 @@ describe('excel schedule cells and column mapping', () => {
       ['monday 09:00-10:15', 'wednesday 09:00-10:15'],
     );
   });
+  it('takes weekdays only from the Schedule meeting that matches Start and End', () => {
+    const rows = [
+      ['Course', 'Title', 'Section', 'Schedule', 'Start Time', 'End Time'],
+      ['COSC 221', 'CS B', '001', 'MW 09:00-10:15, F 11:00-12:00', '09:00', '10:15'],
+    ];
+    const analyzed = analyzeTabularRows(rows);
+    const parsed = parseExcelRowsToCourses(analyzed.rawRows, analyzed.dataStartRow, analyzed.detectedMapping);
+    const course = parsed.courses.find((item) => item.code === 'COSC 221');
+    assert.ok(course);
+    assert.deepEqual(
+      course.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['monday 09:00-10:15', 'wednesday 09:00-10:15'],
+    );
+  });
+
+  it('reports missing days when Start and End match none of several Schedule meetings', () => {
+    const rows = [
+      ['Course', 'Title', 'Section', 'Schedule', 'Start Time', 'End Time'],
+      ['COSC 221', 'CS B', '001', 'MW 09:00-10:15, F 11:00-12:00', '13:00', '14:15'],
+    ];
+    const analyzed = analyzeTabularRows(rows);
+    const parsed = parseExcelRowsToCourses(analyzed.rawRows, analyzed.dataStartRow, analyzed.detectedMapping);
+    assert.equal(parsed.courses.some((item) => item.code === 'COSC 221' && item.sessions.length > 0), false);
+    assert.equal(parsed.issues.some((issue) => /missing days/i.test(issue.message)), true);
+  });
+
+  it('uses the whole Schedule cell when it holds a single meeting at a different time', () => {
+    const rows = [
+      ['Course', 'Title', 'Section', 'Schedule', 'Start Time', 'End Time'],
+      ['COSC 221', 'CS B', '001', 'MW 09:00-10:15', '13:00', '14:15'],
+    ];
+    const analyzed = analyzeTabularRows(rows);
+    const parsed = parseExcelRowsToCourses(analyzed.rawRows, analyzed.dataStartRow, analyzed.detectedMapping);
+    const course = parsed.courses.find((item) => item.code === 'COSC 221');
+    assert.ok(course);
+    assert.deepEqual(
+      course.sessions.map((session) => `${session.day} ${session.startTime}-${session.endTime}`),
+      ['monday 13:00-14:15', 'wednesday 13:00-14:15'],
+    );
+  });
 });

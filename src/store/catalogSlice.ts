@@ -87,6 +87,12 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
         if (wouldCollide) return p;
 
         const colorChanged = oldCat.color !== updatedCourse.color;
+        const isTarget = (c: Course) =>
+          courseIdentityKey(c.code, c.section) === oldKey || c.id === updatedCourse.id;
+        // Plans keep their course colors distinct, so the pool color only carries over
+        // when no other course in this plan already uses it.
+        const newColor = updatedCourse.color.toLowerCase();
+        const colorTaken = p.courses.some((c) => !isTarget(c) && c.color.toLowerCase() === newColor);
         return {
           ...p,
           courses: p.courses.map((c) => {
@@ -97,7 +103,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
               return {
                 ...updatedCourse,
                 id: c.id,
-                color: colorChanged ? updatedCourse.color : (c.color || updatedCourse.color),
+                color: colorChanged && !colorTaken ? updatedCourse.color : (c.color || updatedCourse.color),
                 sessions: updatedCourse.sessions.map((s, idx) => ({
                   ...s,
                   id: `s_${c.id}_${idx}`,

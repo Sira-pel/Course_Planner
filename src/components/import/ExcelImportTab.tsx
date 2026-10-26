@@ -38,7 +38,7 @@ interface ExcelImportTabProps {
   activePlan: SchedulePlan;
   newPlanName: string;
   onImportToPool: (courses: Course[]) => void;
-  onImportToPlanAndPool: (courses: Course[], planId: string) => void;
+  onImportToPlanAndPool: (courses: Course[], planId: string) => number;
   onImportToNewPlan: (courses: Course[], planName: string) => void;
   onSuccess: (count: number, destination: string) => void;
 }
@@ -377,8 +377,8 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     const toImport = coursesToImport;
 
     if (destination === 'active') {
-      onImportToPlanAndPool(toImport, activePlan.id);
-      onSuccess(toImport.length, `Course Pool & ${activePlan.name}`);
+      const added = onImportToPlanAndPool(toImport, activePlan.id);
+      onSuccess(added, `Course Pool & ${activePlan.name}`);
     } else if (destination === 'new') {
       onImportToNewPlan(toImport, newPlanName);
       onSuccess(toImport.length, `Course Pool & ${newPlanName}`);

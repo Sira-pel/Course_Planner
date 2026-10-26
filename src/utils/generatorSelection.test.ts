@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { MAX_CANDIDATES } from './generatorPrefs';
-import { liveGeneratorSelection } from './generatorSelection';
+import { liveGeneratorSelection, settledGeneratorSelection } from './generatorSelection';
 
 describe('generator selection stays inside the pool', () => {
   it('drops picked and pinned keys that are no longer in the pool and sizes the plan from what remains', () => {
@@ -36,5 +36,17 @@ describe('generator selection stays inside the pool', () => {
     assert.equal(capped.atCap, true);
     assert.equal(capped.courseMin, 2);
     assert.equal(capped.courseMax, MAX_CANDIDATES);
+  });
+});
+
+describe('saved picks survive a pool that has not loaded', () => {
+  it('keeps picked and pinned keys when the pool is empty and prunes once it has courses', () => {
+    const empty = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set());
+    assert.deepEqual(empty.picked, ['CS 101', 'MATH 201']);
+    assert.deepEqual(empty.pinned, ['CS 101']);
+
+    const loaded = settledGeneratorSelection(['CS 101', 'MATH 201'], ['CS 101'], new Set(['MATH 201']));
+    assert.deepEqual(loaded.picked, ['MATH 201']);
+    assert.deepEqual(loaded.pinned, []);
   });
 });
