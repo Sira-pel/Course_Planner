@@ -112,4 +112,4 @@ The same lint, test, and build steps run in GitHub Actions on every pull request
 
 ## License
 
-[Apache 2.0](LICENSE)
+Copyright 2026 Sirapel. Licensed under the [Apache License 2.0](LICENSE).
