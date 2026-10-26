@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { User } from '@firebase/auth';
 import { AlertCircle, Calendar, CheckCircle2, RefreshCw, X } from 'lucide-react';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { SchedulePlan } from '../types/schedule';

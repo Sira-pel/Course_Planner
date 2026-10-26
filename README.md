@@ -18,7 +18,7 @@ Course schedule planner for university students. Plan multiple scenarios, check 
   - Excel and calendar imports can stay in the course pool, enroll in the open plan, or start a new empty plan. The pool still receives the courses. One undo removes a plan created this way.
   - Friend share links.
   - JSON backup files.
-- **Generate plans**: From the course pool, tick candidate courses and pin must-takes. Uniplan tries section mixes on your device, drops time clashes, and shows a few ranked plans. Lunch is any free stretch of the length you choose inside the window you set. Saving a result creates a normal plan and leaves the pool and your other plans unchanged.
+- **Generate plans**: From the course pool, tick candidate courses and pin must-takes. Uniplan tries section mixes on your device (up to 15 candidate courses), drops time clashes, and shows a few ranked plans. A course that has no usable section under your filters is left out and listed, instead of blocking the rest. Lunch is any free stretch of the length you choose inside the window you set. Saving a result creates a normal plan and leaves the pool and your other plans unchanged.
 - **Export**:
   - Direct Google Calendar sync via Google OAuth (creates or updates a `{Plan} - Uniplan` calendar).
   - `.ics` calendar files (Google Calendar, Apple Calendar, Outlook).
@@ -29,7 +29,7 @@ Course schedule planner for university students. Plan multiple scenarios, check 
 - **Course scratchpad pool**: Save alternate sections and electives in a sidebar pool so you can swap them between plans without retyping. Generate plans from the courses already in the pool.
 - **Keyboard navigation & custom shortcuts**: Keyboard controls for common actions, plus a built-in shortcut rebind editor (`?`).
 - **PWA support**: Installable on mobile and desktop via `vite-plugin-pwa`, with bottom dock navigation and offline caching.
-- **Theme support**: Dark mode with circular reveal transition.
+- **Light and dark themes**: One indigo accent in both, with a circular reveal transition when you switch.
 - **Undo / Redo**: History support (`Ctrl+Z` / `Ctrl+Y`) across schedule edits.
 
 ---
@@ -64,7 +64,7 @@ Press `?` inside the app to see all shortcuts or rebind them.
 - Tailwind CSS v4
 - Zustand v5 (state management + localStorage persistence)
 - SheetJS (`xlsx`) for spreadsheet imports
-- Firebase v12 (Google Auth) & Google Calendar API
+- Firebase Auth (`@firebase/app`, `@firebase/auth`) & Google Calendar API
 - Motion for transitions
 - `vite-plugin-pwa`
 - Lucide React
@@ -74,7 +74,7 @@ Press `?` inside the app to see all shortcuts or rebind them.
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ (Node 20+ recommended)
+- Node.js 22 (what CI and the production build use; `package.json` declares it)
 - npm
 
 ### Setup
@@ -86,24 +86,30 @@ npm install
 npm run dev
 ```
 
-App runs on `http://localhost:3000`.
+App runs on `http://localhost:3000`. It is only reachable from your own computer; use `npm run dev:phone` to open it to your network, for example to test on a phone.
 
-### Build & Typecheck
+### Check, test, build
 ```bash
 npm run lint      # type check with tsc
+npm test          # unit tests
 npm run build     # production build
 npm run preview   # preview production build locally
 ```
+
+`npm run test:e2e` runs a browser test that needs Chrome (set `CHROME_PATH` if it is not found).
+
+The same lint, test, and build steps run in GitHub Actions on every pull request, plus a non-blocking `npm audit`.
 
 ---
 
 ## Privacy & Storage
 
 - **Local by default**: All plans, courses, and settings are saved in browser `localStorage`. There is no tracking database or custom backend collecting your data.
-- **Google Calendar sync**: If you use the Google Calendar sync feature, OAuth tokens and schedule entries are sent directly to Google's API to manage your Uniplan calendar. Syncing is optional; `.ics` export works completely offline.
+- **One browser, no sync**: Data lives in the browser you used. A new device, a private window, or cleared site data starts empty. To keep or move your plans, use the JSON backup (Import / Export, Save backup) or send a share link.
+- **Google Calendar sync**: If you use the Google Calendar sync feature, OAuth tokens and schedule entries are sent directly to Google's API to manage your Uniplan calendar. Syncing is optional; `.ics` export works completely offline. Google sign-in uses the Firebase project in `firebase-applet-config.json`; if you deploy under another domain, add it to Firebase's authorized domains.
 
 ---
 
 ## License
 
-[Apache 2.0](LICENSE)
+Copyright 2026 Sirapel. Licensed under the [Apache License 2.0](LICENSE).
