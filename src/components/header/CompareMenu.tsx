@@ -176,7 +176,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                     className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
                       isGhosted
                         ? 'font-medium bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                        : 'text-slate-500 dark:text-slate-500'
+                        : 'text-slate-500'
                     }`}
                   >
                     {isGhosted && <Check className="w-2.5 h-2.5 stroke-[2.5]" />}

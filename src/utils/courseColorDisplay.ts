@@ -186,6 +186,20 @@ for (const hex of COURSE_COLORS) {
   if (rgb) PRESET_PAINT.set(hex.toLowerCase(), paint(rgb));
 }
 
+const PRESET_BY_DISPLAY = new Map<string, string>();
+for (const hex of COURSE_COLORS) {
+  const shown = PRESET_DISPLAY[hex.toLowerCase()];
+  if (shown) PRESET_BY_DISPLAY.set(shown.toLowerCase(), hex);
+}
+
+/**
+ * The stored preset for a color that is the shade a preset is drawn in, such as the
+ * color an exported calendar carries. Any other value comes back unchanged.
+ */
+export function storedCourseColor(hex: string): string {
+  return PRESET_BY_DISPLAY.get((hex || '').trim().toLowerCase()) ?? hex;
+}
+
 /**
  * Preset swatches use the softened palette. Any other hex, including a custom
  * color from the picker, is painted exactly as stored in both themes.

@@ -306,7 +306,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Details</span>
             <span className="flex items-center gap-2 min-w-0">
               {!detailsOpen && detailsSummary && (
-                <span className="text-[11px] text-slate-500 dark:text-slate-500 truncate">{detailsSummary}</span>
+                <span className="text-[11px] text-slate-500 truncate">{detailsSummary}</span>
               )}
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"
