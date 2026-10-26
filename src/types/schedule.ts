@@ -67,19 +67,20 @@ export const COURSE_COLORS: string[] = [
   '#C07D3E', // Caramel Bronze
 ];
 
+// Names describe the color a course is shown in. Keys stay the stored hex values.
 export const COURSE_COLOR_NAMES: Record<string, string> = {
-  '#3B82F6': 'Blue',
-  '#10B981': 'Emerald Green',
-  '#F97316': 'Tangerine Orange',
-  '#8B5CF6': 'Royal Purple',
-  '#EF4444': 'Coral Red',
-  '#F59E0B': 'Golden Amber',
-  '#14B8A6': 'Pine Teal',
-  '#EC4899': 'Rose Pink',
-  '#84CC16': 'Lime Green',
-  '#F43F5E': 'Warm Rose',
-  '#64748B': 'Slate Grey',
-  '#C07D3E': 'Caramel Bronze',
+  '#3B82F6': 'Sky Blue',
+  '#10B981': 'Green',
+  '#F97316': 'Orange',
+  '#8B5CF6': 'Violet',
+  '#EF4444': 'Rose Pink',
+  '#F59E0B': 'Amber',
+  '#14B8A6': 'Teal',
+  '#EC4899': 'Magenta',
+  '#84CC16': 'Lime',
+  '#F43F5E': 'Lavender',
+  '#64748B': 'Slate',
+  '#C07D3E': 'Bronze',
 };
 
 // Maps legacy darker / overly saturated shades to the lighter, softer palette colors

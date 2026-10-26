@@ -9,6 +9,7 @@ import {
   parseLocalDate,
   sessionTimesAreValid,
 } from './calendarDates';
+import { displayCourseColor } from './courseColorDisplay';
 import { displayCourseTitle } from './courseIdentity';
 import { randomId } from './id';
 
@@ -137,14 +138,18 @@ export function generateIcsCalendar(
     `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
   ];
 
+  // Calendars get the color the course is drawn in, so it matches what the user sees in the app.
+  const shownColor = (color: string) => displayCourseColor(color).bg;
+
   if (singleCourse && singleCourse.color) {
-    lines.push(`COLOR:${singleCourse.color}`);
-    lines.push(`X-APPLE-CALENDAR-COLOR:${singleCourse.color}`);
-    lines.push(`X-OUTLOOK-COLOR:${singleCourse.color}`);
-    lines.push(`X-COLOR:${singleCourse.color}`);
+    const color = shownColor(singleCourse.color);
+    lines.push(`COLOR:${color}`);
+    lines.push(`X-APPLE-CALENDAR-COLOR:${color}`);
+    lines.push(`X-OUTLOOK-COLOR:${color}`);
+    lines.push(`X-COLOR:${color}`);
   } else if (targetCourses.length > 0 && targetCourses[0].color) {
     // Set fallback calendar default color to the first course's color
-    lines.push(`X-APPLE-CALENDAR-COLOR:${targetCourses[0].color}`);
+    lines.push(`X-APPLE-CALENDAR-COLOR:${shownColor(targetCourses[0].color)}`);
   }
 
   const now = new Date();
@@ -224,7 +229,8 @@ export function generateIcsCalendar(
       if (!dtStart || !dtEnd) continue;
 
       const codeSec = course.section ? `${course.code}-${course.section}` : course.code;
-      const colorPrefix = includeColorEmoji && course.color ? `${getColorEmoji(course.color)} ` : '';
+      const courseColor = course.color ? shownColor(course.color) : '';
+      const colorPrefix = includeColorEmoji && courseColor ? `${getColorEmoji(courseColor)} ` : '';
       const visibleTitle = displayCourseTitle(course);
       const summary = escapeIcsText(`${colorPrefix}${codeSec}${visibleTitle ? ` ${visibleTitle}` : ''}`.trim());
 
@@ -232,7 +238,7 @@ export function generateIcsCalendar(
       if (course.instructor) descParts.push(`Instructor: ${course.instructor}`);
       if (course.credits) descParts.push(`Credits: ${course.credits}`);
       if (bundle.room) descParts.push(`Room: ${bundle.room}`);
-      if (course.color) descParts.push(`Color: ${course.color}`);
+      if (courseColor) descParts.push(`Color: ${courseColor}`);
       const description = escapeIcsText(descParts.join(' | '));
       const location = escapeIcsText(bundle.room);
 
@@ -249,11 +255,11 @@ export function generateIcsCalendar(
       lines.push(`SUMMARY:${summary}`);
 
       // Full cross-platform color preservation (RFC 7986, Apple Calendar, Outlook, generic)
-      if (course.color) {
-        lines.push(`COLOR:${course.color}`);
-        lines.push(`X-APPLE-CALENDAR-COLOR:${course.color}`);
-        lines.push(`X-OUTLOOK-COLOR:${course.color}`);
-        lines.push(`X-COLOR:${course.color}`);
+      if (courseColor) {
+        lines.push(`COLOR:${courseColor}`);
+        lines.push(`X-APPLE-CALENDAR-COLOR:${courseColor}`);
+        lines.push(`X-OUTLOOK-COLOR:${courseColor}`);
+        lines.push(`X-COLOR:${courseColor}`);
       }
       lines.push(`CATEGORIES:${escapeIcsText(course.code)}`);
 
