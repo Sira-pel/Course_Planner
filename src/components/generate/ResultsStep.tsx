@@ -96,7 +96,20 @@ export function ResultsStep({
     />
   ) : null;
 
+  const leftOut = result.leftOut ?? [];
+  const leftOutNotice = (items: { code: string; reason: string }[]) => items.length > 0 && (
+    <div className="up-gen-notice" role="status">
+      <div className="up-gen-notice-copy">
+        {items.map((item) => (
+          <p key={item.code}>{item.reason}, so it was left out.</p>
+        ))}
+      </div>
+    </div>
+  );
+
   if (result.plans.length === 0) {
+    // The reason line already names a left-out course when that is why nothing fits.
+    const unmentioned = leftOut.filter((item) => !(result.emptyReason ?? '').includes(item.reason));
     return (
       <div className="up-gen-step-body">
         {running && <SearchProgress checked={checked} />}
@@ -108,6 +121,7 @@ export function ResultsStep({
           </div>
         )}
         {deeper}
+        {leftOutNotice(unmentioned)}
         <div className="up-gen-reason" role="status">
           <h3>Nothing fits</h3>
           <p>{result.emptyReason || 'No clash-free mix fits these courses and filters.'}</p>
@@ -117,7 +131,6 @@ export function ResultsStep({
   }
 
   const notices = result.dayOffNotices;
-  const leftOut = result.leftOut ?? [];
   const savedByKey = new Map<string, { id: string; name: string }>();
   for (const plan of plans) {
     savedByKey.set(sectionSetKey(plan.courses), { id: plan.id, name: plan.name });
@@ -132,15 +145,7 @@ export function ResultsStep({
           </div>
         </div>
       )}
-      {leftOut.length > 0 && (
-        <div className="up-gen-notice" role="status">
-          <div className="up-gen-notice-copy">
-            {leftOut.map((item) => (
-              <p key={item.code}>{item.reason}, so it was left out.</p>
-            ))}
-          </div>
-        </div>
-      )}
+      {leftOutNotice(leftOut)}
       {notices.length > 0 && !noticeDismissed && (
         <div className="up-gen-notice" role="status">
           <div className="up-gen-notice-copy">

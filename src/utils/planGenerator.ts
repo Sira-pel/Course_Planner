@@ -675,11 +675,11 @@ class PlanSearch implements GeneratorSearch {
       if (!this.emptyReason && this.leftOut.length > 0 && this.prefs.mode === 'courses' && pins.length + optional.length < this.prefs.courseCount) {
         this.emptyReason = this.leftOut.map((item) => item.reason).join('; ');
       }
-      if (!this.emptyReason) {
-        this.emptyReason = this.prefs.mode === 'credits'
-          ? 'No mix of at least 2 courses fits that credit range.'
-          : 'No course set fits that plan size.';
+      if (!this.emptyReason && this.prefs.mode === 'credits') {
+        const dropped = this.leftOut.map((item) => `${item.reason}, so it was left out.`);
+        this.emptyReason = ['No mix of at least 2 courses fits that credit range.', ...dropped].join(' ');
       }
+      if (!this.emptyReason) this.emptyReason = 'No course set fits that plan size.';
       this.done = true;
       return;
     }

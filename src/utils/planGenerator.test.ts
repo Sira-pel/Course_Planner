@@ -554,6 +554,23 @@ describe('plan generator', () => {
       assert.equal(res.emptyReason, 'X has no section left after exclusions');
     });
 
+    it('names the left-out course when a credit range fits nothing', () => {
+      const res = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'tuesday')]),
+          group('B', [section('b', 'B', '09:00', '10:00', '001', 'wednesday')]),
+          group('X', [section('x', 'X', '11:00', '12:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ mode: 'credits', creditMin: 20, creditMax: 24, excludedSectionIds: ['x'] }),
+      });
+      assert.equal(res.plans.length, 0);
+      assert.equal(
+        res.emptyReason,
+        'No mix of at least 2 courses fits that credit range. X has no section left after exclusions, so it was left out.',
+      );
+    });
+
     it('explains plan size mismatches and credit range bounds', () => {
       const resPinsOver = generatePlans({
         groups: [
