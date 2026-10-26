@@ -725,6 +725,10 @@ export default function App() {
           initialStartTime={modalInitialStartTime}
           initialMode={modalInitialMode}
           onModeChange={handleCourseModeChange}
+          onQuickAdded={(added) => showToast(
+            added === 0 ? 'Already in this plan' : `Added ${added} ${added === 1 ? 'course' : 'courses'}`,
+            added === 0 ? 'info' : 'success',
+          )}
         />
       </DeferredDialog>
 

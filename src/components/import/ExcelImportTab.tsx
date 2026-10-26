@@ -26,6 +26,8 @@ import {
   parseExcelRowsToCourses,
   parseDelimitedText,
   SpreadsheetRejectedError,
+  applyManualColumnMapping,
+  EXCEL_MAPPING_FIELDS,
   type ColumnMapping,
   type ExcelWorkbook,
   type ExcelWorkbookData,
@@ -35,32 +37,11 @@ import { ImportDestinationSelect, type ImportDestination } from './ImportDestina
 interface ExcelImportTabProps {
   activePlan: SchedulePlan;
   newPlanName: string;
-  onImportToPool: (courses: Course[]) => void;
-  onImportToPlanAndPool: (courses: Course[], planId: string) => void;
-  onImportToNewPlan: (courses: Course[], planName: string) => void;
+  onImportToPool: (courses: Course[]) => number;
+  onImportToPlanAndPool: (courses: Course[], planId: string) => number;
+  onImportToNewPlan: (courses: Course[], planName: string) => number;
   onSuccess: (count: number, destination: string) => void;
 }
-
-interface FieldDef {
-  field: keyof ColumnMapping;
-  label: string;
-  required: boolean;
-  hint: string;
-}
-
-const PRIMARY_FIELDS: FieldDef[] = [
-  { field: 'code', label: 'Course Code / ID', required: true, hint: 'e.g. ICT 304, CS 101' },
-  { field: 'subject', label: 'Subject / Dept (Optional)', required: false, hint: 'e.g. CS, MATH, BIO' },
-  { field: 'courseNum', label: 'Course # (Optional)', required: false, hint: 'e.g. 101, 2040, 380' },
-  { field: 'name', label: 'Course Name / Title', required: true, hint: 'e.g. Mobile App Dev' },
-  { field: 'schedule', label: 'Schedule (Days & Times)', required: false, hint: 'e.g. (H) 01:45PM - 03:15PM TTH' },
-  { field: 'days', label: 'Days (Separate)', required: false, hint: 'e.g. MWF, TTH, Mon/Wed' },
-  { field: 'time', label: 'Time Range (Separate)', required: false, hint: 'e.g. 08:30AM - 10:00AM' },
-  { field: 'section', label: 'Section', required: false, hint: 'e.g. 001, 101, A' },
-  { field: 'instructor', label: 'Professor / Instructor', required: false, hint: 'e.g. Kabin Antony' },
-  { field: 'credits', label: 'Credits', required: false, hint: 'e.g. 3, 4' },
-  { field: 'room', label: 'Room / Location', required: false, hint: 'e.g. TBD, Hall 101' },
-];
 
 interface CourseRowProps {
   course: Course;
@@ -309,7 +290,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   };
 
   const handleMappingChange = useCallback((field: keyof ColumnMapping, colKey: string) => {
-    setActiveMapping((prev) => (prev ? { ...prev, [field]: colKey } : null));
+    setActiveMapping((prev) => (prev ? applyManualColumnMapping(prev, field, colKey) : null));
   }, []);
 
   // Re-parse whenever raw rows, data start row, or mapping changes
@@ -396,14 +377,14 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     const toImport = coursesToImport;
 
     if (destination === 'active') {
-      onImportToPlanAndPool(toImport, activePlan.id);
-      onSuccess(toImport.length, `Course Pool & ${activePlan.name}`);
+      const added = onImportToPlanAndPool(toImport, activePlan.id);
+      onSuccess(added, `Course Pool & ${activePlan.name}`);
     } else if (destination === 'new') {
-      onImportToNewPlan(toImport, newPlanName);
-      onSuccess(toImport.length, `Course Pool & ${newPlanName}`);
+      const kept = onImportToNewPlan(toImport, newPlanName);
+      onSuccess(kept, `Course Pool & ${newPlanName}`);
     } else {
-      onImportToPool(toImport);
-      onSuccess(toImport.length, 'Course Pool');
+      const added = onImportToPool(toImport);
+      onSuccess(added, 'Course Pool');
     }
 
     setIsImporting(false);
@@ -629,7 +610,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                {PRIMARY_FIELDS.map((f) => {
+                {EXCEL_MAPPING_FIELDS.map((f) => {
                   const currentVal = activeMapping[f.field] || '';
                   return (
                     <div
