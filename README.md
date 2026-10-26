@@ -74,7 +74,7 @@ Press `?` inside the app to see all shortcuts or rebind them.
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+ (CI runs Node 22)
+- Node.js 22 (what CI and the production build use; `package.json` declares it)
 - npm
 
 ### Setup
