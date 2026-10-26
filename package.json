@@ -15,8 +15,8 @@
     "test:e2e": "tsx --test e2e/*.test.ts"
   },
   "dependencies": {
-    "@firebase/app": "0.16.2",
-    "@firebase/auth": "1.13.6",
+    "@firebase/app": "^0.16.2",
+    "@firebase/auth": "^1.13.6",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "lucide-react": "^0.546.0",
