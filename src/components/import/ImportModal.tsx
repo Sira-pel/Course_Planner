@@ -107,7 +107,7 @@ const ImportModalBody: React.FC<{
   );
 
   const handleImportToPool = (courses: Course[]) => {
-    bulkAddToCatalog(courses);
+    return bulkAddToCatalog(courses);
   };
 
   const handleImportToPlanAndPool = (courses: Course[], planId: string) => {
@@ -115,11 +115,11 @@ const ImportModalBody: React.FC<{
   };
 
   const handleImportToNewPlan = (courses: Course[], name: string) => {
-    importPlan({
+    return importPlan({
       id: prefixedId('plan'),
       name,
       courses,
-    }, false);
+    }, false).kept;
   };
 
   const handleSuccess = (count: number, destination: string) => {
@@ -215,7 +215,7 @@ const ImportModalBody: React.FC<{
               <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>
                 {successBanner.count === 0
-                  ? 'Already in this plan. Closing...'
+                  ? `Already in ${successBanner.destination}. Closing...`
                   : `Successfully imported ${successBanner.count} ${successBanner.count === 1 ? 'course' : 'courses'} into ${successBanner.destination}! Closing...`}
               </span>
             </motion.div>

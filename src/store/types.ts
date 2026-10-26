@@ -52,7 +52,8 @@ export interface ScheduleState {
   deletePlan: (planId: string) => void;
   toggleGhostPlan: (planId: string) => void;
   clearGhostPlans: () => void;
-  importPlan: (plan: SchedulePlan, asGhost?: boolean) => string;
+  /** Returns the saved plan id and how many courses it kept after dropping repeats. */
+  importPlan: (plan: SchedulePlan, asGhost?: boolean) => { planId: string; kept: number };
 
   // Course actions
   addCourse: (course: Course, targetPlanId?: string) => void;
@@ -63,7 +64,8 @@ export interface ScheduleState {
   getNextColor: (targetPlanId?: string) => string;
 
   // Catalog Pool actions
-  bulkAddToCatalog: (courses: Course[]) => void;
+  /** Returns how many courses were new to the pool. */
+  bulkAddToCatalog: (courses: Course[]) => number;
   removeFromCatalog: (courseId: string) => void;
   updateCatalogCourse: (course: Course) => void;
   addCourseFromPool: (catalogCourseId: string, targetPlanId?: string) => void;

@@ -16,7 +16,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
 > {
   return {
     bulkAddToCatalog: (courses: Course[]) => {
-      if (courses.length === 0) return;
+      if (courses.length === 0) return 0;
       const state = get();
       const existingKeys = new Set(
         state.catalogCourses.map(c => courseIdentityKey(c.code, c.section))
@@ -32,10 +32,11 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
           });
         }
       }
-      if (newItems.length === 0) return;
+      if (newItems.length === 0) return 0;
       commitWithHistory(set, get, {
         catalogCourses: [...newItems, ...state.catalogCourses],
       });
+      return newItems.length;
     },
 
     removeFromCatalog: (courseId: string) => {
