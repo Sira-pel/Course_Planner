@@ -2,7 +2,9 @@
 
 Course schedule planner for university students. Plan multiple scenarios, check conflicts side by side, import schedules from Excel, text, or iCal, and export directly to Google Calendar.
 
-[Live Demo](https://course-schedule-planner.vercel.app/)
+[Site](https://course-schedule-planner.vercel.app/)
+
+The site is public and hosted on Vercel, so anyone can open it and use it for free in their browser. There is no sign-up. Each person's plans stay in their own browser. It can also be installed as an app.
 
 ---
 
