@@ -159,24 +159,24 @@ function paint(bg: Rgb): CourseColorDisplay {
 }
 
 /**
- * Softened preset paints, keyed by the stored COURSE_COLORS hex.
- * Hues are spaced apart, and a few swatches sit darker so neighbors stay distinct.
- * None of these match the indigo accent or the conflict / Clear all reds.
+ * Preset paints, keyed by the stored COURSE_COLORS hex.
+ * Hues sit at least 25 apart in CIELAB, and every card text clears 4.5:1.
+ * None sit near the indigo accent or the conflict reds.
  * The same hex is used in light and dark. Stored course colors are not rewritten.
  */
 const PRESET_DISPLAY: Record<string, string> = {
-  '#3b82f6': '#32A5D4',
-  '#10b981': '#5AA75E',
-  '#f97316': '#DE9046',
-  '#8b5cf6': '#644395',
-  '#ef4444': '#DAA0A0',
-  '#f59e0b': '#D5B455',
-  '#14b8a6': '#046850',
-  '#ec4899': '#853867',
-  '#84cc16': '#AABC56',
-  '#f43f5e': '#D291CC',
-  '#64748b': '#4E5359',
-  '#c07d3e': '#885538',
+  '#3b82f6': '#4AA8E0', // Sky blue
+  '#10b981': '#3FA66B', // Green
+  '#f97316': '#E08A3C', // Orange
+  '#8b5cf6': '#9448B0', // Violet
+  '#ef4444': '#E58FB4', // Rose pink
+  '#f59e0b': '#D9B43C', // Amber
+  '#14b8a6': '#1E9E9A', // Teal
+  '#ec4899': '#B8458F', // Magenta
+  '#84cc16': '#9BC04A', // Lime
+  '#f43f5e': '#B8A0E8', // Lavender
+  '#64748b': '#5F6B7A', // Slate
+  '#c07d3e': '#8F5B33', // Bronze
 };
 
 const PRESET_PAINT = new Map<string, CourseColorDisplay>();
@@ -192,7 +192,7 @@ for (const hex of COURSE_COLORS) {
  */
 export function displayCourseColor(hex: string): CourseColorDisplay {
   const parsed = parseHex(hex || '');
-  if (!parsed) return PRESET_PAINT.get('#3b82f6') ?? paint({ r: 50, g: 165, b: 212 });
+  if (!parsed) return PRESET_PAINT.get('#3b82f6') ?? paint({ r: 74, g: 168, b: 224 });
   const preset = PRESET_PAINT.get(toHex(parsed).toLowerCase());
   if (preset) return preset;
   return paint(parsed);
