@@ -117,6 +117,7 @@ export function ResultsStep({
   }
 
   const notices = result.dayOffNotices;
+  const leftOut = result.leftOut ?? [];
   const savedByKey = new Map<string, { id: string; name: string }>();
   for (const plan of plans) {
     savedByKey.set(sectionSetKey(plan.courses), { id: plan.id, name: plan.name });
@@ -128,6 +129,15 @@ export function ResultsStep({
         <div className="up-gen-notice" role="status">
           <div className="up-gen-notice-copy">
             <p>{result.gapNotice}</p>
+          </div>
+        </div>
+      )}
+      {leftOut.length > 0 && (
+        <div className="up-gen-notice" role="status">
+          <div className="up-gen-notice-copy">
+            {leftOut.map((item) => (
+              <p key={item.code}>{item.reason}, so it was left out.</p>
+            ))}
           </div>
         </div>
       )}
