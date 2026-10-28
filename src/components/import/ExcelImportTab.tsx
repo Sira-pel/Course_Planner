@@ -358,21 +358,22 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   }, [filteredCourses, coursesToImport]);
 
   const selectAnchorRef = useRef<string | null>(null);
-  const handleToggleSelectCourse = useCallback(
-    (id: string, mods: PickModifiers) => {
-      const result = applyPick(
-        selectedCourseIds,
-        visibleCourses.map((course) => course.id),
-        selectAnchorRef.current,
-        id,
-        mods,
-        { canSelect: (rowId) => !blockingIssueIds.has(rowId) },
-      );
-      selectAnchorRef.current = result.anchor;
-      setSelectedCourseIds(result.selected);
-    },
-    [selectedCourseIds, visibleCourses, blockingIssueIds],
-  );
+  // Read through a ref so the handler keeps one identity and CourseRow's memo still skips unchanged rows.
+  const pickStateRef = useRef({ selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds });
+  pickStateRef.current = { selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds };
+  const handleToggleSelectCourse = useCallback((id: string, mods: PickModifiers) => {
+    const { selected, visible, blocking } = pickStateRef.current;
+    const result = applyPick(
+      selected,
+      visible.map((course) => course.id),
+      selectAnchorRef.current,
+      id,
+      mods,
+      { canSelect: (rowId) => !blocking.has(rowId) },
+    );
+    selectAnchorRef.current = result.anchor;
+    setSelectedCourseIds(result.selected);
+  }, []);
 
   const handleSelectAll = useCallback(() => {
     setSelectedCourseIds(new Set(allCourses.filter((course) => !blockingIssueIds.has(course.id)).map((c) => c.id)));
