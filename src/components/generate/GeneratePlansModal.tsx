@@ -7,6 +7,7 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import { withUnusedCourseColors } from '../../utils/courseColor';
 import { sectionSetKey } from '../../utils/courseIdentity';
 import { prefixedId } from '../../utils/id';
+import { applyPick, type PickModifiers } from '../../utils/rangeSelect';
 import {
   loadGeneratorPrefs,
   saveGeneratorPrefs,
@@ -332,21 +333,21 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     clearResults();
   };
 
-  const togglePicked = (key: string) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-        setPinned((pins) => {
-          if (!pins.has(key)) return pins;
-          const copy = new Set(pins);
-          copy.delete(key);
-          return copy;
-        });
-      } else if (next.size < MAX_CANDIDATES) {
-        next.add(key);
-      }
-      return next;
+  const pickAnchorRef = useRef<string | null>(null);
+  const togglePicked = (key: string, mods: PickModifiers) => {
+    const result = applyPick(
+      picked,
+      filteredGroups.map((group) => group.key),
+      pickAnchorRef.current,
+      key,
+      mods,
+      { max: MAX_CANDIDATES },
+    );
+    pickAnchorRef.current = result.anchor;
+    setPicked(result.selected);
+    setPinned((pins) => {
+      const kept = [...pins].filter((pin) => result.selected.has(pin));
+      return kept.length === pins.size ? pins : new Set(kept);
     });
     clearResults();
   };

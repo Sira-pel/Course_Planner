@@ -19,6 +19,7 @@ import type { Course, SchedulePlan } from '../../types/schedule';
 import { withUnusedCourseColors } from '../../utils/courseColor';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
+import { applyPick, pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import {
   loadXlsx,
   readExcelFile,
@@ -66,7 +67,7 @@ interface CourseRowProps {
   course: Course;
   isSelected: boolean;
   issue?: string;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, mods: PickModifiers) => void;
 }
 
 const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, onToggle }) => {
@@ -80,7 +81,10 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, on
 
   return (
     <div
-      onClick={() => onToggle(c.id)}
+      onMouseDown={(e) => {
+        if (e.shiftKey) e.preventDefault();
+      }}
+      onClick={(e) => onToggle(c.id, pickModifiers(e))}
       className={`py-2 px-2.5 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 cursor-pointer transition-colors ${
         isSelected
           ? 'up-selected'
@@ -372,14 +376,22 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     return filteredCourses.map((course) => byId.get(course.id) ?? course);
   }, [filteredCourses, coursesToImport]);
 
-  const handleToggleSelectCourse = useCallback((id: string) => {
-    setSelectedCourseIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const selectAnchorRef = useRef<string | null>(null);
+  const handleToggleSelectCourse = useCallback(
+    (id: string, mods: PickModifiers) => {
+      const result = applyPick(
+        selectedCourseIds,
+        visibleCourses.map((course) => course.id),
+        selectAnchorRef.current,
+        id,
+        mods,
+        { canSelect: (rowId) => !blockingIssueIds.has(rowId) },
+      );
+      selectAnchorRef.current = result.anchor;
+      setSelectedCourseIds(result.selected);
+    },
+    [selectedCourseIds, visibleCourses, blockingIssueIds],
+  );
 
   const handleSelectAll = useCallback(() => {
     setSelectedCourseIds(new Set(allCourses.filter((course) => !blockingIssueIds.has(course.id)).map((c) => c.id)));

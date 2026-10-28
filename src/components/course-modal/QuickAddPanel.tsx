@@ -1,3 +1,4 @@
+import { pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import React, { type Ref } from 'react';
 import { AlertTriangle, ClipboardPaste, Pencil, Trash2 } from 'lucide-react';
 import { ClassSession, Course, DAYS_LIST, DayOfWeek } from '../../types/schedule';
@@ -27,7 +28,7 @@ export interface QuickAddPanelProps {
   pasteInputRef: Ref<HTMLTextAreaElement>;
   onRawTextChange: (v: string) => void;
   onPasteClipboard: () => void;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, mods: PickModifiers) => void;
   onToggleEdit: (id: string) => void;
   onDeleteItem: (id: string) => void;
   onUpdateItemCourse: (id: string, updates: Partial<Course>) => void;
@@ -209,11 +210,17 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
                   style={{ ['--i' as string]: Math.min(idx, 7) }}
                 >
                   <div className="px-2.5 py-2 flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer">
+                    <label
+                      className="flex items-center gap-2 min-w-0 cursor-pointer"
+                      onMouseDown={(e) => {
+                        if (e.shiftKey) e.preventDefault();
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={item.selected}
-                        onChange={() => onToggleSelect(item.id)}
+                        readOnly
+                        onClick={(e) => onToggleSelect(item.id, pickModifiers(e))}
                         className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus-visible:ring-indigo-500"
                       />
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: displayCourseColor(c.color).bg }} />
