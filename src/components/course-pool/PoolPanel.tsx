@@ -392,16 +392,15 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               transition={{ duration: 0.18, ease: EASE_OUT }}
               className="overflow-hidden"
             >
-              <div className="p-2.5 rounded-lg border border-rose-300 dark:border-rose-900/80 bg-rose-50/90 dark:bg-rose-950/50 text-xs">
-                <div className="flex items-center justify-between font-semibold text-rose-800 dark:text-rose-200">
-                  <span>Clear {unusedInAnyPlanCount} unused {unusedInAnyPlanCount === 1 ? 'course' : 'courses'}?</span>
-                  <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400">
-                    Keep {usedInAnyPlanCount} in plans
-                  </span>
-                </div>
-                <p className="text-[11px] text-rose-700/90 dark:text-rose-300/80 mt-1 leading-snug">
-                  Removes all courses from the pool that are not used in any plan. You can undo this action anytime (Ctrl+Z).
+              <div className="up-pool-confirm-card" style={{ margin: 0 }}>
+                <p>
+                  Remove {unusedInAnyPlanCount} unused {unusedInAnyPlanCount === 1 ? 'course' : 'courses'} from the pool?
                 </p>
+                <span>
+                  {usedInAnyPlanCount > 0 ? 'Courses used in a plan are kept. ' : ''}
+                  {searching || filterMode !== 'all' ? 'This covers the whole pool, not just the results shown. ' : ''}
+                  You can undo this (Ctrl+Z).
+                </span>
                 <div className="flex items-center gap-1.5 mt-2">
                   <button
                     type="button"
@@ -410,14 +409,14 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                       onClearUnusedCatalogCourses();
                       setIsConfirmingClearPool(false);
                     }}
-                    className="flex-1 py-1 px-2.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs transition-colors up-chrome-btn"
+                    className="flex-1 py-1 px-2.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors up-chrome-btn"
                   >
-                    Clear {unusedInAnyPlanCount} {unusedInAnyPlanCount === 1 ? 'course' : 'courses'}
+                    Clear unused courses
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsConfirmingClearPool(false)}
-                    className="py-1 px-2.5 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors up-chrome-btn"
+                    className="up-pool-text-btn up-chrome-btn"
                   >
                     Cancel
                   </button>
