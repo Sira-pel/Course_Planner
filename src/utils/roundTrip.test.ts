@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { Course, SchedulePlan } from '../types/schedule';
+import { COURSE_COLORS, type Course, type SchedulePlan } from '../types/schedule';
+import { displayCourseColor } from './courseColorDisplay';
 import { generateIcsCalendar } from './icsExport';
 import { parseIcsContent } from './icsImport';
 import { parseQuickAdd } from './quickAdd';
@@ -70,5 +71,43 @@ describe('export round trip', () => {
       .sort((a, b) => a.code.localeCompare(b.code));
     const original = plan.courses.map(fingerprint).sort((a, b) => a.code.localeCompare(b.code));
     assert.deepEqual(imported, original);
+  });
+  it('exports the color a course is drawn in and reimports it as the same preset', () => {
+    const colored: SchedulePlan = {
+      id: 'plan_colors',
+      name: 'Colors',
+      courses: COURSE_COLORS.map((color, index) => ({
+        id: `c_${index}`,
+        code: `COLR ${100 + index}`,
+        name: `Color course ${index}`,
+        section: '001',
+        credits: 3,
+        color,
+        sessions: [{ id: `s_${index}`, day: 'monday', startTime: '09:00', endTime: '10:00' }],
+      })),
+    };
+
+    const ics = generateIcsCalendar(colored);
+    for (const color of COURSE_COLORS) {
+      assert.ok(ics.includes(`COLOR:${displayCourseColor(color).bg}`), `${color} is exported as its drawn shade`);
+    }
+    assert.equal(ics.includes('COLOR:#EF4444'), false);
+
+    const imported = parseIcsContent(ics).sort((a, b) => a.code.localeCompare(b.code));
+    assert.deepEqual(imported.map((course) => course.color), COURSE_COLORS);
+  });
+
+  it('keeps a custom color and still reads colors from older Uniplan exports', () => {
+    const custom: SchedulePlan = {
+      id: 'plan_custom',
+      name: 'Custom',
+      courses: [{ ...plan.courses[0], id: 'c_custom', color: '#123456' }],
+    };
+    const [reimported] = parseIcsContent(generateIcsCalendar(custom));
+    assert.equal(reimported.color.toLowerCase(), '#123456');
+
+    const older = generateIcsCalendar(plan).replace(/COLOR:#[0-9A-F]{6}/g, 'COLOR:#EF4444');
+    const [oldCourse] = parseIcsContent(older);
+    assert.equal(oldCourse.color, '#EF4444');
   });
 });

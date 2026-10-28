@@ -37,6 +37,8 @@ interface CourseModalProps {
   initialStartTime?: string;
   initialMode?: 'form' | 'quick';
   onModeChange?: (mode: 'form' | 'quick', editing: boolean) => void;
+  /** Called after Quick Add with how many courses were really added to the plan. */
+  onQuickAdded?: (added: number) => void;
 }
 
 const CLOSE_MS = 150;
@@ -66,6 +68,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   initialStartTime = '09:00',
   initialMode = 'form',
   onModeChange,
+  onQuickAdded,
 }) => {
   const suppressFocusRestoreRef = useContext(SuppressFocusRestoreContext);
   const onModeChangeRef = useRef(onModeChange);
@@ -527,7 +530,8 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
       setError('Select at least one recognized course, or paste a syllabus line.');
       return;
     }
-    bulkAddCourses(selectedCourses, effectivePlanId);
+    const added = bulkAddCourses(selectedCourses, effectivePlanId);
+    onQuickAdded?.(added);
     onClose();
   };
 
@@ -620,7 +624,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-[background-color,color] duration-[var(--dur-chrome)] ease-[var(--ease-snap)]"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-[background-color,color] duration-[var(--dur-chrome)] ease-[var(--ease-snap)]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -799,7 +803,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
               </button>
             )
           ) : (
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
               <kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono">
                 Ctrl+Enter
               </kbd>

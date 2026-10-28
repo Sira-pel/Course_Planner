@@ -1,4 +1,5 @@
 import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP } from '../types/schedule';
+import { storedCourseColor } from './courseColorDisplay';
 import { prefixedId } from './id';
 
 const dayMap: Record<string, DayOfWeek> = {
@@ -320,6 +321,8 @@ export function parseIcsContent(icsContent: string): Course[] {
       
       const parsedSummary = parseIcsSummary(summary);
 
+      // A file exported by Uniplan carries the shade a preset is drawn in. Turn it back into the preset.
+      const importedColor = eventColor ? storedCourseColor(eventColor) : undefined;
       courses.push({
         id: prefixedId('c'),
         code: parsedSummary.code,
@@ -328,8 +331,8 @@ export function parseIcsContent(icsContent: string): Course[] {
         instructor: descFields.instructor,
         credits: descFields.credits ?? 3,
         color:
-          (eventColor && LEGACY_COURSE_COLOR_MAP[eventColor.toLowerCase()]) ||
-          eventColor ||
+          (importedColor && LEGACY_COURSE_COLOR_MAP[importedColor.toLowerCase()]) ||
+          importedColor ||
           COURSE_COLORS[courses.length % COURSE_COLORS.length],
         sessions,
       });

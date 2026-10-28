@@ -507,6 +507,70 @@ describe('plan generator', () => {
       assert.equal(resBlock.emptyReason, 'CS101 has no section outside your blocked times');
     });
 
+    it('leaves out an unpinned course with no usable section and still builds plans from the rest', () => {
+      const groups = [
+        group('A', [section('a', 'A', '09:00', '10:00', '001', 'tuesday')]),
+        group('B', [section('b', 'B', '09:00', '10:00', '001', 'wednesday')]),
+        group('X', [section('x', 'X', '09:00', '10:00')]),
+      ];
+      const blocked = [{ day: 'monday' as DayOfWeek, startMinutes: 9 * 60, endMinutes: 10 * 60 }];
+
+      const res = generatePlans({ groups, pinnedKeys: [], preferences: preferences({ blocked }) });
+      assert.ok(res.plans.length > 0);
+      assert.deepEqual(res.plans[0].courses.map((course) => course.code).sort(), ['A', 'B']);
+      assert.deepEqual(res.leftOut, [{ code: 'X', reason: 'X has no section outside your blocked times' }]);
+      assert.equal(res.emptyReason, null);
+
+      const pinned = generatePlans({ groups, pinnedKeys: ['X'], preferences: preferences({ blocked }) });
+      assert.equal(pinned.plans.length, 0);
+      assert.equal(pinned.emptyReason, 'X has no section outside your blocked times');
+    });
+
+    it('leaves out an unpinned course whose sections are all excluded', () => {
+      const res = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'tuesday')]),
+          group('B', [section('b', 'B', '09:00', '10:00', '001', 'wednesday')]),
+          group('X', [section('x', 'X', '11:00', '12:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ excludedSectionIds: ['x'] }),
+      });
+      assert.ok(res.plans.length > 0);
+      assert.deepEqual(res.leftOut, [{ code: 'X', reason: 'X has no section left after exclusions' }]);
+    });
+
+    it('explains the left-out course when too few usable courses remain for the plan size', () => {
+      const res = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'tuesday')]),
+          group('B', [section('b', 'B', '09:00', '10:00', '001', 'wednesday')]),
+          group('X', [section('x', 'X', '11:00', '12:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ courseCount: 3, excludedSectionIds: ['x'] }),
+      });
+      assert.equal(res.plans.length, 0);
+      assert.equal(res.emptyReason, 'X has no section left after exclusions');
+    });
+
+    it('names the left-out course when a credit range fits nothing', () => {
+      const res = generatePlans({
+        groups: [
+          group('A', [section('a', 'A', '09:00', '10:00', '001', 'tuesday')]),
+          group('B', [section('b', 'B', '09:00', '10:00', '001', 'wednesday')]),
+          group('X', [section('x', 'X', '11:00', '12:00')]),
+        ],
+        pinnedKeys: [],
+        preferences: preferences({ mode: 'credits', creditMin: 20, creditMax: 24, excludedSectionIds: ['x'] }),
+      });
+      assert.equal(res.plans.length, 0);
+      assert.equal(
+        res.emptyReason,
+        'No mix of at least 2 courses fits that credit range. X has no section left after exclusions, so it was left out.',
+      );
+    });
+
     it('explains plan size mismatches and credit range bounds', () => {
       const resPinsOver = generatePlans({
         groups: [

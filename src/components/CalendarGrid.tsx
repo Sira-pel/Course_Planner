@@ -481,7 +481,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                           : 'text-sm'
                       } ${
                         isToday
-                          ? 'text-indigo-700 dark:text-[var(--up-accent)]'
+                          ? 'text-indigo-700 dark:text-[var(--up-accent-text)]'
                           : 'text-slate-900 dark:text-slate-100'
                       }`}
                     >

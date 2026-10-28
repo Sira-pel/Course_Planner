@@ -142,6 +142,200 @@ describe('updateCourse keeps plans and the pool in step', () => {
     assert.deepEqual(catalogCourses.map((c) => c.code).sort(), ['CS 101', 'CS 102']);
     assert.equal(catalogCourses.find((c) => c.id === 'cat_c3')?.name, 'Pool Edited 102');
   });
+
+  it('updateCatalogCourse copies a new pool color onto the plan courses', () => {
+    seed(
+      [{ id: 'a', name: 'A', courses: [{ ...course('c1', 'CS 101', '001'), color: '#10B981' }] }],
+      [{ ...course('cat_c1', 'CS 101', '001'), color: '#3B82F6' }],
+    );
+
+    useScheduleStore.getState().updateCatalogCourse({
+      ...course('cat_c1', 'CS 101', '001'),
+      color: '#EF4444',
+      name: 'Recolored',
+    });
+
+    let state = useScheduleStore.getState();
+    assert.equal(state.plans[0].courses[0].color, '#EF4444');
+    assert.equal(state.plans[0].courses[0].name, 'Recolored');
+    assert.equal(state.catalogCourses[0].color, '#EF4444');
+
+    useScheduleStore.setState({
+      plans: [{
+        id: 'a',
+        name: 'A',
+        courses: [{ ...state.plans[0].courses[0], color: '#10B981' }],
+      }],
+    });
+    useScheduleStore.getState().updateCatalogCourse({
+      ...useScheduleStore.getState().catalogCourses[0],
+      name: 'Title only',
+    });
+    state = useScheduleStore.getState();
+    assert.equal(state.plans[0].courses[0].color, '#10B981');
+    assert.equal(state.plans[0].courses[0].name, 'Title only');
+  });
+
+  it('updateCatalogCourse keeps a plan course color when another course in that plan already uses the new pool color', () => {
+    seed(
+      [{
+        id: 'a',
+        name: 'A',
+        courses: [
+          { ...course('c1', 'CS 101', '001'), color: '#10B981' },
+          { ...course('c2', 'MATH 200', '001'), color: '#EF4444' },
+        ],
+      }, {
+        id: 'b',
+        name: 'B',
+        courses: [{ ...course('c3', 'CS 101', '001'), color: '#F59E0B' }],
+      }],
+      [{ ...course('cat_c1', 'CS 101', '001'), color: '#3B82F6' }],
+    );
+
+    useScheduleStore.getState().updateCatalogCourse({
+      ...course('cat_c1', 'CS 101', '001'),
+      color: '#EF4444',
+    });
+
+    const { plans, catalogCourses } = useScheduleStore.getState();
+    assert.equal(plans[0].courses[0].color, '#10B981');
+    assert.equal(plans[0].courses[1].color, '#EF4444');
+    assert.equal(plans[1].courses[0].color, '#EF4444');
+    assert.equal(catalogCourses[0].color, '#EF4444');
+  });
+
+  it('updateCatalogCourse recolors plans that hold a course saved without a color', () => {
+    const noColor = { ...course('c2', 'MATH 200', '001') } as Partial<Course>;
+    delete noColor.color;
+    seed(
+      [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001'), noColor as Course] }],
+      [course('cat_c1', 'CS 101', '001')],
+    );
+
+    useScheduleStore.getState().updateCatalogCourse({
+      ...course('cat_c1', 'CS 101', '001'),
+      color: '#EF4444',
+    });
+
+    assert.equal(useScheduleStore.getState().plans[0].courses[0].color, '#EF4444');
+  });
+
+  it('bulkAddCourses returns how many courses it actually added', () => {
+    seed(
+      [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] }],
+      [course('cat_c1', 'CS 101', '001')],
+    );
+
+    const added = useScheduleStore.getState().bulkAddCourses([
+      course('d1', 'CS 101', '001'),
+      course('d2', 'MATH 200', '001'),
+      course('d3', 'CS 101', '001'),
+    ], 'a');
+    assert.equal(added, 1);
+
+    const again = useScheduleStore.getState().bulkAddCourses([course('d4', 'MATH 200', '001')], 'a');
+    assert.equal(again, 0);
+  });
+
+  it('updateCourse merges into an existing code and section instead of duplicating it', () => {
+    seed(
+      [{
+        id: 'a',
+        name: 'A',
+        courses: [
+          course('c1', 'CS 101', '001'),
+          { ...course('c2', 'CS 102', '001'), color: '#10B981' },
+          course('c2b', 'CS 102', '001'),
+        ],
+      }],
+      [course('cat_c1', 'CS 101', '001'), course('cat_c2', 'CS 102', '001')],
+    );
+
+    useScheduleStore.getState().updateCourse(
+      { ...course('c1', 'CS 102', '001', 'tuesday'), name: 'Merged 102' },
+      'a',
+    );
+
+    const { plans, catalogCourses } = useScheduleStore.getState();
+    assert.equal(plans[0].courses.length, 1);
+    assert.equal(plans[0].courses[0].id, 'c2');
+    assert.equal(plans[0].courses[0].code, 'CS 102');
+    assert.equal(plans[0].courses[0].name, 'Merged 102');
+    assert.equal(plans[0].courses[0].sessions[0].day, 'tuesday');
+    assert.equal(plans[0].courses[0].sessions[0].id, 's_c2_0');
+    assert.deepEqual(catalogCourses.map((c) => c.code), ['CS 102']);
+  });
+
+  it('removeCourseFromPlanByCatalog removes every matching copy', () => {
+    seed(
+      [{
+        id: 'a',
+        name: 'A',
+        courses: [course('c1', 'CS 101', '001'), course('c1b', 'CS 101', '001'), course('c2', 'MATH 200', '001')],
+      }],
+      [course('cat_c1', 'CS 101', '001')],
+    );
+
+    useScheduleStore.getState().removeCourseFromPlanByCatalog('cat_c1', 'a');
+
+    assert.deepEqual(useScheduleStore.getState().plans[0].courses.map((c) => c.code), ['MATH 200']);
+  });
+
+  it('addCourse and bulkAddCourses skip a code and section the plan already has', () => {
+    seed(
+      [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] }],
+      [course('cat_c1', 'CS 101', '001')],
+    );
+
+    useScheduleStore.getState().addCourse(course('c-new', 'CS 101', '001', 'tuesday'), 'a');
+    useScheduleStore.getState().bulkAddCourses([
+      course('c-again', 'CS 101', '001'),
+      course('c-math', 'MATH 200', '001'),
+      course('c-math-2', 'MATH 200', '001'),
+    ], 'a');
+
+    const { plans, catalogCourses } = useScheduleStore.getState();
+    assert.deepEqual(plans[0].courses.map((c) => `${c.code} ${c.section}`), ['CS 101 001', 'MATH 200 001']);
+    assert.equal(plans[0].courses[0].id, 'c1');
+    assert.equal(plans[0].courses[0].sessions[0].day, 'monday');
+    assert.deepEqual(catalogCourses.map((c) => c.code).sort(), ['CS 101', 'MATH 200']);
+  });
+});
+
+describe('imports skip repeats', () => {
+  it('importPlan drops repeated code and section pairs and reports how many it kept', () => {
+    seed([{ id: 'blank', name: 'Blank', courses: [] }], []);
+
+    const result = useScheduleStore.getState().importPlan({
+      id: 'np',
+      name: 'New',
+      courses: [
+        course('a', 'CS 101', '001'),
+        course('b', 'CS 101', '001', 'tuesday'),
+        course('c', 'CS 101', '002'),
+        course('d', 'MATH 200', '001'),
+      ],
+    }, false);
+
+    assert.equal(result.kept, 3);
+    const plan = useScheduleStore.getState().plans.find((p) => p.id === result.planId);
+    assert.deepEqual(plan?.courses.map((c) => c.id), ['a', 'c', 'd']);
+    assert.equal(plan?.courses[0].sessions[0].day, 'monday');
+    assert.equal(useScheduleStore.getState().catalogCourses.length, 3);
+  });
+
+  it('bulkAddToCatalog returns how many courses were new to the pool', () => {
+    seed([{ id: 'blank', name: 'Blank', courses: [] }], [course('cat_x', 'CS 101', '001')]);
+
+    const added = useScheduleStore.getState().bulkAddToCatalog([
+      course('p1', 'CS 101', '001'),
+      course('p2', 'MATH 200', '001'),
+      course('p3', 'MATH 200', '001'),
+    ]);
+    assert.equal(added, 1);
+    assert.equal(useScheduleStore.getState().bulkAddToCatalog([course('p4', 'MATH 200', '001')]), 0);
+  });
 });
 
 describe('backup restore settings', () => {

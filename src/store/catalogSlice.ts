@@ -16,7 +16,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
 > {
   return {
     bulkAddToCatalog: (courses: Course[]) => {
-      if (courses.length === 0) return;
+      if (courses.length === 0) return 0;
       const state = get();
       const existingKeys = new Set(
         state.catalogCourses.map(c => courseIdentityKey(c.code, c.section))
@@ -32,10 +32,11 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
           });
         }
       }
-      if (newItems.length === 0) return;
+      if (newItems.length === 0) return 0;
       commitWithHistory(set, get, {
         catalogCourses: [...newItems, ...state.catalogCourses],
       });
+      return newItems.length;
     },
 
     removeFromCatalog: (courseId: string) => {
@@ -86,6 +87,15 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
           );
         if (wouldCollide) return p;
 
+        const colorChanged = oldCat.color !== updatedCourse.color;
+        const isTarget = (c: Course) =>
+          courseIdentityKey(c.code, c.section) === oldKey || c.id === updatedCourse.id;
+        // Plans keep their course colors distinct, so the pool color only carries over
+        // when no other course in this plan already uses it.
+        const newColor = (updatedCourse.color ?? '').toLowerCase();
+        const colorTaken = p.courses.some(
+          (c) => !isTarget(c) && (c.color ?? '').toLowerCase() === newColor
+        );
         return {
           ...p,
           courses: p.courses.map((c) => {
@@ -96,7 +106,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
               return {
                 ...updatedCourse,
                 id: c.id,
-                color: c.color || updatedCourse.color,
+                color: colorChanged && !colorTaken ? updatedCourse.color : (c.color || updatedCourse.color),
                 sessions: updatedCourse.sessions.map((s, idx) => ({
                   ...s,
                   id: `s_${c.id}_${idx}`,
@@ -191,14 +201,13 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       const catalogItem = state.catalogCourses.find(c => c.id === catalogCourseId);
       if (!catalogItem) return;
 
-      const existingInPlan = targetPlan.courses.find(
-        c => sameCourseIdentity(c, catalogItem) || c.id === catalogItem.id
-      );
-      if (!existingInPlan) return;
+      const matchesCatalog = (course: Course) =>
+        sameCourseIdentity(course, catalogItem) || course.id === catalogItem.id;
+      if (!targetPlan.courses.some(matchesCatalog)) return;
 
       const updatedPlans = state.plans.map(p =>
         p.id === targetId
-          ? { ...p, courses: p.courses.filter(c => c.id !== existingInPlan.id) }
+          ? { ...p, courses: p.courses.filter(c => !matchesCatalog(c)) }
           : p
       );
 

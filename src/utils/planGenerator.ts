@@ -77,6 +77,8 @@ export interface GeneratorResult {
   dayOffNotices: string[];
   /** Set when the gap limit ruled out every mix and the list is the closest soft-scored plans. */
   gapNotice: string | null;
+  /** Unpinned picks that have no usable section, left out of the search. Missing in results saved earlier. */
+  leftOut?: { code: string; reason: string }[];
 }
 
 export interface GeneratorSearch {
@@ -609,6 +611,7 @@ class PlanSearch implements GeneratorSearch {
   validCount = 0;
   overDailyCap = 0;
   emptyReason: string | null = null;
+  private leftOut: { code: string; reason: string }[] = [];
   private evaluationLimit = MAX_EVALUATIONS;
   private jobs: MixJob[] = [];
   private cursor = 0;
@@ -622,26 +625,44 @@ class PlanSearch implements GeneratorSearch {
 
   constructor(input: GeneratorInput) {
     this.prefs = input.preferences;
-    const picked = input.groups.slice(0, MAX_CANDIDATES);
     const lockedIds = new Set(input.preferences.lockedSectionIds);
-    const lockedKeys = picked
+    const lockedKeys = input.groups
       .filter((group) => group.sections.some((section) => lockedIds.has(section.id)))
       .map((group) => group.key);
     this.pinned = new Set([...input.pinnedKeys, ...lockedKeys]);
-    const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
-    const firstProblem = [...pinnedGroups, ...picked.filter((group) => !this.pinned.has(group.key))]
-      .map((group) => unusableReason(group, input.preferences))
-      .find((reason): reason is string => Boolean(reason));
-    this.prepared = picked.map((group) => prepareGroup(group, input.preferences));
-    this.pickedOrder = this.prepared;
 
-    if (picked.length < 2) {
+    if (input.groups.length < 2) {
+      this.prepared = input.groups.map((group) => prepareGroup(group, input.preferences));
+      this.pickedOrder = this.prepared;
       this.emptyReason = 'Pick at least 2 courses.';
       this.done = true;
       return;
     }
-    if (firstProblem) {
-      this.emptyReason = firstProblem;
+
+    // A pinned or locked course must be in every plan, so one that cannot be used ends the search.
+    // An unpinned one is left out and the rest still run. The cap counts usable courses only.
+    const reasons = new Map(input.groups.map((group) => [group.key, unusableReason(group, input.preferences)]));
+    const pinnedProblem = input.groups
+      .filter((group) => this.pinned.has(group.key))
+      .map((group) => reasons.get(group.key))
+      .find((reason): reason is string => Boolean(reason));
+    const unusable = input.groups.filter((group) => !this.pinned.has(group.key) && reasons.get(group.key));
+    this.leftOut = unusable.map((group) => ({ code: group.code, reason: reasons.get(group.key)! }));
+    const leftOutKeys = new Set(unusable.map((group) => group.key));
+    const picked = input.groups.filter((group) => !leftOutKeys.has(group.key)).slice(0, MAX_CANDIDATES);
+    const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
+    this.prepared = picked.map((group) => prepareGroup(group, input.preferences));
+    this.pickedOrder = this.prepared;
+
+    if (pinnedProblem) {
+      this.emptyReason = pinnedProblem;
+      this.done = true;
+      return;
+    }
+    if (picked.length < 2) {
+      this.emptyReason = this.leftOut.length > 0
+        ? this.leftOut.map((item) => item.reason).join('; ')
+        : 'Pick at least 2 courses.';
       this.done = true;
       return;
     }
@@ -651,11 +672,14 @@ class PlanSearch implements GeneratorSearch {
     const optional = this.prepared.filter((group) => !this.pinned.has(group.key) && group.sections.length > 0);
     const subsets = this.buildSubsets(pins, optional);
     if (subsets.length === 0) {
-      if (!this.emptyReason) {
-        this.emptyReason = this.prefs.mode === 'credits'
-          ? 'No mix of at least 2 courses fits that credit range.'
-          : 'No course set fits that plan size.';
+      if (!this.emptyReason && this.leftOut.length > 0 && this.prefs.mode === 'courses' && pins.length + optional.length < this.prefs.courseCount) {
+        this.emptyReason = this.leftOut.map((item) => item.reason).join('; ');
       }
+      if (!this.emptyReason && this.prefs.mode === 'credits') {
+        const dropped = this.leftOut.map((item) => `${item.reason}, so it was left out.`);
+        this.emptyReason = ['No mix of at least 2 courses fits that credit range.', ...dropped].join(' ');
+      }
+      if (!this.emptyReason) this.emptyReason = 'No course set fits that plan size.';
       this.done = true;
       return;
     }
@@ -943,6 +967,7 @@ class PlanSearch implements GeneratorSearch {
       emptyReason,
       dayOffNotices: plans.length > 0 ? dayOffNotices(this.prepared, this.pinned, this.prefs) : [],
       gapNotice,
+      leftOut: this.leftOut,
     };
   }
 }

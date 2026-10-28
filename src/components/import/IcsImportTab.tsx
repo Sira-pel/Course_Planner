@@ -20,9 +20,9 @@ import { ImportDestinationSelect, type ImportDestination } from './ImportDestina
 interface IcsImportTabProps {
   activePlan: SchedulePlan;
   newPlanName: string;
-  onImportToPool: (courses: Course[]) => void;
-  onImportToPlanAndPool: (courses: Course[], planId: string) => void;
-  onImportToNewPlan: (courses: Course[], planName: string) => void;
+  onImportToPool: (courses: Course[]) => number;
+  onImportToPlanAndPool: (courses: Course[], planId: string) => number;
+  onImportToNewPlan: (courses: Course[], planName: string) => number;
   onSuccess: (count: number, destination: string) => void;
 }
 
@@ -162,14 +162,14 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
     const toImport = coursesToImport;
 
     if (destination === 'active') {
-      onImportToPlanAndPool(toImport, activePlan.id);
-      onSuccess(toImport.length, `Course Pool & ${activePlan.name}`);
+      const added = onImportToPlanAndPool(toImport, activePlan.id);
+      onSuccess(added, `Course Pool & ${activePlan.name}`);
     } else if (destination === 'new') {
-      onImportToNewPlan(toImport, newPlanName);
-      onSuccess(toImport.length, `Course Pool & ${newPlanName}`);
+      const kept = onImportToNewPlan(toImport, newPlanName);
+      onSuccess(kept, `Course Pool & ${newPlanName}`);
     } else {
-      onImportToPool(toImport);
-      onSuccess(toImport.length, 'Course Pool');
+      const added = onImportToPool(toImport);
+      onSuccess(added, 'Course Pool');
     }
   };
 

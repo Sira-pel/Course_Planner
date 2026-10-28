@@ -126,9 +126,20 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
       const existingIds = new Set(state.plans.map((p) => p.id));
       const newPlanId = existingIds.has(sanitized.id) ? uniquePlanId(state.plans.map((p) => p.id)) : sanitized.id;
 
+      // A plan holds one course per code and section, so repeats are dropped, first one wins.
+      const seenKeys = new Set<string>();
+      const courses = (sanitized.courses || []).filter((c) => {
+        if (!c || typeof c !== 'object') return true;
+        const key = courseIdentityKey(c.code, c.section);
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
+        return true;
+      });
+
       const newPlan: SchedulePlan = {
         ...sanitized,
         id: newPlanId,
+        courses,
       };
 
       const nextPlans = [...state.plans, newPlan];
@@ -159,7 +170,7 @@ export function createPlanSlice(set: StoreSet, get: StoreGet): Pick<
         catalogCourses: currentCatalog,
       });
 
-      return newPlanId;
+      return { planId: newPlanId, kept: courses.length };
     },
   };
 }

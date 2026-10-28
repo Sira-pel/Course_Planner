@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Transition } from 'motion/react';
@@ -32,6 +32,7 @@ import {
 } from '../../utils/motion';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import { timeToMinutes } from '../../utils/timeUtils';
+import { settledGeneratorSelection } from '../../utils/generatorSelection';
 import { shouldClearVisiblePicks } from '../../utils/visiblePicks';
 import {
   creditBounds,
@@ -127,20 +128,38 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   stepRef.current = step;
 
   const groups = useMemo(() => groupCoursesByCode(catalogCourses), [catalogCourses]);
+  const poolKeys = useMemo(() => new Set(groups.map((group) => group.key)), [groups]);
+  // Saved picks must not be erased before the store has loaded, so only a loaded pool prunes.
+  const poolLoaded = useSyncExternalStore(
+    (onChange) => useScheduleStore.persist.onFinishHydration(onChange),
+    () => useScheduleStore.persist.hasHydrated(),
+    () => true,
+  );
+  const selection = useMemo(
+    () => settledGeneratorSelection(picked, pinned, poolKeys, poolLoaded),
+    [picked, pinned, poolKeys, poolLoaded],
+  );
+  useEffect(() => {
+    if (!poolLoaded) return;
+    if (selection.picked.length !== picked.size) setPicked(new Set(selection.picked));
+    if (selection.pinned.length !== pinned.size) setPinned(new Set(selection.pinned));
+  }, [poolLoaded, selection, picked.size, pinned.size]);
+  const activePicked = useMemo(() => new Set(selection.picked), [selection]);
+  const activePinned = useMemo(() => new Set(selection.pinned), [selection]);
   const filteredGroups = useMemo(
     () => groups.filter((group) => matchesQuery(group, query.trim().toLowerCase())),
     [groups, query],
   );
   const pickedGroups = useMemo(
-    () => groups.filter((group) => picked.has(group.key)),
-    [groups, picked],
+    () => groups.filter((group) => activePicked.has(group.key)),
+    [groups, activePicked],
   );
 
-  const courseMin = Math.max(2, pinned.size);
-  const courseMax = Math.max(courseMin, picked.size);
+  const courseMin = selection.courseMin;
+  const courseMax = selection.courseMax;
   const courseCount = Math.min(courseMax, Math.max(courseMin, prefs.courseCount));
   const pinnedCreditMin = pickedGroups
-    .filter((group) => pinned.has(group.key))
+    .filter((group) => activePinned.has(group.key))
     .reduce((sum, group) => sum + groupCredits(group).min, 0);
   const pickedCreditMax = pickedGroups.reduce((sum, group) => sum + groupCredits(group).max, 0);
   const creditMinBound = Math.max(pinnedCreditMin, 1);
@@ -154,8 +173,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   useEffect(() => {
     const draft = {
       step: persistedGeneratorStep(step, result),
-      picked: [...picked],
-      pinned: [...pinned],
+      picked: selection.picked,
+      pinned: selection.pinned,
       lockedIds,
       excludedIds,
       blocked,
@@ -185,7 +204,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   useEffect(() => {
     if (!courseStamp) return;
-    const changed = stampPickedCourses(catalogCourses, [...picked]) !== courseStamp;
+    const changed = stampPickedCourses(catalogCourses, selection.picked) !== courseStamp;
     if (!changed) return;
     cancelRef.current?.();
     cancelRef.current = null;
@@ -198,7 +217,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     holdGeneratorSearch(null);
     setCourseStamp(null);
     setStep(2);
-  }, [catalogCourses, courseStamp, picked]);
+  }, [catalogCourses, courseStamp, selection.picked]);
 
   useEffect(() => {
     if (isOpen) {
@@ -333,10 +352,16 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     clearResults();
   };
 
+  const liveKeys = (keys: Set<string>) => {
+    const next = new Set<string>();
+    for (const item of keys) if (poolKeys.has(item)) next.add(item);
+    return next;
+  };
+
   const pickAnchorRef = useRef<string | null>(null);
   const togglePicked = (key: string, mods: PickModifiers) => {
     const result = applyPick(
-      picked,
+      liveKeys(picked),
       filteredGroups.map((group) => group.key),
       pickAnchorRef.current,
       key,
@@ -346,7 +371,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     pickAnchorRef.current = result.anchor;
     setPicked(result.selected);
     setPinned((pins) => {
-      const kept = [...pins].filter((pin) => result.selected.has(pin));
+      const kept = [...liveKeys(pins)].filter((pin) => result.selected.has(pin));
       return kept.length === pins.size ? pins : new Set(kept);
     });
     clearResults();
@@ -364,7 +389,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const rememberAndPin = (groupKey: string) => {
     if (!pinBeforeLock.current.has(groupKey)) {
-      pinBeforeLock.current.set(groupKey, pinned.has(groupKey));
+      pinBeforeLock.current.set(groupKey, activePinned.has(groupKey));
     }
     setPicked((prev) => {
       if (prev.has(groupKey)) return prev;
@@ -387,7 +412,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     if (stillLocked) return;
     const before = pinBeforeLock.current.get(groupKey);
     pinBeforeLock.current.delete(groupKey);
-    if (before === undefined || !picked.has(groupKey)) return;
+    if (before === undefined || !activePicked.has(groupKey)) return;
     setPinned((prev) => {
       const has = prev.has(groupKey);
       if (before === has) return prev;
@@ -400,7 +425,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const togglePin = (key: string) => {
     clearResults();
-    if (pinned.has(key)) {
+    if (activePinned.has(key)) {
       if (lockedGroupKeys.has(key)) return;
       setPinned((prev) => {
         const next = new Set(prev);
@@ -409,8 +434,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       });
       return;
     }
-    if (!picked.has(key) && picked.size >= MAX_CANDIDATES) return;
-    if (!picked.has(key)) {
+    if (!activePicked.has(key) && selection.atCap) return;
+    if (!activePicked.has(key)) {
       setPicked((prev) => {
         const next = new Set(prev);
         next.add(key);
@@ -427,21 +452,21 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
   const selectAll = () => {
     const visible = filteredGroups.map((group) => group.key);
     clearResults();
-    if (shouldClearVisiblePicks(visible, picked)) {
+    if (shouldClearVisiblePicks(visible, activePicked)) {
       setPicked((prev) => {
-        const next = new Set(prev);
+        const next = liveKeys(prev);
         for (const key of visible) next.delete(key);
         return next;
       });
       setPinned((prev) => {
-        const next = new Set(prev);
+        const next = liveKeys(prev);
         for (const key of visible) next.delete(key);
         return next;
       });
       return;
     }
     setPicked((prev) => {
-      const next = new Set(prev);
+      const next = liveKeys(prev);
       for (const key of visible) {
         if (next.size >= MAX_CANDIDATES) break;
         next.add(key);
@@ -485,7 +510,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     setStep(3);
     setDayOffNoticeDismissed(false);
     setChecked(0);
-    const stamp = stampPickedCourses(catalogCourses, [...picked]);
+    const stamp = stampPickedCourses(catalogCourses, selection.picked);
     setCourseStamp(stamp);
     setShownCount(MAX_RESULTS);
     shownCountRef.current = MAX_RESULTS;
@@ -497,7 +522,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     const classEnd = prefs.classHoursEnabled && prefs.classEnd ? timeToMinutes(prefs.classEnd) : null;
     const search: GeneratorSearch = startGeneratorSearch({
       groups: pickedGroups,
-      pinnedKeys: [...pinned],
+      pinnedKeys: selection.pinned,
       preferences: {
         mode: prefs.mode,
         courseCount,
@@ -572,7 +597,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const goStep = (next: 1 | 2 | 3) => {
     if (next === 3 && !result && !running) return;
-    if (next === 2 && picked.size < 2) return;
+    if (next === 2 && selection.pickedCount < 2) return;
     if (next !== 3) stopSearch();
     setStep(next);
   };
@@ -594,11 +619,11 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     <div className="up-gen-foot">
       {step === 1 && (
         <>
-          <span className="up-gen-foot-meta">{picked.size} picked · {pinned.size} pinned</span>
+          <span className="up-gen-foot-meta">{selection.pickedCount} picked · {selection.pinnedCount} pinned</span>
           <button
             type="button"
             className="up-gen-primary up-chrome-btn"
-            disabled={picked.size < 2}
+            disabled={selection.pickedCount < 2}
             onClick={() => setStep(2)}
           >
             Next
@@ -663,7 +688,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       </div>
       <GenerateStepHeader
         step={step}
-        canPreferences={picked.size >= 2}
+        canPreferences={selection.pickedCount >= 2}
         canResults={step === 3 || result != null}
         onStep={goStep}
       />
@@ -677,8 +702,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
             <CoursesStep
               groups={filteredGroups}
               query={query}
-              picked={picked}
-              pinned={pinned}
+              picked={activePicked}
+              pinned={activePinned}
               onQuery={setQuery}
               onToggle={togglePicked}
               onTogglePin={togglePin}
@@ -689,8 +714,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
           {step === 2 && (
             <PreferencesStep
               prefs={prefs}
-              pickedCount={picked.size}
-              pinnedCount={pinned.size}
+              pickedCount={selection.pickedCount}
+              pinnedCount={selection.pinnedCount}
               courseCount={courseCount}
               courseMin={courseMin}
               courseMax={courseMax}

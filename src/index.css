@@ -33,15 +33,22 @@
   --up-ink: #1b2430;
   --up-muted: #5c6774;
   --up-line: #d5dbe3;
-  --up-accent: #3d4fd8;
-  --up-accent-ink: #f4f5ff;
+  /* One indigo for primary fills in both themes. White text on it is 5.25:1. */
+  --up-accent: #4d5de4;
+  --up-accent-ink: #ffffff;
+  /* Accent as text or link color: a slightly deeper indigo here, a lighter one in dark mode. */
+  --up-accent-text: #3d4fd8;
   --up-focus: #3d4fd8;
-  /* Selected highlight. Same hue as the dark pill, light enough to sit just off the gray track. */
-  --up-secondary: #bac7ff;
+  /* Border for buttons and inputs, 3:1 on the page. Dividers keep --up-line. */
+  --up-control-line: #868fa0;
+  /* Selected highlight. A quiet tint of the accent so it sits calmly on the gray track. */
+  --up-secondary: color-mix(in srgb, var(--up-accent) 20%, var(--up-raised));
   --up-secondary-ink: #1b2430;
   --up-secondary-line: color-mix(in srgb, var(--up-accent) 32%, transparent);
   --color-indigo-600: var(--up-accent);
   --color-indigo-700: color-mix(in srgb, var(--up-accent) 82%, #101218);
+  /* Slate 500 is used for small labels, so it is set to clear 4.5:1 on white and on the panel color. */
+  --color-slate-500: oklch(51% 0.046 257.417);
 }
 
 html {
@@ -96,7 +103,7 @@ html.dark {
   --color-slate-200: oklch(92.9% 0 0);
   --color-slate-300: oklch(86.9% 0 0);
   --color-slate-400: oklch(70.4% 0 0);
-  --color-slate-500: oklch(55.4% 0 0);
+  --color-slate-500: oklch(62% 0 0);
   --color-slate-600: oklch(44.6% 0 0);
   --color-slate-700: oklch(37.2% 0 0);
   --color-slate-800: oklch(27.9% 0 0);
@@ -106,11 +113,13 @@ html.dark {
   --up-ink: #ececec;
   --up-muted: #939393;
   --up-line: #333333;
-  --up-accent: #5b6cf0;
-  --up-accent-ink: #f4f5ff;
+  --up-accent: #4d5de4;
+  --up-accent-ink: #ffffff;
+  --up-accent-text: #8b96ff;
   --up-focus: #8b96ff;
+  --up-control-line: #666666;
   /* Deep indigo selected highlight. Same hue as the accent, darker than the solid button. */
-  --up-secondary: #323a86;
+  --up-secondary: #2f3570;
   --up-secondary-ink: #f4f5ff;
   --up-secondary-line: color-mix(in srgb, var(--up-accent) 55%, transparent);
   --color-indigo-300: var(--up-focus);
@@ -122,6 +131,15 @@ html.dark {
 
 html.dark body {
   background-color: #070707;
+}
+
+/* Secondary buttons share one border color that reads as a control, not a divider. */
+button.border-slate-300 {
+  border-color: var(--up-control-line);
+}
+
+html.dark button[class~='dark:border-slate-700'] {
+  border-color: var(--up-control-line);
 }
 
 
@@ -1233,7 +1251,7 @@ html.dark .up-settings-select option,
   gap: 8px;
   min-height: 36px;
   padding: 0 10px 0 12px;
-  border: 1px solid var(--up-line);
+  border: 1px solid var(--up-control-line);
   border-radius: 12px;
   background: #fff;
   color: var(--up-ink);
@@ -1374,7 +1392,7 @@ html.dark .up-plan-row-item-danger {
   gap: 6px;
   min-height: 36px;
   padding: 0 10px 0 12px;
-  border: 1px solid var(--up-line);
+  border: 1px solid var(--up-control-line);
   border-radius: 8px;
   background: #fff;
   font-weight: 600;
@@ -1737,7 +1755,7 @@ body[data-up-pool-open] .up-fab-cluster {
   padding: 0 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--up-accent) 16%, transparent);
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   font-weight: 700;
@@ -2013,7 +2031,7 @@ html.dark .up-phone-time-gutter.is-week {
 }
 
 .up-phone-day-name.is-today {
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   border-bottom-color: var(--up-accent);
 }
 
@@ -2037,7 +2055,7 @@ html.dark .up-phone-time-gutter.is-week {
 
 .up-day-strip-btn.is-selected {
   background: transparent;
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   box-shadow: none;
 }
 
@@ -2100,7 +2118,7 @@ html.dark .up-welcome-backdrop {
   margin-bottom: 10px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--up-accent) 14%, transparent);
-  color: var(--up-accent);
+  color: var(--up-accent-text);
 }
 
 .up-welcome h2 {
@@ -2169,7 +2187,7 @@ html.dark .up-welcome-option {
 
 .up-welcome-mark-quick {
   background: color-mix(in srgb, var(--up-accent) 16%, transparent);
-  color: var(--up-accent);
+  color: var(--up-accent-text);
 }
 
 .up-welcome-mark-file {
@@ -2212,7 +2230,7 @@ html.dark .up-welcome-mark-demo {
 }
 
 .up-welcome-em {
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   font-weight: 700;
 }
 
@@ -2694,7 +2712,7 @@ html.dark .up-mobile-sheet,
 
 .up-pool-in-plan-badge.is-active {
   background: color-mix(in srgb, var(--up-accent) 14%, transparent);
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   border-color: color-mix(in srgb, var(--up-accent) 30%, transparent);
 }
 
@@ -3389,7 +3407,7 @@ html.dark .course-tab-pill {
 .course-input:focus-visible {
   outline: none;
   box-shadow: none;
-  border-color: #6366f1;
+  border-color: var(--up-accent);
 }
 
 html.dark .course-input:focus,
@@ -4137,7 +4155,7 @@ html.dark .up-gen-pin[aria-pressed='true']:hover {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -4413,7 +4431,7 @@ html.dark .up-gen-pin[aria-pressed='true']:hover {
 .up-gen-open {
   border: 0;
   background: transparent;
-  color: var(--up-accent);
+  color: var(--up-accent-text);
   font-size: 12px;
   font-weight: 650;
   line-height: 1;
