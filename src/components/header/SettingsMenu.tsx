@@ -18,6 +18,7 @@ import { ClearAllDialog } from './ClearAllDialog';
 import { usePWAInstall } from '../../utils/usePWAInstall';
 import { resolveTheme, type ThemePreference } from '../../utils/theme';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 
 const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
 
@@ -77,6 +78,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const reduceMotion = useReducedMotion();
+  const sheetDrag = useSheetDrag(onToggleOpen);
 
   const sheetOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
@@ -326,16 +328,18 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                       : { y: '100%', transition: sheetCloseTransition }
                   }
                   transition={sheetOpenTransition}
+                  {...sheetDrag.sheetProps}
                 >
                   <button
                     type="button"
                     className="up-pool-handle-hit"
+                    {...sheetDrag.handleProps}
                     onClick={onToggleOpen}
                     aria-label="Close settings"
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4">
+                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <Settings className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Settings</h2>

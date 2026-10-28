@@ -13,6 +13,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
   | 'addCourseFromPool'
   | 'removeCourseFromPlanByCatalog'
   | 'clearUnusedCatalogCourses'
+  | 'clearPlanCourses'
 > {
   return {
     bulkAddToCatalog: (courses: Course[]) => {
@@ -213,6 +214,17 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
 
       commitWithHistory(set, get, {
         plans: updatedPlans,
+      });
+    },
+
+    clearPlanCourses: (targetPlanId?: string) => {
+      const state = get();
+      const targetId = targetPlanId || state.activePlanId;
+      const targetPlan = state.plans.find(p => p.id === targetId);
+      if (!targetPlan || targetPlan.courses.length === 0) return;
+
+      commitWithHistory(set, get, {
+        plans: state.plans.map(p => (p.id === targetId ? { ...p, courses: [] } : p)),
       });
     },
 

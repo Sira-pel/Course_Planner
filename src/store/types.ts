@@ -71,6 +71,8 @@ export interface ScheduleState {
   addCourseFromPool: (catalogCourseId: string, targetPlanId?: string) => void;
   removeCourseFromPlanByCatalog: (catalogCourseId: string, targetPlanId?: string) => void;
   clearUnusedCatalogCourses: () => void;
+  /** Empties a plan's timetable without touching the pool. */
+  clearPlanCourses: (targetPlanId?: string) => void;
 
   // Undo / Redo
   undo: () => void;

@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Course } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
-import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
-import { Check, Trash2, Edit2, AlertTriangle, X, Plus } from 'lucide-react';
+import { formatSessionLines } from '../../utils/poolGroups';
+import { Plus, Trash2, Edit2, X, MoreHorizontal } from 'lucide-react';
 
 export interface PoolRowProps {
   item: Course;
+  /** `single` is a whole course card; `section` is one line inside an expanded group. */
+  variant: 'single' | 'section';
   inActivePlan: boolean;
   conflict: Course | null;
   confirmDelete: boolean;
@@ -19,8 +22,116 @@ export interface PoolRowProps {
   onRemoveFromPlan: (id: string) => void;
 }
 
+function RowMenu({
+  label,
+  onEdit,
+  onRemove,
+}: {
+  label: string;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const [pos, setPos] = useState<{ right: number; top?: number; bottom?: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const open = pos !== null;
+
+  const close = (restoreFocus: boolean) => {
+    setPos(null);
+    if (restoreFocus) buttonRef.current?.focus();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    menuRef.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      close(true);
+    };
+    const onPointer = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
+      setPos(null);
+    };
+    const dismiss = () => setPos(null);
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('scroll', dismiss, true);
+    window.addEventListener('resize', dismiss);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('scroll', dismiss, true);
+      window.removeEventListener('resize', dismiss);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    if (open) return close(false);
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const right = window.innerWidth - rect.right;
+    // Flip upward near the bottom edge so the menu is never cut off.
+    setPos(
+      rect.bottom + 110 > window.innerHeight
+        ? { right, bottom: window.innerHeight - rect.top + 4 }
+        : { right, top: rect.bottom + 4 }
+    );
+  };
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`More actions for ${label}`}
+        title="More actions"
+        className="up-pool-kebab up-chrome-btn"
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
+      {pos &&
+        createPortal(
+          <div ref={menuRef} className="up-pool-rowmenu" role="menu" style={pos}>
+            <button
+              type="button"
+              role="menuitem"
+              className="up-pool-menu-item up-chrome-btn"
+              onClick={() => {
+                setPos(null);
+                onEdit();
+              }}
+            >
+              <Edit2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Edit course</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="up-pool-menu-item is-danger up-chrome-btn"
+              onClick={() => {
+                setPos(null);
+                onRemove();
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Remove from pool</span>
+            </button>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
 export const PoolRow = React.memo(function PoolRow({
   item,
+  variant,
   inActivePlan,
   conflict,
   confirmDelete,
@@ -33,124 +144,104 @@ export const PoolRow = React.memo(function PoolRow({
   onRemoveFromPlan,
 }: PoolRowProps) {
   const visibleTitle = displayCourseTitle(item);
-  return (
-    <div className="up-pool-row group">
-      <div className="flex items-start justify-between gap-1.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} />
-          <span className="up-pool-code truncate">{item.code}</span>
-          {item.section && (
-            <span className="up-pool-meta font-mono">Sec {item.section}</span>
-          )}
-          {item.credits ? (
-            <span className="up-pool-meta font-mono">{item.credits} cr</span>
-          ) : null}
-        </div>
+  const lines = formatSessionLines(item.sessions);
+  const rooms = new Set(item.sessions.map((s) => s.room).filter((r): r is string => !!r && !/^tbd$/i.test(r)));
+  const room = rooms.size === 1 ? [...rooms][0] : '';
+  const sectionLabel = item.section ? `Sec ${item.section}` : 'Section';
 
-        <div className="flex items-center gap-0.5 shrink-0">
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onConfirmDelete(item.id)}
-                className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
-              >
-                Delete
-              </button>
-              <button
-                type="button"
-                onClick={onCancelDelete}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-                aria-label="Cancel delete"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="up-pool-row-actions flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => onEdit(item.id)}
-                title="Edit course"
-                aria-label={`Edit ${item.code}`}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onRequestDelete(item.id)}
-                title="Remove from pool"
-                aria-label={`Remove ${item.code} from pool`}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+  const times = (
+    <div className="up-pool-times font-mono up-pool-meta">
+      {lines.length === 0 ? <span>No meeting times</span> : lines.map((line) => <span key={line}>{line}</span>)}
+    </div>
+  );
 
-      {visibleTitle && (
-        <h3 className="text-xs mt-0.5 leading-snug line-clamp-1" style={{ color: 'var(--up-ink)' }}>
-          {visibleTitle}
-        </h3>
+  const actions = confirmDelete ? (
+    <div className="up-pool-confirm">
+      <button
+        type="button"
+        onClick={() => onConfirmDelete(item.id)}
+        className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
+      >
+        Delete
+      </button>
+      <button
+        type="button"
+        onClick={onCancelDelete}
+        className="up-icon-btn up-chrome-btn up-pool-icon-hit"
+        aria-label="Cancel delete"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  ) : (
+    <div className="up-pool-trail">
+      {conflict && !inActivePlan && (
+        <span className="up-pool-conflict-tag" title={`Overlaps with ${conflict.code}`}>
+          Overlaps
+        </span>
       )}
-
-      <div className="mt-1.5 space-y-0.5 font-mono up-pool-meta">
-        {item.sessions.map((s, idx) => (
-          <div key={idx} className="flex items-center justify-between">
-            <span className="capitalize">
-              {s.day.slice(0, 3)}{' '}
-              {minutesToTime(timeToMinutes(s.startTime))} - {minutesToTime(timeToMinutes(s.endTime))}
-            </span>
-            {s.room && (
-              <span className="font-sans truncate max-w-[90px]">{s.room}</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {item.instructor && (
-        <div className="mt-1 up-pool-meta truncate">{item.instructor}</div>
+      <RowMenu
+        label={`${item.code}${item.section ? ` section ${item.section}` : ''}`}
+        onEdit={() => onEdit(item.id)}
+        onRemove={() => onRequestDelete(item.id)}
+      />
+      {inActivePlan ? (
+        <button
+          type="button"
+          onClick={() => onRemoveFromPlan(item.id)}
+          className="up-pool-toggle is-remove up-chrome-btn"
+          title={`Remove ${item.code} from ${activePlanName ?? 'plan'}`}
+          aria-label={`Remove ${item.code}${item.section ? ` section ${item.section}` : ''} from plan`}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onAddToPlan(item.id)}
+          className={`up-pool-toggle is-add up-chrome-btn${conflict ? ' is-conflict' : ''}`}
+          title={conflict ? `Overlaps with ${conflict.code}. Add anyway` : `Add ${item.code} to ${activePlanName ?? 'plan'}`}
+          aria-label={`Add ${item.code}${item.section ? ` section ${item.section}` : ''} to plan`}
+        >
+          <Plus className="w-4 h-4" />
+        </button>
       )}
+    </div>
+  );
 
-      {conflict && (
-        <div className="up-pool-conflict">
-          <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span className="truncate">
-            Overlaps with <strong>{conflict.code}</strong>
+  if (variant === 'section') {
+    return (
+      <div className={`up-pool-section group${inActivePlan ? ' is-in-plan' : ''}${conflict && !inActivePlan ? ' is-conflict' : ''}`}>
+        <div className="up-pool-body">
+          <span className="up-pool-sec-no font-mono">
+            <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} aria-hidden="true" />
+            {sectionLabel}
           </span>
+          {times}
+          {(item.instructor || room) && (
+            <div className="up-pool-meta truncate">{[item.instructor, room].filter(Boolean).join(' · ')}</div>
+          )}
         </div>
-      )}
+        {actions}
+      </div>
+    );
+  }
 
-      <div className="mt-2.5 pt-2 flex items-center justify-between gap-2" style={{ borderTop: '1px solid var(--up-line)' }}>
-        {inActivePlan ? (
-          <>
-            <span className="up-pool-status">
-              <Check className="w-3.5 h-3.5" />
-              In plan
-            </span>
-            <button
-              type="button"
-              onClick={() => onRemoveFromPlan(item.id)}
-              className="up-pool-text-btn up-chrome-btn"
-              title="Remove this class from the current timetable"
-            >
-              Remove from plan
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onAddToPlan(item.id)}
-            className="up-pool-add up-chrome-btn"
-            title={`Add ${item.code} to ${activePlanName}`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add to plan
-          </button>
-        )}
+  return (
+    <div className={`up-pool-row group${inActivePlan ? ' is-in-plan' : ''}${conflict && !inActivePlan ? ' is-conflict' : ''}`}>
+      <div className="up-pool-one">
+        <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} />
+        <div className="up-pool-body" title={item.instructor || undefined}>
+          <div className="up-pool-l1">
+            <span className="up-pool-code truncate">{item.code}</span>
+            {visibleTitle && <span className="up-pool-title-sm truncate">{visibleTitle}</span>}
+          </div>
+          <div className="up-pool-l2 font-mono up-pool-meta">
+            {lines.length === 0 ? 'No meeting times' : lines.join(' · ')}
+            {item.credits ? ` · ${item.credits} cr` : ''}
+          </div>
+        </div>
+        {actions}
       </div>
     </div>
   );

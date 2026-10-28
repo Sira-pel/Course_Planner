@@ -30,6 +30,7 @@ import {
   SHEET_OPEN_TRANSITION,
   useModalMotion,
 } from '../../utils/motion';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 import { useIsPhone } from '../../utils/usePoolLayout';
 import { timeToMinutes } from '../../utils/timeUtils';
 import { settledGeneratorSelection } from '../../utils/generatorSelection';
@@ -84,6 +85,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 }) => {
   const isPhone = useIsPhone();
   const reduceMotion = useReducedMotion();
+  const sheetDrag = useSheetDrag(onClose);
   const { backdropProps, panelProps, contentProps } = useModalMotion(isOpen);
   const catalogCourses = useScheduleStore((state) => state.catalogCourses);
   const importPlan = useScheduleStore((state) => state.importPlan);
@@ -844,8 +846,9 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? { opacity: 0, transition: { duration: 0 } } : { y: '100%', transition: sheetClose }}
             transition={sheetOpen}
+            {...sheetDrag.sheetProps}
           >
-            <button type="button" className="up-pool-handle-hit" onClick={onClose} aria-label="Close generate plans">
+            <button type="button" className="up-pool-handle-hit" {...sheetDrag.handleProps} onClick={onClose} aria-label="Close generate plans">
               <span className="up-pool-handle" />
             </button>
             <div className="up-gen-sheet-body">{body}</div>

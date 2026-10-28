@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { ExportTabType } from '../export/ExportModal';
 import { EASE_OUT, SHEET_CLOSE_TRANSITION, SHEET_OPEN_TRANSITION } from '../../utils/motion';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 
 type ImportTab = 'excel' | 'share' | 'ics' | 'backup';
 
@@ -115,6 +116,7 @@ export function ImportExportMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   const close = () => onOpenChange(false);
+  const sheetDrag = useSheetDrag(close);
   const actions: ImportExportActions = { onOpenImport, onOpenExport, onClose: close };
 
   useEffect(() => {
@@ -197,11 +199,13 @@ export function ImportExportMenu({
                       : { y: '100%', transition: sheetCloseTransition }
                   }
                   transition={sheetOpenTransition}
+                  {...sheetDrag.sheetProps}
                 >
-                  <button type="button" className="up-pool-handle-hit" onClick={close} aria-label="Close import and export">
+                  <button type="button" className="up-pool-handle-hit"
+                    {...sheetDrag.handleProps} onClick={close} aria-label="Close import and export">
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4">
+                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <ArrowUpDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Import / Export</h2>
