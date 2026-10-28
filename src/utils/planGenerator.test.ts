@@ -421,6 +421,34 @@ describe('plan generator', () => {
     assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'C16')), false);
   });
 
+  it('spends a capped search on the best-fitting sections, not the first listed', () => {
+    // Each course lists its bad sections first (early MWF, late MWF) and its good one last.
+    // Good sections sit Tue/Thu 10:00-14:00, so every five that start at different hours fit.
+    const groups = Array.from({ length: 10 }, (_, index) => {
+      const code = `G${index + 1}`;
+      const slot = 10 * 60 + (index % 5) * 60;
+      const early = section(`${code}-early`, code, '08:00', '08:50', '001', 'monday');
+      const late = section(`${code}-late`, code, '16:30', '17:20', '002', 'friday');
+      const good = section(`${code}-good`, code, clock(slot), clock(slot + 50), '003', 'tuesday');
+      return group(code, [early, late, good]);
+    });
+
+    const result = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({
+        courseCount: 5,
+        daysOff: ['monday', 'friday'],
+        classStart: 10 * 60,
+        classEnd: 15 * 60,
+      }),
+    });
+
+    assert.equal(result.capped, true);
+    assert.equal(result.evaluated, MAX_EVALUATIONS);
+    assert.ok(result.plans[0].courses.every((course) => course.id.endsWith('-good')));
+  });
+
   it('accepts courseCount up to 15 and caps higher values to MAX_CANDIDATES in sanitizeGeneratorPrefs', () => {
     assert.equal(sanitizeGeneratorPrefs({ courseCount: 15 }).courseCount, 15);
     assert.equal(sanitizeGeneratorPrefs({ courseCount: 16 }).courseCount, MAX_CANDIDATES);
