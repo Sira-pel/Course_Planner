@@ -18,6 +18,7 @@ import type { SchedulePlan } from '../../types/schedule';
 import { AnimatedBody } from '../app/AnimatedBody';
 import { ModalTabPill } from '../app/ModalTabPill';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 
 interface PlansMenuProps {
   isPhone: boolean;
@@ -73,6 +74,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   onSharePlan,
 }) => {
   const reduceMotion = useReducedMotion();
+  const sheetDrag = useSheetDrag(onToggleOpen);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<'blank' | 'duplicate'>('blank');
   const [rowMenuPlanId, setRowMenuPlanId] = useState<string | null>(null);
@@ -471,16 +473,18 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                       : { y: '100%', transition: sheetCloseTransition }
                   }
                   transition={sheetOpenTransition}
+                  {...sheetDrag.sheetProps}
                 >
                   <button
                     type="button"
                     className="up-pool-handle-hit"
+                    {...sheetDrag.handleProps}
                     onClick={onToggleOpen}
                     aria-label="Close plans"
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4">
+                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <FolderKanban className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Schedule plans</h2>

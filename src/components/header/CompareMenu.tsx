@@ -6,6 +6,7 @@ import { Layers, Plus, Copy, ChevronDown, Share2, UserPlus, X, Check } from 'luc
 import { getPlanGhostColor } from '../../types/schedule';
 import type { SchedulePlan } from '../../types/schedule';
 import { EASE_OUT, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION } from '../../utils/motion';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 
 interface CompareMenuProps {
   isPhone: boolean;
@@ -47,6 +48,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
   onImportFriendLink,
 }) => {
   const reduceMotion = useReducedMotion();
+  const sheetDrag = useSheetDrag(onToggleOpen);
 
   const sheetOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
@@ -287,16 +289,18 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                       : { y: '100%', transition: sheetCloseTransition }
                   }
                   transition={sheetOpenTransition}
+                  {...sheetDrag.sheetProps}
                 >
                   <button
                     type="button"
                     className="up-pool-handle-hit"
+                    {...sheetDrag.handleProps}
                     onClick={onToggleOpen}
                     aria-label="Close compare"
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4">
+                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Compare plans</h2>

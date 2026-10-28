@@ -22,6 +22,8 @@ export type FilterMode = 'all' | 'in_plan' | 'not_in_plan';
 
 export interface PoolPanelProps {
   isMobileSheet: boolean;
+  /** Lets the phone sheet be dragged down by its header. */
+  headDragProps?: React.HTMLAttributes<HTMLDivElement>;
   searchQuery: string;
   filterMode: FilterMode;
   confirmDeleteCourseId: string | null;
@@ -57,6 +59,7 @@ export interface PoolPanelProps {
 
 export const PoolPanel: React.FC<PoolPanelProps> = ({
   isMobileSheet,
+  headDragProps,
   searchQuery,
   filterMode,
   confirmDeleteCourseId,
@@ -122,7 +125,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   }, [totalInPlan]);
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="up-pool-head">
+      <div className="up-pool-head" {...headDragProps}>
         <div className="flex items-center gap-2.5 min-w-0">
           <ShoppingBag className="w-4 h-4 shrink-0" style={{ color: 'var(--up-ink)' }} />
           <div className="min-w-0">

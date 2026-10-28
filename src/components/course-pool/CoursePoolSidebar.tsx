@@ -6,6 +6,7 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import { Course, DayOfWeek } from '../../types/schedule';
 import { timeToMinutes } from '../../utils/timeUtils';
 import { usePoolLayout } from '../../utils/usePoolLayout';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 import { courseIdentityKey, sameCourseIdentity } from '../../utils/courseIdentity';
 import { ShoppingBag } from 'lucide-react';
 import { PoolPanel, type FilterMode } from './PoolPanel';
@@ -51,6 +52,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   );
 
   const reduceMotion = useReducedMotion();
+  const sheetDrag = useSheetDrag(onToggleCollapse);
   const layout = usePoolLayout();
   // Held here so a layout-branch remount of PoolPanel does not clear search/filter/confirm.
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,6 +358,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   const renderPoolPanel = (isMobileSheet: boolean) => (
     <PoolPanel
       isMobileSheet={isMobileSheet}
+      headDragProps={isMobileSheet ? sheetDrag.handleProps : undefined}
       searchQuery={searchQuery}
       filterMode={filterMode}
       confirmDeleteCourseId={confirmDeleteCourseId}
@@ -519,10 +522,12 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
                     : { y: '100%', transition: sheetCloseTransition }
                 }
                 transition={sheetOpenTransition}
+                {...sheetDrag.sheetProps}
               >
                 <button
                   type="button"
                   className="up-pool-handle-hit"
+                  {...sheetDrag.handleProps}
                   onClick={onToggleCollapse}
                   aria-label="Close course pool"
                 >
