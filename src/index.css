@@ -3084,41 +3084,45 @@ html.dark .up-mobile-sheet,
   flex-shrink: 0;
 }
 
-.up-pool-row-actions {
-  display: flex;
+.up-pool-kebab {
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-}
-
-.up-pool-row-actions .up-icon-btn {
+  justify-content: center;
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--up-muted);
+  cursor: pointer;
 }
 
-@media (hover: hover) {
-  .up-pool-row-actions {
-    position: absolute;
-    top: 50%;
-    right: 56px;
-    transform: translateY(-50%);
-    padding: 2px;
-    border: 1px solid var(--up-line);
-    border-radius: 8px;
-    background: var(--up-raised);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--dur-chrome) var(--ease-out);
-  }
+.up-pool-kebab:hover,
+.up-pool-kebab[aria-expanded='true'] {
+  color: var(--up-ink);
+  background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+}
 
-  .up-pool-row:not(.up-pool-group):hover .up-pool-row-actions,
-  .up-pool-section:hover .up-pool-row-actions,
-  .up-pool-row-actions:focus-within {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.up-pool-rowmenu {
+  position: fixed;
+  z-index: 120;
+  width: max-content;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--up-line);
+  border-radius: 8px;
+  background: var(--up-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.up-pool-menu-item.is-danger {
+  color: #c42b4a;
+}
+
+.dark .up-pool-menu-item.is-danger {
+  color: #f4a4b2;
 }
 
 .up-pool-toggle {
@@ -3292,6 +3296,11 @@ html.dark .up-mobile-sheet,
     height: 44px;
   }
 
+  .up-pool-kebab {
+    width: 40px;
+    height: 40px;
+  }
+
   .up-pool-menu-item {
     min-height: 48px;
     align-items: center;
@@ -3302,17 +3311,6 @@ html.dark .up-mobile-sheet,
   }
 }
 
-@media (pointer: coarse) {
-  .up-pool-row-actions {
-    position: static;
-    transform: none;
-    opacity: 1;
-    pointer-events: auto;
-    border: 0;
-    padding: 0;
-    background: transparent;
-  }
-}
 
 @media (max-width: 380px) {
   .up-pool-one {
