@@ -1,6 +1,8 @@
 import { DAYS_LIST, type Course } from '../types/schedule';
 import { minutesToTime, timeToMinutes } from './timeUtils';
 
+const UNKNOWN_DAY = Number.MAX_SAFE_INTEGER;
+
 export interface PoolGroup {
   key: string;
   code: string;
@@ -11,7 +13,9 @@ export interface PoolGroup {
 export function groupPoolCourses(courses: Course[]): PoolGroup[] {
   const groups = new Map<string, PoolGroup>();
   for (const course of courses) {
-    const key = course.code.trim().replace(/\s+/g, ' ').toUpperCase();
+    const code = course.code.trim().replace(/\s+/g, ' ').toUpperCase();
+    // Courses without a code must not collapse into one nameless group.
+    const key = code || `ID:${course.id}`;
     const group = groups.get(key);
     if (group) group.courses.push(course);
     else groups.set(key, { key, code: course.code, courses: [course] });
@@ -37,12 +41,12 @@ export function formatSessionLines(sessions: Course['sessions']): string[] {
   for (const session of sessions) {
     const label = range(session.startTime, session.endTime);
     const entry = byRange.get(label) ?? { days: [], label };
-    const day = order.get(session.day) ?? 0;
+    const day = order.get(session.day) ?? UNKNOWN_DAY;
     if (!entry.days.includes(day)) entry.days.push(day);
     byRange.set(label, entry);
   }
   return [...byRange.values()].map(({ days, label }) => {
-    const names = days.sort((x, y) => x - y).map((day) => DAYS_LIST[day].label);
+    const names = days.sort((x, y) => x - y).map((day) => DAYS_LIST[day]?.label ?? 'TBA');
     return `${names.join(', ')} ${label}`;
   });
 }

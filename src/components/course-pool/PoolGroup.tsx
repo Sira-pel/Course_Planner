@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Check, ChevronRight } from 'lucide-react';
 import type { Course } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 
 export interface PoolGroupProps {
-  groupId: string;
   courses: Course[];
   inPlanCount: number;
   expanded: boolean;
@@ -14,14 +13,16 @@ export interface PoolGroupProps {
 }
 
 export const PoolGroup = React.memo(function PoolGroup({
-  groupId,
   courses,
   inPlanCount,
   expanded,
   onToggle,
   children,
 }: PoolGroupProps) {
+  const groupId = useId();
   const first = courses[0];
+  // Each section keeps its own color, so show every distinct one (a few at most).
+  const colors = [...new Set(courses.map((c) => displayCourseColor(c.color).bg))].slice(0, 3);
   const title = courses.map(displayCourseTitle).find(Boolean) ?? '';
   const credits = first.credits ? `${first.credits} cr · ` : '';
   return (
@@ -30,11 +31,15 @@ export const PoolGroup = React.memo(function PoolGroup({
         type="button"
         className="up-pool-group-head up-chrome-btn"
         aria-expanded={expanded}
-        aria-controls={groupId}
+        aria-controls={expanded ? groupId : undefined}
         onClick={onToggle}
       >
         <ChevronRight className={`up-pool-chevron w-4 h-4${expanded ? ' is-open' : ''}`} aria-hidden="true" />
-        <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(first.color).bg }} />
+        <span className="up-pool-swatches" aria-hidden="true">
+          {colors.map((bg) => (
+            <span key={bg} className="up-pool-swatch" style={{ backgroundColor: bg }} />
+          ))}
+        </span>
         <span className="up-pool-body">
           <span className="up-pool-l1">
             <span className="up-pool-code truncate">{first.code}</span>

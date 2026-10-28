@@ -18,6 +18,13 @@ describe('groupPoolCourses', () => {
   });
 });
 
+describe('groupPoolCourses with blank codes', () => {
+  it('keeps courses without a code in separate groups', () => {
+    const groups = groupPoolCourses([course('1', '', '001'), course('2', '  ', '001')]);
+    assert.equal(groups.length, 2);
+  });
+});
+
 describe('formatSessionLines', () => {
   const s = (day: 'monday' | 'wednesday' | 'friday', startTime: string, endTime: string) => ({
     id: `${day}${startTime}`, day, startTime, endTime,
@@ -28,6 +35,11 @@ describe('formatSessionLines', () => {
       formatSessionLines([s('wednesday', '15:30', '17:00'), s('monday', '15:30', '17:00')]),
       ['Mon, Wed 3:30–5:00 PM'],
     );
+  });
+
+  it('labels an unknown day TBA instead of Monday', () => {
+    const odd = { id: 'x', day: 'someday' as never, startTime: '09:00', endTime: '10:00' };
+    assert.deepEqual(formatSessionLines([odd]), ['TBA 9:00–10:00 AM']);
   });
 
   it('keeps both meridiems when the range crosses noon and splits differing ranges', () => {

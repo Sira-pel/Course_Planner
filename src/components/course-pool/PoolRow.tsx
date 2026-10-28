@@ -43,7 +43,7 @@ function RowMenu({
 
   useEffect(() => {
     if (!open) return;
-    menuRef.current?.querySelector<HTMLElement>('button')?.focus();
+    menuRef.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       e.preventDefault();
@@ -213,7 +213,10 @@ export const PoolRow = React.memo(function PoolRow({
     return (
       <div className={`up-pool-section group${inActivePlan ? ' is-in-plan' : ''}${conflict && !inActivePlan ? ' is-conflict' : ''}`}>
         <div className="up-pool-body">
-          <span className="up-pool-sec-no font-mono">{sectionLabel}</span>
+          <span className="up-pool-sec-no font-mono">
+            <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} aria-hidden="true" />
+            {sectionLabel}
+          </span>
           {times}
           {(item.instructor || room) && (
             <div className="up-pool-meta truncate">{[item.instructor, room].filter(Boolean).join(' · ')}</div>

@@ -520,7 +520,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               return (
                 <PoolGroup
                   key={group.key}
-                  groupId={`pool-group-${group.key.replace(/[^A-Z0-9]+/g, '-')}`}
                   courses={group.courses}
                   inPlanCount={inPlanCount}
                   expanded={expanded}
