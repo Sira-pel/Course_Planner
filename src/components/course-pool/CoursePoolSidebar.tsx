@@ -36,6 +36,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     addCourseFromPool,
     removeCourseFromPlanByCatalog,
     clearUnusedCatalogCourses,
+    clearPlanCourses,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -45,6 +46,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       addCourseFromPool: state.addCourseFromPool,
       removeCourseFromPlanByCatalog: state.removeCourseFromPlanByCatalog,
       clearUnusedCatalogCourses: state.clearUnusedCatalogCourses,
+      clearPlanCourses: state.clearPlanCourses,
     }))
   );
 
@@ -325,6 +327,11 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     [removeCourseFromPlanByCatalog, activePlan]
   );
 
+  const handleClearPlan = useCallback(() => {
+    if (!activePlan) return;
+    clearPlanCourses(activePlan.id);
+  }, [clearPlanCourses, activePlan]);
+
   const countBadge = (
     <AnimatePresence initial={false} mode="popLayout">
       {catalogCourses.length > 0 && (
@@ -379,6 +386,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       unusedInAnyPlanCount={unusedInAnyPlanCount}
       usedInAnyPlanCount={usedInAnyPlanCount}
       onClearUnusedCatalogCourses={clearUnusedCatalogCourses}
+      onClearPlan={handleClearPlan}
     />
   );
 

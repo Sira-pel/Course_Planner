@@ -2,11 +2,13 @@ import React from 'react';
 import type { Course } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
-import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
-import { Check, Trash2, Edit2, AlertTriangle, X, Plus } from 'lucide-react';
+import { formatSessionLines } from '../../utils/poolGroups';
+import { Plus, Trash2, Edit2, X } from 'lucide-react';
 
 export interface PoolRowProps {
   item: Course;
+  /** `single` is a whole course card; `section` is one line inside an expanded group. */
+  variant: 'single' | 'section';
   inActivePlan: boolean;
   conflict: Course | null;
   confirmDelete: boolean;
@@ -21,6 +23,7 @@ export interface PoolRowProps {
 
 export const PoolRow = React.memo(function PoolRow({
   item,
+  variant,
   inActivePlan,
   conflict,
   confirmDelete,
@@ -33,124 +36,116 @@ export const PoolRow = React.memo(function PoolRow({
   onRemoveFromPlan,
 }: PoolRowProps) {
   const visibleTitle = displayCourseTitle(item);
+  const lines = formatSessionLines(item.sessions);
+  const rooms = new Set(item.sessions.map((s) => s.room).filter((r): r is string => !!r && !/^tbd$/i.test(r)));
+  const room = rooms.size === 1 ? [...rooms][0] : '';
+  const sectionLabel = item.section ? `Sec ${item.section}` : 'Section';
+
+  const times = (
+    <div className="up-pool-times font-mono up-pool-meta">
+      {lines.length === 0 ? <span>No meeting times</span> : lines.map((line) => <span key={line}>{line}</span>)}
+    </div>
+  );
+
+  const actions = confirmDelete ? (
+    <div className="up-pool-confirm">
+      <button
+        type="button"
+        onClick={() => onConfirmDelete(item.id)}
+        className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
+      >
+        Delete
+      </button>
+      <button
+        type="button"
+        onClick={onCancelDelete}
+        className="up-icon-btn up-chrome-btn up-pool-icon-hit"
+        aria-label="Cancel delete"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  ) : (
+    <div className="up-pool-trail">
+      {conflict && !inActivePlan && (
+        <span className="up-pool-conflict-tag" title={`Overlaps with ${conflict.code}`}>
+          Overlaps
+        </span>
+      )}
+      <div className="up-pool-row-actions">
+        <button
+          type="button"
+          onClick={() => onEdit(item.id)}
+          title="Edit course"
+          aria-label={`Edit ${item.code}${item.section ? ` section ${item.section}` : ''}`}
+          className="up-icon-btn up-chrome-btn up-pool-icon-hit"
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onRequestDelete(item.id)}
+          title="Remove from pool"
+          aria-label={`Remove ${item.code}${item.section ? ` section ${item.section}` : ''} from pool`}
+          className="up-icon-btn up-chrome-btn up-pool-icon-hit"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {inActivePlan ? (
+        <button
+          type="button"
+          onClick={() => onRemoveFromPlan(item.id)}
+          className="up-pool-toggle is-remove up-chrome-btn"
+          title={`Remove ${item.code} from ${activePlanName ?? 'plan'}`}
+          aria-label={`Remove ${item.code}${item.section ? ` section ${item.section}` : ''} from plan`}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onAddToPlan(item.id)}
+          className={`up-pool-toggle is-add up-chrome-btn${conflict ? ' is-conflict' : ''}`}
+          title={conflict ? `Overlaps with ${conflict.code}. Add anyway` : `Add ${item.code} to ${activePlanName ?? 'plan'}`}
+          aria-label={`Add ${item.code}${item.section ? ` section ${item.section}` : ''} to plan`}
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+
+  if (variant === 'section') {
+    return (
+      <div className={`up-pool-section group${inActivePlan ? ' is-in-plan' : ''}${conflict && !inActivePlan ? ' is-conflict' : ''}`}>
+        <div className="up-pool-body">
+          <span className="up-pool-sec-no font-mono">{sectionLabel}</span>
+          {times}
+          {(item.instructor || room) && (
+            <div className="up-pool-meta truncate">{[item.instructor, room].filter(Boolean).join(' · ')}</div>
+          )}
+        </div>
+        {actions}
+      </div>
+    );
+  }
+
   return (
-    <div className="up-pool-row group">
-      <div className="flex items-start justify-between gap-1.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} />
-          <span className="up-pool-code truncate">{item.code}</span>
-          {item.section && (
-            <span className="up-pool-meta font-mono">Sec {item.section}</span>
-          )}
-          {item.credits ? (
-            <span className="up-pool-meta font-mono">{item.credits} cr</span>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-0.5 shrink-0">
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onConfirmDelete(item.id)}
-                className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
-              >
-                Delete
-              </button>
-              <button
-                type="button"
-                onClick={onCancelDelete}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-                aria-label="Cancel delete"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="up-pool-row-actions flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => onEdit(item.id)}
-                title="Edit course"
-                aria-label={`Edit ${item.code}`}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onRequestDelete(item.id)}
-                title="Remove from pool"
-                aria-label={`Remove ${item.code} from pool`}
-                className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {visibleTitle && (
-        <h3 className="text-xs mt-0.5 leading-snug line-clamp-1" style={{ color: 'var(--up-ink)' }}>
-          {visibleTitle}
-        </h3>
-      )}
-
-      <div className="mt-1.5 space-y-0.5 font-mono up-pool-meta">
-        {item.sessions.map((s, idx) => (
-          <div key={idx} className="flex items-center justify-between">
-            <span className="capitalize">
-              {s.day.slice(0, 3)}{' '}
-              {minutesToTime(timeToMinutes(s.startTime))} - {minutesToTime(timeToMinutes(s.endTime))}
-            </span>
-            {s.room && (
-              <span className="font-sans truncate max-w-[90px]">{s.room}</span>
-            )}
+    <div className={`up-pool-row group${inActivePlan ? ' is-in-plan' : ''}${conflict && !inActivePlan ? ' is-conflict' : ''}`}>
+      <div className="up-pool-one">
+        <span className="up-pool-swatch" style={{ backgroundColor: displayCourseColor(item.color).bg }} />
+        <div className="up-pool-body" title={item.instructor || undefined}>
+          <div className="up-pool-l1">
+            <span className="up-pool-code truncate">{item.code}</span>
+            {visibleTitle && <span className="up-pool-title-sm truncate">{visibleTitle}</span>}
           </div>
-        ))}
-      </div>
-
-      {item.instructor && (
-        <div className="mt-1 up-pool-meta truncate">{item.instructor}</div>
-      )}
-
-      {conflict && (
-        <div className="up-pool-conflict">
-          <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span className="truncate">
-            Overlaps with <strong>{conflict.code}</strong>
-          </span>
+          <div className="up-pool-l2 font-mono up-pool-meta">
+            {lines.length === 0 ? 'No meeting times' : lines.join(' · ')}
+            {item.credits ? ` · ${item.credits} cr` : ''}
+          </div>
         </div>
-      )}
-
-      <div className="mt-2.5 pt-2 flex items-center justify-between gap-2" style={{ borderTop: '1px solid var(--up-line)' }}>
-        {inActivePlan ? (
-          <>
-            <span className="up-pool-status">
-              <Check className="w-3.5 h-3.5" />
-              In plan
-            </span>
-            <button
-              type="button"
-              onClick={() => onRemoveFromPlan(item.id)}
-              className="up-pool-text-btn up-chrome-btn"
-              title="Remove this class from the current timetable"
-            >
-              Remove from plan
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onAddToPlan(item.id)}
-            className="up-pool-add up-chrome-btn"
-            title={`Add ${item.code} to ${activePlanName}`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add to plan
-          </button>
-        )}
+        {actions}
       </div>
     </div>
   );

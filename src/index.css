@@ -42,7 +42,7 @@
   /* Border for buttons and inputs, 3:1 on the page. Dividers keep --up-line. */
   --up-control-line: #868fa0;
   /* Selected highlight. A quiet tint of the accent so it sits calmly on the gray track. */
-  --up-secondary: color-mix(in srgb, var(--up-accent) 20%, var(--up-raised));
+  --up-secondary: color-mix(in srgb, var(--up-accent) 32%, var(--up-raised));
   --up-secondary-ink: #1b2430;
   --up-secondary-line: color-mix(in srgb, var(--up-accent) 32%, transparent);
   --color-indigo-600: var(--up-accent);
@@ -2925,10 +2925,11 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-row {
+  position: relative;
   border: 1px solid var(--up-line);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 10px;
   background: var(--up-raised);
+  overflow: hidden;
   transition-property: border-color, background-color;
   transition-duration: var(--dur-chrome);
   transition-timing-function: var(--ease-out);
@@ -2938,14 +2939,390 @@ html.dark .up-mobile-sheet,
   border-color: color-mix(in srgb, var(--up-ink) 22%, var(--up-line));
 }
 
+.up-pool-row.is-in-plan {
+  background: color-mix(in srgb, var(--up-accent) 8%, var(--up-raised));
+  border-color: color-mix(in srgb, var(--up-accent) 35%, var(--up-line));
+}
+
+.up-pool-one {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 14px 12px;
+}
+
+.up-pool-body {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: left;
+}
+
+.up-pool-l1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.up-pool-l1 .up-pool-code {
+  flex-shrink: 0;
+  max-width: 60%;
+  font-size: 14px;
+}
+
+.up-pool-title-sm {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--up-muted);
+}
+
+.up-pool-l2 {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.up-pool-times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.up-pool-section .up-pool-times {
+  color: var(--up-ink);
+}
+
+.up-pool-group.is-in-plan {
+  background: var(--up-raised);
+}
+
+.up-pool-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.up-pool-group-head:hover {
+  background: color-mix(in srgb, var(--up-ink) 4%, transparent);
+}
+
+.up-pool-chevron {
+  flex-shrink: 0;
+  color: var(--up-muted);
+  transition: transform var(--dur-chrome) var(--ease-out);
+}
+
+.up-pool-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.up-pool-group-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--up-accent) 30%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--up-accent) 14%, transparent);
+  color: var(--up-accent-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.up-pool-sections {
+  border-top: 1px solid var(--up-line);
+}
+
+.up-pool-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 12px;
+}
+
+.up-pool-section + .up-pool-section {
+  border-top: 1px solid var(--up-line);
+}
+
+.up-pool-section.is-in-plan {
+  background: color-mix(in srgb, var(--up-accent) 10%, var(--up-raised));
+}
+
+.up-pool-sec-no {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: var(--up-muted);
+}
+
+.up-pool-trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.up-pool-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.up-pool-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.up-pool-row-actions .up-icon-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 6px;
+}
+
 @media (hover: hover) {
   .up-pool-row-actions {
+    position: absolute;
+    top: 6px;
+    right: 56px;
+    padding: 2px;
+    border: 1px solid var(--up-line);
+    border-radius: 8px;
+    background: var(--up-raised);
     opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-chrome) var(--ease-out);
   }
 
-  .up-pool-row:hover .up-pool-row-actions,
-  .up-pool-row:focus-within .up-pool-row-actions {
+  .up-pool-row:not(.up-pool-group):hover .up-pool-row-actions,
+  .up-pool-section:hover .up-pool-row-actions,
+  .up-pool-row-actions:focus-within {
     opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.up-pool-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.up-pool-toggle.is-add {
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
+}
+
+.up-pool-toggle.is-add:hover {
+  background: color-mix(in srgb, var(--up-accent) 88%, #111111);
+}
+
+.up-pool-toggle.is-remove {
+  background: transparent;
+  border-color: var(--up-control-line);
+  color: var(--up-ink);
+}
+
+.up-pool-toggle.is-remove:hover {
+  border-color: color-mix(in srgb, #c42b4a 55%, var(--up-line));
+  background: color-mix(in srgb, #c42b4a 10%, transparent);
+  color: #c42b4a;
+}
+
+.dark .up-pool-toggle.is-remove:hover {
+  color: #f4a4b2;
+}
+
+.is-conflict .up-pool-body {
+  opacity: 0.6;
+}
+
+.up-pool-toggle.is-conflict {
+  opacity: 0.55;
+}
+
+.up-pool-conflict-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #c42b4a;
+  white-space: nowrap;
+}
+
+.dark .up-pool-conflict-tag {
+  color: #f4a4b2;
+}
+
+.up-pool-confirm-card {
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #c42b4a 35%, var(--up-line));
+  border-radius: 8px;
+}
+
+.up-pool-confirm-card p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--up-ink);
+}
+
+.up-pool-confirm-card span {
+  font-size: 11px;
+  color: var(--up-muted);
+}
+
+.up-pool-readout .up-pool-text-btn {
+  min-height: 28px;
+  padding: 0 6px;
+}
+
+.up-pool-in-plan-badge strong {
+  color: inherit;
+}
+
+.up-pool-menu-wrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.up-pool-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--up-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--up-muted);
+  cursor: pointer;
+}
+
+.up-pool-more:hover,
+.up-pool-more[aria-expanded='true'] {
+  color: var(--up-ink);
+  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
+}
+
+.up-pool-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 232px;
+  padding: 4px;
+  border: 1px solid var(--up-line);
+  border-radius: 8px;
+  background: var(--up-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.up-pool-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--up-ink);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.up-pool-menu-item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--up-ink) 6%, transparent);
+}
+
+.up-pool-menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.up-pool-menu-item svg {
+  margin-top: 2px;
+}
+
+.up-pool-menu-item strong {
+  display: block;
+  font-weight: 600;
+}
+
+.up-pool-menu-item small {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--up-muted);
+}
+
+@media (pointer: coarse), (max-width: 639px) {
+  .up-pool-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .up-pool-more {
+    width: 44px;
+    height: 44px;
+  }
+
+  .up-pool-menu-item {
+    min-height: 48px;
+    align-items: center;
+  }
+
+  .up-pool-readout .up-pool-text-btn {
+    min-height: 40px;
+  }
+}
+
+@media (pointer: coarse) {
+  .up-pool-row-actions {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+@media (max-width: 380px) {
+  .up-pool-one {
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .up-pool-section {
+    gap: 8px;
   }
 }
 

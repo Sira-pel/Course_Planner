@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Course } from '../../types/schedule';
 import {
@@ -10,8 +10,12 @@ import {
   Upload,
   X,
   Trash2,
+  Eraser,
+  MoreHorizontal,
 } from 'lucide-react';
 import { PoolRow } from './PoolRow';
+import { PoolGroup } from './PoolGroup';
+import { groupPoolCourses } from '../../utils/poolGroups';
 import { EASE_OUT, EASE_POP } from '../../utils/motion';
 
 export type FilterMode = 'all' | 'in_plan' | 'not_in_plan';
@@ -48,6 +52,7 @@ export interface PoolPanelProps {
   unusedInAnyPlanCount: number;
   usedInAnyPlanCount: number;
   onClearUnusedCatalogCourses: () => void;
+  onClearPlan: () => void;
 }
 
 export const PoolPanel: React.FC<PoolPanelProps> = ({
@@ -82,8 +87,39 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   unusedInAnyPlanCount,
   usedInAnyPlanCount,
   onClearUnusedCatalogCourses,
+  onClearPlan,
 }) => {
   const [isConfirmingClearPool, setIsConfirmingClearPool] = useState(false);
+  const [isConfirmingClearPlan, setIsConfirmingClearPlan] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedOverride, setExpandedOverride] = useState<Record<string, boolean>>({});
+  const menuRef = useRef<HTMLDivElement>(null);
+  const searching = searchQuery.trim() !== '';
+
+  const groups = useMemo(() => groupPoolCourses(filteredCourses), [filteredCourses]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setMenuOpen(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (totalInPlan === 0) setIsConfirmingClearPlan(false);
+  }, [totalInPlan]);
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="up-pool-head">
@@ -113,7 +149,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                 )}
               </AnimatePresence>
             </div>
-            <p className="up-pool-sub truncate">Sections saved for this semester</p>
           </div>
         </div>
         <button
@@ -128,26 +163,76 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
         </button>
       </div>
 
-      <div className="up-pool-readout flex items-center justify-between gap-1">
+      <div className="up-pool-readout flex items-center justify-between gap-2">
         <div
-          className="flex items-center gap-1.5 min-w-0 flex-1"
+          className="flex items-center gap-2 min-w-0 flex-1"
           role="status"
           aria-live="polite"
           aria-atomic="true"
         >
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">Adding to:</span>
-          <strong className="truncate text-xs text-slate-800 dark:text-slate-100">{activePlanName}</strong>
-        </div>
-        <span
-          className={`up-pool-in-plan-badge shrink-0 ${totalInPlan > 0 ? 'is-active' : 'is-zero'}`}
-          title={`${totalInPlan} course section${totalInPlan === 1 ? '' : 's'} currently enrolled in ${activePlanName || 'the active plan'}`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80 shrink-0" aria-hidden="true" />
-          <span>
-            <strong>{totalInPlan}</strong> in plan
+          <span className="text-[11px] shrink-0" style={{ color: 'var(--up-muted)' }}>Adding to:</span>
+          <strong className="truncate text-xs">{activePlanName}</strong>
+          <span
+            className={`up-pool-in-plan-badge shrink-0 ${totalInPlan > 0 ? 'is-active' : 'is-zero'}`}
+            title={`${totalInPlan} course section${totalInPlan === 1 ? '' : 's'} currently enrolled in ${activePlanName || 'the active plan'}`}
+          >
+            <strong>{totalInPlan}</strong>
+            <span>in plan</span>
           </span>
-        </span>
+        </div>
+        {totalInPlan > 0 && (
+          <button
+            type="button"
+            id="btn-pool-clear-plan"
+            onClick={() => setIsConfirmingClearPlan((prev) => !prev)}
+            aria-expanded={isConfirmingClearPlan}
+            className="up-pool-text-btn up-chrome-btn shrink-0"
+            title="Remove every section from this plan. The pool is not changed"
+          >
+            <Eraser className="w-3.5 h-3.5 mr-1" />
+            Clear
+          </button>
+        )}
       </div>
+
+      <AnimatePresence initial={false}>
+        {isConfirmingClearPlan && totalInPlan > 0 && (
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="overflow-hidden shrink-0"
+          >
+            <div className="up-pool-confirm-card">
+              <p>
+                Remove {totalInPlan} {totalInPlan === 1 ? 'section' : 'sections'} from {activePlanName || 'this plan'}?
+              </p>
+              <span>Your pool stays as it is. You can undo this (Ctrl+Z).</span>
+              <div className="flex items-center gap-1.5 mt-2">
+                <button
+                  type="button"
+                  id="btn-confirm-clear-plan"
+                  onClick={() => {
+                    onClearPlan();
+                    setIsConfirmingClearPlan(false);
+                  }}
+                  className="flex-1 py-1 px-2.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors up-chrome-btn"
+                >
+                  Clear plan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingClearPlan(false)}
+                  className="up-pool-text-btn up-chrome-btn"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="up-pool-controls">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -217,25 +302,45 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                 <span>Generate</span>
               </button>
             )}
-            <button
-              type="button"
-              id="btn-pool-clear-unused"
-              onClick={() => setIsConfirmingClearPool((prev) => !prev)}
-              disabled={unusedInAnyPlanCount === 0}
-              className={`up-icon-btn up-chrome-btn up-pool-icon-hit shrink-0 ${
-                isConfirmingClearPool
-                  ? 'bg-rose-600 text-white opacity-100'
-                  : 'hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400'
-              } disabled:opacity-30 disabled:pointer-events-none`}
-              title={
-                unusedInAnyPlanCount > 0
-                  ? `Clear ${unusedInAnyPlanCount} unused course${unusedInAnyPlanCount === 1 ? '' : 's'} (keeps courses used in any plan)`
-                  : 'All courses in pool are in use in your plans'
-              }
-              aria-label="Clear unused courses from pool"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            <div className="up-pool-menu-wrap" ref={menuRef}>
+              <button
+                type="button"
+                id="btn-pool-menu"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="up-pool-more up-chrome-btn"
+                title="More pool actions"
+                aria-label="More pool actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <div className="up-pool-menu" role="menu" aria-label="Pool actions">
+                  <button
+                    type="button"
+                    id="btn-pool-clear-unused"
+                    role="menuitem"
+                    disabled={unusedInAnyPlanCount === 0}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setIsConfirmingClearPool(true);
+                    }}
+                    className="up-pool-menu-item up-chrome-btn"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      <strong>Clear unused courses</strong>
+                      <small>
+                        {unusedInAnyPlanCount > 0
+                          ? `${unusedInAnyPlanCount} not used in any plan`
+                          : 'All courses are used in your plans'}
+                      </small>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -386,16 +491,14 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               </div>
             </div>
           ) : (
-            filteredCourses.map((item) => {
-              const inActivePlan = isEnrolled(item);
-              const conflict = findConflict(item);
-
-              return (
+            groups.map((group) => {
+              const renderRow = (item: typeof filteredCourses[number], variant: 'single' | 'section') => (
                 <PoolRow
                   key={item.id}
                   item={item}
-                  inActivePlan={inActivePlan}
-                  conflict={conflict}
+                  variant={variant}
+                  inActivePlan={isEnrolled(item)}
+                  conflict={findConflict(item)}
                   confirmDelete={confirmDeleteCourseId === item.id}
                   activePlanName={activePlanName}
                   onEdit={onEditCourse}
@@ -405,6 +508,23 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   onAddToPlan={onAddToPlan}
                   onRemoveFromPlan={onRemoveFromPlan}
                 />
+              );
+
+              if (group.courses.length === 1) return renderRow(group.courses[0], 'single');
+
+              const inPlanCount = group.courses.filter(isEnrolled).length;
+              const expanded = expandedOverride[group.key] ?? (searching || inPlanCount > 0);
+              return (
+                <PoolGroup
+                  key={group.key}
+                  groupId={`pool-group-${group.key.replace(/[^A-Z0-9]+/g, '-')}`}
+                  courses={group.courses}
+                  inPlanCount={inPlanCount}
+                  expanded={expanded}
+                  onToggle={() => setExpandedOverride((prev) => ({ ...prev, [group.key]: !expanded }))}
+                >
+                  {group.courses.map((item) => renderRow(item, 'section'))}
+                </PoolGroup>
               );
             })
           )}

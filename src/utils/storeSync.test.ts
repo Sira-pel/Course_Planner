@@ -282,6 +282,22 @@ describe('updateCourse keeps plans and the pool in step', () => {
     assert.deepEqual(useScheduleStore.getState().plans[0].courses.map((c) => c.code), ['MATH 200']);
   });
 
+  it('clearPlanCourses empties the plan and keeps the pool', () => {
+    seed(
+      [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001'), course('c2', 'MATH 200', '001')] }],
+      [course('cat_c1', 'CS 101', '001'), course('cat_c2', 'MATH 200', '001')],
+    );
+
+    useScheduleStore.getState().clearPlanCourses('a');
+
+    const { plans, catalogCourses } = useScheduleStore.getState();
+    assert.equal(plans[0].courses.length, 0);
+    assert.equal(catalogCourses.length, 2);
+
+    useScheduleStore.getState().undo();
+    assert.equal(useScheduleStore.getState().plans[0].courses.length, 2);
+  });
+
   it('addCourse and bulkAddCourses skip a code and section the plan already has', () => {
     seed(
       [{ id: 'a', name: 'A', courses: [course('c1', 'CS 101', '001')] }],
