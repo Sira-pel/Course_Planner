@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } from 'react';
 import {
   FileSpreadsheet,
   Upload,
@@ -360,7 +360,9 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
   const selectAnchorRef = useRef<string | null>(null);
   // Read through a ref so the handler keeps one identity and CourseRow's memo still skips unchanged rows.
   const pickStateRef = useRef({ selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds });
-  pickStateRef.current = { selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds };
+  useLayoutEffect(() => {
+    pickStateRef.current = { selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds };
+  });
   const handleToggleSelectCourse = useCallback((id: string, mods: PickModifiers) => {
     const { selected, visible, blocking } = pickStateRef.current;
     const result = applyPick(

@@ -1,10 +1,10 @@
-import { pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import React, { type Ref } from 'react';
 import { AlertTriangle, ClipboardPaste, Pencil, Trash2 } from 'lucide-react';
 import { ClassSession, Course, DAYS_LIST, DayOfWeek } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import { timeToMinutes } from '../../utils/timeUtils';
+import { pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import type { ColumnMapping, ColumnOption } from '../../utils/excelImport';
 import {
   DURATION_CHIPS,
