@@ -13,6 +13,7 @@ import type { Course, SchedulePlan } from '../../types/schedule';
 import { withUnusedCourseColors } from '../../utils/courseColor';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
+import { applyPick, pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import { parseIcsContent } from '../../utils/icsImport';
 import { ImportDestinationSelect, type ImportDestination } from './ImportDestinationSelect';
 
@@ -135,11 +136,17 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
     return filteredCourses.map((course) => byId.get(course.id) ?? course);
   }, [filteredCourses, coursesToImport]);
 
-  const handleToggleSelectCourse = (id: string) => {
-    const next = new Set(selectedCourseIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedCourseIds(next);
+  const selectAnchorRef = useRef<string | null>(null);
+  const handleToggleSelectCourse = (id: string, mods: PickModifiers) => {
+    const result = applyPick(
+      selectedCourseIds,
+      visibleCourses.map((course) => course.id),
+      selectAnchorRef.current,
+      id,
+      mods,
+    );
+    selectAnchorRef.current = result.anchor;
+    setSelectedCourseIds(result.selected);
   };
 
   const handleSelectAll = () => {
@@ -310,7 +317,10 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 return (
                   <div
                     key={c.id}
-                    onClick={() => handleToggleSelectCourse(c.id)}
+                    onMouseDown={(e) => {
+                      if (e.shiftKey) e.preventDefault();
+                    }}
+                    onClick={(e) => handleToggleSelectCourse(c.id, pickModifiers(e))}
                     className={`py-2 px-2.5 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 cursor-pointer transition-colors ${
                       isSelected
                         ? 'up-selected'

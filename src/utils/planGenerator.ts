@@ -151,6 +151,8 @@ interface MixJob {
   nextIndex: number[] | null;
   /** Sections accepted along the current path. */
   chosen: Course[];
+  /** Section indexes in the order to try them at each depth, best fit first. */
+  orders: number[][];
   done: boolean;
 }
 
@@ -702,6 +704,7 @@ class PlanSearch implements GeneratorSearch {
         groups: subset,
         nextIndex: null,
         chosen: [],
+        orders: [],
         done: false,
       });
     }
@@ -823,6 +826,7 @@ class PlanSearch implements GeneratorSearch {
     if (!job.nextIndex) {
       job.nextIndex = [0];
       job.chosen = [];
+      job.orders = [this.orderSections(job.groups[0].sections, [])];
     }
     const groups = job.groups;
     const nextIndex = job.nextIndex;
@@ -835,16 +839,18 @@ class PlanSearch implements GeneratorSearch {
         return 'evaluated';
       }
 
-      const sectionIndex = nextIndex[depth] ?? 0;
-      if (sectionIndex >= groups[depth].sections.length) {
+      const position = nextIndex[depth] ?? 0;
+      if (position >= groups[depth].sections.length) {
         if (depth === 0) return 'done';
         chosen.pop();
         continue;
       }
 
-      nextIndex[depth] = sectionIndex + 1;
-      const section = groups[depth].sections[sectionIndex];
+      nextIndex[depth] = position + 1;
+      const section = groups[depth].sections[job.orders[depth][position]];
       if (sectionClashesWithChosen(section, chosen)) {
+        // Clashing sections are ordered last, so every one after this also clashes.
+        nextIndex[depth] = groups[depth].sections.length;
         this.exhaustMix(job);
         return 'evaluated';
       }
@@ -855,8 +861,23 @@ class PlanSearch implements GeneratorSearch {
         this.scoreChosen(job);
         return 'evaluated';
       }
+      job.orders[depth + 1] = this.orderSections(groups[depth + 1].sections, chosen);
       return 'step';
     }
+  }
+
+  /**
+   * Try the sections that fit the preferences best with what is already chosen
+   * first, and clashing ones last, so a capped search spends its mixes on the
+   * promising ones. It only reorders: an uncapped search still visits every mix.
+   */
+  private orderSections(sections: Course[], chosen: Course[]): number[] {
+    const cost = sections.map((section) => (
+      sectionClashesWithChosen(section, chosen)
+        ? Number.POSITIVE_INFINITY
+        : scoreMix([...chosen, section], this.prefs).score
+    ));
+    return sections.map((_, index) => index).sort((a, b) => cost[a] - cost[b] || a - b);
   }
 
   private scoreChosen(job: MixJob): void {

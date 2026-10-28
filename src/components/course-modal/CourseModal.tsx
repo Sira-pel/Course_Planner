@@ -5,6 +5,7 @@ import { Course, ClassSession, DayOfWeek, COURSE_COLORS, LEGACY_COURSE_COLOR_MAP
 import { useShallow } from 'zustand/react/shallow';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { parseQuickAdd, type QuickAddTable } from '../../utils/quickAdd';
+import { applyPick, type PickModifiers } from '../../utils/rangeSelect';
 import type { ColumnMapping } from '../../utils/excelImport';
 import { nextUnusedCourseColor } from '../../utils/courseColor';
 import { checkSessionCollision, timeToMinutes } from '../../utils/timeUtils';
@@ -325,10 +326,18 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
     }
   }, [mode]);
 
-  const handleToggleSelectItem = (id: string) => {
-    setRecognizedItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item))
+  const selectAnchorRef = useRef<string | null>(null);
+  const handleToggleSelectItem = (id: string, mods: PickModifiers) => {
+    const result = applyPick(
+      new Set(recognizedItems.filter((item) => item.selected).map((item) => item.id)),
+      recognizedItems.map((item) => item.id),
+      selectAnchorRef.current,
+      id,
+      mods,
+      { canSelect: (rowId) => !recognizedItems.find((item) => item.id === rowId)?.hasError },
     );
+    selectAnchorRef.current = result.anchor;
+    setRecognizedItems((prev) => prev.map((item) => ({ ...item, selected: result.selected.has(item.id) })));
   };
 
   const handleToggleEditItem = (id: string) => {

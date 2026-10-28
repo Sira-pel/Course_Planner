@@ -158,10 +158,11 @@ describe('plan generator', () => {
   });
 
   it('describes an empty capped search with the number of mixes it actually checked', () => {
-    const sectionsA = Array.from({ length: 80 }, (_, index) => (
+    // A clash skips the rest of that step, so more first sections than the cap are needed to hit it.
+    const sectionsA = Array.from({ length: MAX_EVALUATIONS + 200 }, (_, index) => (
       section(`a${index}`, 'A', '09:00', '10:30', String(index + 1).padStart(3, '0'))
     ));
-    const sectionsB = Array.from({ length: 80 }, (_, index) => (
+    const sectionsB = Array.from({ length: 3 }, (_, index) => (
       section(`b${index}`, 'B', '10:00', '11:00', String(index + 1).padStart(3, '0'))
     ));
     const result = generatePlans({
@@ -174,6 +175,24 @@ describe('plan generator', () => {
     assert.equal(result.emptyReason, 'Checked 5,000 mixes and none were clash-free yet. Search deeper, narrow the list, or clear a blocked time.');
     assert.equal(cappedSearchHint(result.evaluated, result.plans.length), 'Checked 5,000 mixes. There may still be plans');
     assert.equal(result.gapNotice, null);
+  });
+
+  it('skips the rest of a step after the first clash instead of spending mixes on it', () => {
+    const sectionsA = Array.from({ length: 80 }, (_, index) => (
+      section(`a${index}`, 'A', '09:00', '10:30', String(index + 1).padStart(3, '0'))
+    ));
+    const sectionsB = Array.from({ length: 80 }, (_, index) => (
+      section(`b${index}`, 'B', '10:00', '11:00', String(index + 1).padStart(3, '0'))
+    ));
+    const result = generatePlans({
+      groups: [group('A', sectionsA), group('B', sectionsB)],
+      pinnedKeys: ['A', 'B'],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 0);
+    assert.equal(result.capped, false);
+    assert.equal(result.evaluated, 80);
+    assert.equal(result.emptyReason, 'No clash-free mix fits these courses and filters.');
   });
 
   it('keeps the finished empty reason when every mix was checked', () => {
@@ -419,6 +438,34 @@ describe('plan generator', () => {
     assert.ok(result.plans.length > 0);
     assert.ok(result.plans.every((plan) => plan.courses.some((course) => course.code === 'C15')));
     assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'C16')), false);
+  });
+
+  it('spends a capped search on the best-fitting sections, not the first listed', () => {
+    // Each course lists its bad sections first (early MWF, late MWF) and its good one last.
+    // Good sections sit Tue/Thu 10:00-14:00, so every five that start at different hours fit.
+    const groups = Array.from({ length: 10 }, (_, index) => {
+      const code = `G${index + 1}`;
+      const slot = 10 * 60 + (index % 5) * 60;
+      const early = section(`${code}-early`, code, '08:00', '08:50', '001', 'monday');
+      const late = section(`${code}-late`, code, '16:30', '17:20', '002', 'friday');
+      const good = section(`${code}-good`, code, clock(slot), clock(slot + 50), '003', 'tuesday');
+      return group(code, [early, late, good]);
+    });
+
+    const result = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({
+        courseCount: 5,
+        daysOff: ['monday', 'friday'],
+        classStart: 10 * 60,
+        classEnd: 15 * 60,
+      }),
+    });
+
+    assert.equal(result.capped, true);
+    assert.equal(result.evaluated, MAX_EVALUATIONS);
+    assert.ok(result.plans[0].courses.every((course) => course.id.endsWith('-good')));
   });
 
   it('accepts courseCount up to 15 and caps higher values to MAX_CANDIDATES in sanitizeGeneratorPrefs', () => {
