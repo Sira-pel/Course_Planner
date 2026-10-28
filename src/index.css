@@ -529,8 +529,17 @@ html.dark button[class~='dark:border-slate-700'] {
   opacity: 1;
 }
 
+.up-icon-btn[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+  color: var(--up-ink);
+  opacity: 1;
+}
+
 .up-icon-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  background: color-mix(in srgb, var(--up-ink) 16%, transparent);
+  color: var(--up-ink);
+  opacity: 1;
+  transform: scale(0.92);
 }
 
 .up-add-course {
