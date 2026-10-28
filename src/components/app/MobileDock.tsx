@@ -10,6 +10,7 @@ import { Sparkles, RotateCcw, HelpCircle, ShoppingBag, Plus, MoreVertical, Smart
 import { ClearAllDialog } from '../header/ClearAllDialog';
 import { EASE_SMOOTH, SHEET_OPEN_TRANSITION, SHEET_CLOSE_TRANSITION, SHEET_BACKDROP_OPEN_TRANSITION, SHEET_BACKDROP_CLOSE_TRANSITION } from '../../utils/motion';
 import { usePWAInstall } from '../../utils/usePWAInstall';
+import { useSheetDrag } from '../../utils/useSheetDrag';
 
 const PWAInstallModal = lazy(() => import('../pwa/PWAInstallModal').then((m) => ({ default: m.PWAInstallModal })));
 
@@ -56,6 +57,8 @@ export const MobileDock = React.memo(function MobileDock({
   const menuCloseTransition: Transition = reduceMotion
     ? { duration: 0 }
     : SHEET_CLOSE_TRANSITION;
+  const sheetDrag = useSheetDrag(onCloseMoreMenu);
+
   const backdropOpenTransition: Transition = reduceMotion
     ? { duration: 0 }
     : SHEET_BACKDROP_OPEN_TRANSITION;
@@ -164,8 +167,18 @@ export const MobileDock = React.memo(function MobileDock({
                     : { y: '100%', transition: menuCloseTransition }
                 }
                 transition={menuOpenTransition}
+                {...sheetDrag.sheetProps}
               >
                 <>
+                    <button
+                      type="button"
+                      className="up-pool-handle-hit"
+                      {...sheetDrag.handleProps}
+                      onClick={onCloseMoreMenu}
+                      aria-label="Close more actions"
+                    >
+                      <span className="up-pool-handle" />
+                    </button>
                     {!isInstalled && !installDismissed && (
                       <div className="up-more-install">
                         <Smartphone className="up-more-install-icon" aria-hidden />

@@ -1943,6 +1943,15 @@ body[data-up-pool-open] .up-fab-cluster {
     display: flex !important;
     flex-direction: column !important;
   }
+
+  .up-more-menu::before {
+    display: none;
+  }
+
+  .up-more-menu .up-pool-handle-hit {
+    min-height: 28px;
+    padding: 6px 0 8px;
+  }
 }
 
 .up-cal-switch-bar {
