@@ -849,6 +849,8 @@ class PlanSearch implements GeneratorSearch {
       nextIndex[depth] = position + 1;
       const section = groups[depth].sections[job.orders[depth][position]];
       if (sectionClashesWithChosen(section, chosen)) {
+        // Clashing sections are ordered last, so every one after this also clashes.
+        nextIndex[depth] = groups[depth].sections.length;
         this.exhaustMix(job);
         return 'evaluated';
       }

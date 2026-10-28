@@ -158,10 +158,11 @@ describe('plan generator', () => {
   });
 
   it('describes an empty capped search with the number of mixes it actually checked', () => {
-    const sectionsA = Array.from({ length: 80 }, (_, index) => (
+    // A clash skips the rest of that step, so more first sections than the cap are needed to hit it.
+    const sectionsA = Array.from({ length: MAX_EVALUATIONS + 200 }, (_, index) => (
       section(`a${index}`, 'A', '09:00', '10:30', String(index + 1).padStart(3, '0'))
     ));
-    const sectionsB = Array.from({ length: 80 }, (_, index) => (
+    const sectionsB = Array.from({ length: 3 }, (_, index) => (
       section(`b${index}`, 'B', '10:00', '11:00', String(index + 1).padStart(3, '0'))
     ));
     const result = generatePlans({
@@ -174,6 +175,24 @@ describe('plan generator', () => {
     assert.equal(result.emptyReason, 'Checked 5,000 mixes and none were clash-free yet. Search deeper, narrow the list, or clear a blocked time.');
     assert.equal(cappedSearchHint(result.evaluated, result.plans.length), 'Checked 5,000 mixes. There may still be plans');
     assert.equal(result.gapNotice, null);
+  });
+
+  it('skips the rest of a step after the first clash instead of spending mixes on it', () => {
+    const sectionsA = Array.from({ length: 80 }, (_, index) => (
+      section(`a${index}`, 'A', '09:00', '10:30', String(index + 1).padStart(3, '0'))
+    ));
+    const sectionsB = Array.from({ length: 80 }, (_, index) => (
+      section(`b${index}`, 'B', '10:00', '11:00', String(index + 1).padStart(3, '0'))
+    ));
+    const result = generatePlans({
+      groups: [group('A', sectionsA), group('B', sectionsB)],
+      pinnedKeys: ['A', 'B'],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 0);
+    assert.equal(result.capped, false);
+    assert.equal(result.evaluated, 80);
+    assert.equal(result.emptyReason, 'No clash-free mix fits these courses and filters.');
   });
 
   it('keeps the finished empty reason when every mix was checked', () => {
