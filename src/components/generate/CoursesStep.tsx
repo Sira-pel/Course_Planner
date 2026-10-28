@@ -2,6 +2,7 @@ import { Check, Pin, Search, Trash2 } from 'lucide-react';
 import type { CourseGroup } from '../../utils/planGenerator';
 import { MAX_CANDIDATES } from '../../utils/planGenerator';
 import { isAllControlDisabled, shouldClearVisiblePicks } from '../../utils/visiblePicks';
+import { pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 
 export function CoursesStep({
@@ -21,7 +22,7 @@ export function CoursesStep({
   pinned: Set<string>;
   lockedKeys: Set<string>;
   onQuery: (value: string) => void;
-  onToggle: (key: string) => void;
+  onToggle: (key: string, mods: PickModifiers) => void;
   onTogglePin: (key: string) => void;
   onSelectAll: () => void;
 }) {
@@ -53,7 +54,7 @@ export function CoursesStep({
         </button>
       </div>
       <p className="up-gen-hint">
-        Tick candidates (max {MAX_CANDIDATES}). Tap the pin to make one a must-take.
+        Tick candidates (max {MAX_CANDIDATES}); Shift+click picks a range, Ctrl/Cmd+click toggles one. Tap the pin to make one a must-take.
       </p>
       {atCap && <p className="up-gen-hint">{MAX_CANDIDATES} course maximum.</p>}
 
@@ -81,7 +82,10 @@ export function CoursesStep({
                   type="button"
                   className="up-gen-course-main up-chrome-btn"
                   aria-pressed={on}
-                  onClick={() => onToggle(group.key)}
+                  onMouseDown={(event) => {
+                    if (event.shiftKey) event.preventDefault();
+                  }}
+                  onClick={(event) => onToggle(group.key, pickModifiers(event))}
                 >
                   <span className="up-gen-check" aria-hidden="true">
                     {on && <Check className="w-3 h-3" strokeWidth={2.75} />}

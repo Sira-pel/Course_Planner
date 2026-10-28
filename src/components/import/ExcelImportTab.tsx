@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } from 'react';
 import {
   FileSpreadsheet,
   Upload,
@@ -19,6 +19,7 @@ import type { Course, SchedulePlan } from '../../types/schedule';
 import { withUnusedCourseColors } from '../../utils/courseColor';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
+import { applyPick, pickModifiers, type PickModifiers } from '../../utils/rangeSelect';
 import {
   loadXlsx,
   readExcelFile,
@@ -47,7 +48,7 @@ interface CourseRowProps {
   course: Course;
   isSelected: boolean;
   issue?: string;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, mods: PickModifiers) => void;
 }
 
 const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, onToggle }) => {
@@ -61,7 +62,10 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, on
 
   return (
     <div
-      onClick={() => onToggle(c.id)}
+      onMouseDown={(e) => {
+        if (e.shiftKey) e.preventDefault();
+      }}
+      onClick={(e) => onToggle(c.id, pickModifiers(e))}
       className={`py-2 px-2.5 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 cursor-pointer transition-colors ${
         isSelected
           ? 'up-selected'
@@ -353,13 +357,24 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
     return filteredCourses.map((course) => byId.get(course.id) ?? course);
   }, [filteredCourses, coursesToImport]);
 
-  const handleToggleSelectCourse = useCallback((id: string) => {
-    setSelectedCourseIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const selectAnchorRef = useRef<string | null>(null);
+  // Read through a ref so the handler keeps one identity and CourseRow's memo still skips unchanged rows.
+  const pickStateRef = useRef({ selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds });
+  useLayoutEffect(() => {
+    pickStateRef.current = { selected: selectedCourseIds, visible: visibleCourses, blocking: blockingIssueIds };
+  });
+  const handleToggleSelectCourse = useCallback((id: string, mods: PickModifiers) => {
+    const { selected, visible, blocking } = pickStateRef.current;
+    const result = applyPick(
+      selected,
+      visible.map((course) => course.id),
+      selectAnchorRef.current,
+      id,
+      mods,
+      { canSelect: (rowId) => !blocking.has(rowId) },
+    );
+    selectAnchorRef.current = result.anchor;
+    setSelectedCourseIds(result.selected);
   }, []);
 
   const handleSelectAll = useCallback(() => {
