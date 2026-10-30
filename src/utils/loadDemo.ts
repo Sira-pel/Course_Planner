@@ -1,3 +1,7 @@
+/** Shown on the welcome card. loadDemo.test.ts keeps these in step with sampleSemester.ts. */
+export const DEMO_COURSE_COUNT = 11;
+export const DEMO_PLAN_COUNT = 3;
+
 /** Load demo replaces every plan and the course pool, so confirm when there is something to lose. */
 export function shouldConfirmLoadDemo(
   plans: { courses: unknown[] }[],

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarPlus, ChevronRight, ClipboardPaste, FileText, Sparkles, X } from 'lucide-react';
-import { SAMPLE_PLANS } from '../../data/sampleSemester';
+import { DEMO_COURSE_COUNT, DEMO_PLAN_COUNT } from '../../utils/loadDemo';
 import { useScheduleStore } from '../../store/useScheduleStore';
 
 interface EmptyStateCardProps {
@@ -10,9 +10,6 @@ interface EmptyStateCardProps {
   onImport: () => void;
   onLoadDemo: () => void;
 }
-
-const DEMO_COURSES = SAMPLE_PLANS.reduce((sum, plan) => sum + plan.courses.length, 0);
-const DEMO_PLANS = SAMPLE_PLANS.length;
 
 export function EmptyStateCard({ onClose, onQuickAdd, onImport, onLoadDemo }: EmptyStateCardProps) {
   const quickAddKeys = useScheduleStore((state) => state.customShortcuts.quick_add || 'Alt+K')
@@ -140,7 +137,7 @@ export function EmptyStateCard({ onClose, onQuickAdd, onImport, onLoadDemo }: Em
               </span>
             </span>
             <span className="up-welcome-option-foot">
-              <span className="up-welcome-meta">{DEMO_COURSES} courses · {DEMO_PLANS} plans</span>
+              <span className="up-welcome-meta">{DEMO_COURSE_COUNT} courses · {DEMO_PLAN_COUNT} plans</span>
             </span>
             <ChevronRight className="up-welcome-chevron" aria-hidden />
           </button>

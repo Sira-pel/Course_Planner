@@ -435,8 +435,10 @@ export default function App() {
   }, [resetToBlank, closeMoreMenu]);
 
   const applyLoadDemo = useCallback(() => {
-    resetToSample();
-    showToast('Loaded the demo semester.', 'success');
+    resetToSample().then(
+      () => showToast('Loaded the demo semester.', 'success'),
+      () => showToast("Couldn't load the demo. Check your connection and try again.", 'error')
+    );
   }, [resetToSample, showToast]);
 
   const requestLoadDemo = useCallback(() => {
