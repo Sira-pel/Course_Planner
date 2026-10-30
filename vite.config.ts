@@ -87,8 +87,25 @@ export default defineConfig(() => {
             '**/xlsx-*.js',
             '**/firebase-*.js',
             '**/GoogleCalendarSync-*.js',
+            // Only the basic Latin subsets are precached. The browser asks for the
+            // other subsets when a page uses those characters; the font route below caches them.
+            '**/fonts/*-{latin-ext,cyrillic,cyrillic-ext,greek,vietnamese}.woff2',
           ],
           runtimeCaching: [
+            {
+              urlPattern: /\/fonts\/[^/]+\.woff2$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'font-subsets',
+                expiration: {
+                  maxEntries: 20,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
             {
               // Large chunks that are not needed to open a dialog. Cached when first fetched.
               // The same file may be requested again with ?retry= after a failed import.

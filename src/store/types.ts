@@ -93,7 +93,7 @@ export interface ScheduleState {
   setMobileCalendarView: (view: 'week' | 'day') => void;
   setSemesterDates: (start: string, end: string) => void;
   resetToBlank: () => void;
-  resetToSample: () => void;
+  resetToSample: () => Promise<void>;
   importFullState: (jsonString: string) => { success: boolean; error?: string };
 }
 
