@@ -47,6 +47,11 @@ export const CourseBlock = memo(function CourseBlock({
   const isShortBlock = durationMin < 50;
   const isMediumBlock = durationMin >= 50 && durationMin < 80;
   const visibleTitle = displayCourseTitle(course);
+  // Narrow blocks (phone week view, side-by-side overlaps) drop the meridiem and end time.
+  const startLabel = minutesToTime(startMin);
+  const meridiemAt = startLabel.lastIndexOf(' ');
+  const startClock = meridiemAt > 0 ? startLabel.slice(0, meridiemAt) : startLabel;
+  const startMeridiem = meridiemAt > 0 ? startLabel.slice(meridiemAt) : '';
 
   // Ghost block styling
   if (isGhost) {
@@ -60,21 +65,23 @@ export const CourseBlock = memo(function CourseBlock({
         onDoubleClick={(e) => {
           e.stopPropagation();
         }}
-        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} transition-[box-shadow,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer hover:shadow-md p-2 overflow-hidden select-none z-10 active:scale-[0.98]`}
+        className={`group absolute rounded-lg border-2 border-dashed ${ghostStyle.border} ${ghostStyle.bg} transition-[box-shadow,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer hover:shadow-md p-2 @max-[96px]:p-1.5 overflow-hidden select-none z-10 active:scale-[0.98]`}
         style={{
           top: `${topPercent}%`,
           height: `calc(${heightPercent}% - 2px)`,
           left: `calc(${leftPercent}% + 1px)`,
           width: `calc(${widthPercent}% - 2px)`,
           contain: 'layout style',
+          containerType: 'size',
         }}
         title={`[Comparing: ${planName}] ${course.code}${visibleTitle ? ` - ${visibleTitle}` : ''} (Click to edit in ${planName})`}
       >
         {/* Top row: Code + Section and Quick Actions / Plan Badge */}
         <div className="flex items-start justify-between gap-1 leading-none">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-extrabold text-xs tracking-tight truncate text-slate-800 dark:text-slate-100">
-              {course.section ? `${course.code}-${course.section}` : course.code}
+            <span className="font-extrabold text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words text-slate-800 dark:text-slate-100">
+              {course.code}
+              {course.section && <span className="@max-[96px]:hidden">-{course.section}</span>}
             </span>
             {hasConflict && (
               <span
@@ -82,14 +89,14 @@ export const CourseBlock = memo(function CourseBlock({
                 className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-red-600 text-white text-[9px] font-bold rounded shadow-xs shrink-0"
               >
                 <AlertTriangle className="w-2.5 h-2.5" />
-                Conflict
+                <span className="@max-[96px]:hidden">Conflict</span>
               </span>
             )}
           </div>
 
           {/* Plan badge (visible when not hovered, cleanly hides on hover to make room for actions) */}
           <span
-            className={`group-hover:hidden inline-flex items-center text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider uppercase truncate max-w-[85px] shrink-0 ${ghostStyle.text} bg-white/90 dark:bg-slate-900/90 shadow-2xs border border-current/20`}
+            className={`group-hover:hidden @max-[96px]:hidden inline-flex items-center text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider uppercase truncate max-w-[85px] shrink-0 ${ghostStyle.text} bg-white/90 dark:bg-slate-900/90 shadow-2xs border border-current/20`}
             title={planName}
           >
             {planName}
@@ -128,7 +135,7 @@ export const CourseBlock = memo(function CourseBlock({
 
         {/* Course Name */}
         {!isShortBlock && visibleTitle && (
-          <div className="text-xs font-semibold truncate mt-1 leading-tight text-slate-700 dark:text-slate-200">
+          <div className="text-xs font-semibold truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight text-slate-700 dark:text-slate-200">
             {visibleTitle}
           </div>
         )}
@@ -136,19 +143,20 @@ export const CourseBlock = memo(function CourseBlock({
         {/* Time & Details */}
         <div className="text-[10.5px] font-mono mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight text-slate-600 dark:text-slate-400">
           <span>
-            {minutesToTime(startMin)} - {minutesToTime(endMin)}
+            {startClock}
+            <span className="@max-[96px]:hidden">{startMeridiem} - {minutesToTime(endMin)}</span>
           </span>
           {session.room && !isShortBlock && (
-            <span className="inline-flex items-center gap-0.5 truncate font-sans">
-              <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80" />
-              {session.room}
+            <span className="inline-flex items-center gap-0.5 min-w-0 max-w-full font-sans">
+              <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80 @max-[96px]:hidden" />
+              <span className="truncate">{session.room}</span>
             </span>
           )}
         </div>
 
         {/* Plan attribution footer (always visible when height permits) */}
         {!isShortBlock && (
-          <div className="text-[10px] font-medium truncate mt-1 flex items-center gap-1 text-slate-500 dark:text-slate-400">
+          <div className="text-[10px] font-medium truncate mt-1 flex @max-[96px]:hidden items-center gap-1 text-slate-500 dark:text-slate-400">
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0"
               style={{ backgroundColor: ghostStyle.dot }}
@@ -174,7 +182,7 @@ export const CourseBlock = memo(function CourseBlock({
       onDoubleClick={(e) => {
         e.stopPropagation();
       }}
-      className={`group absolute rounded-lg transition-[box-shadow,border-color,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer select-none p-2 overflow-hidden shadow-xs hover:shadow-md hover:z-30 active:scale-[0.98] ${
+      className={`group absolute rounded-lg transition-[box-shadow,border-color,transform] duration-[var(--dur-chrome)] ease-[var(--ease-smooth)] cursor-pointer select-none p-2 @max-[96px]:p-1.5 overflow-hidden shadow-xs hover:shadow-md hover:z-30 active:scale-[0.98] ${
         hasConflict
           ? theme === 'dark'
             ? 'ring-2 ring-red-400'
@@ -189,13 +197,15 @@ export const CourseBlock = memo(function CourseBlock({
         width: cascadeIndex > 0 ? `calc(100% - ${8 + cascadeIndex * 12}px)` : `calc(${widthPercent}% - 2px)`,
         zIndex: 20 + colIndex + cascadeIndex,
         contain: 'layout style',
+        containerType: 'size',
       }}
     >
       {/* Top row: Code + Section and Quick Actions */}
       <div className="flex items-start justify-between gap-1 leading-none">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`font-extrabold text-xs tracking-tight truncate ${contrastText}`}>
-            {course.section ? `${course.code}-${course.section}` : course.code}
+          <span className={`font-extrabold text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words ${contrastText}`}>
+            {course.code}
+            {course.section && <span className="@max-[96px]:hidden">-{course.section}</span>}
           </span>
           {hasConflict && (
             <span
@@ -203,7 +213,7 @@ export const CourseBlock = memo(function CourseBlock({
               className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-red-600 text-white text-[9px] font-bold rounded shadow-xs shrink-0"
             >
               <AlertTriangle className="w-2.5 h-2.5" />
-              Conflict
+              <span className="@max-[96px]:hidden">Conflict</span>
             </span>
           )}
         </div>
@@ -241,7 +251,7 @@ export const CourseBlock = memo(function CourseBlock({
 
       {/* Course Name */}
       {!isShortBlock && visibleTitle && (
-        <div className={`text-xs font-semibold truncate mt-1 leading-tight ${subtitleColor}`}>
+        <div className={`text-xs font-semibold truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight ${subtitleColor}`}>
           {visibleTitle}
         </div>
       )}
@@ -249,19 +259,20 @@ export const CourseBlock = memo(function CourseBlock({
       {/* Time & Details */}
       <div className={`text-[11.5px] font-mono font-semibold mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight ${subtextColor}`}>
         <span>
-          {minutesToTime(startMin)} - {minutesToTime(endMin)}
+          {startClock}
+          <span className="@max-[96px]:hidden">{startMeridiem} - {minutesToTime(endMin)}</span>
         </span>
         {session.room && !isShortBlock && (
-          <span className="inline-flex items-center gap-0.5 truncate font-sans text-[11px] font-medium">
-            <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80" />
-            {session.room}
+          <span className="inline-flex items-center gap-0.5 min-w-0 max-w-full font-sans text-[11px] font-medium">
+            <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80 @max-[96px]:hidden" />
+            <span className="truncate">{session.room}</span>
           </span>
         )}
       </div>
 
       {/* Instructor if room permits */}
       {!isShortBlock && !isMediumBlock && course.instructor && (
-        <div className={`text-[10px] font-medium truncate mt-1 inline-flex items-center gap-0.5 ${subtextColor}`}>
+        <div className={`text-[10px] font-medium truncate mt-1 inline-flex @max-[96px]:hidden items-center gap-0.5 ${subtextColor}`}>
           <User className="w-2.5 h-2.5 shrink-0 opacity-80" />
           {course.instructor}
         </div>
