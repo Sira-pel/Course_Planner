@@ -334,6 +334,12 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     clearPlanCourses(activePlan.id);
   }, [clearPlanCourses, activePlan]);
 
+  // The rail badge is a bare number next to "Enrolled N cr", so the label says what it counts.
+  const poolButtonLabel =
+    catalogCourses.length > 0
+      ? `Open course pool · ${catalogCourses.length} ${catalogCourses.length === 1 ? 'section' : 'sections'}`
+      : 'Open course pool';
+
   const countBadge = (
     <AnimatePresence initial={false} mode="popLayout">
       {catalogCourses.length > 0 && (
@@ -424,8 +430,8 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
             id="course-pool-collapsed"
             onClick={onToggleCollapse}
             className="up-pool-rail up-chrome-btn"
-            title="Open course pool"
-            aria-label="Open course pool"
+            title={poolButtonLabel}
+            aria-label={poolButtonLabel}
             tabIndex={isCollapsed ? 0 : -1}
             aria-hidden={!isCollapsed}
           >
@@ -465,8 +471,8 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
           id="course-pool-collapsed"
           onClick={onToggleCollapse}
           className="up-pool-dock up-chrome-btn"
-          title="Open course pool"
-          aria-label="Open course pool"
+          title={poolButtonLabel}
+          aria-label={poolButtonLabel}
         >
           <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
           <span className="flex-1 text-left">Course pool</span>

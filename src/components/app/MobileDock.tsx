@@ -97,7 +97,7 @@ export const MobileDock = React.memo(function MobileDock({
           id="btn-mobile-pool-pill"
           onClick={onTogglePool}
           className="up-fab-secondary up-chrome-btn"
-          title="Open course pool"
+          aria-label={catalogCount > 0 ? `Open course pool · ${catalogCount} ${catalogCount === 1 ? 'section' : 'sections'}` : 'Open course pool'}
         >
           <span className="up-dock-copy">
             <ShoppingBag className="w-3.5 h-3.5" />
