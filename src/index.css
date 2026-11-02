@@ -856,7 +856,7 @@ html.dark button[class~='dark:border-slate-700'] {
 }
 
 .up-segment-btn[aria-pressed='true'] {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
 }
 
 .up-settings-appearance {
@@ -901,8 +901,8 @@ html.dark button[class~='dark:border-slate-700'] {
 }
 
 .up-appearance-btn[aria-pressed='true'] {
-  background: var(--up-secondary);
-  color: var(--up-secondary-ink);
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
 }
 
 .up-appearance-btn:focus {
@@ -922,18 +922,18 @@ html.dark button[class~='dark:border-slate-700'] {
   }
 
   .up-appearance-btn[aria-pressed='true']:hover {
-    background: color-mix(in srgb, var(--up-secondary) 84%, var(--up-ink));
-    color: var(--up-secondary-ink);
+    background: color-mix(in srgb, var(--up-accent) 88%, #111111);
+    color: var(--up-accent-ink);
   }
 }
 
 .up-tab-pill {
-  background: var(--up-secondary);
+  background: var(--up-accent);
   box-shadow: none;
 }
 
 .up-tab-on {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
 }
 
 .up-choice.is-on {
@@ -2830,8 +2830,8 @@ html.dark .up-mobile-sheet,
   left: 0;
   width: 0;
   border-radius: 6px;
-  background: var(--up-secondary);
-  border: 1px solid var(--up-secondary);
+  background: var(--up-accent);
+  border: 1px solid var(--up-accent);
   pointer-events: none;
   z-index: 0;
   transition-property: transform, width;
@@ -2866,7 +2866,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-tab[aria-selected='true'] {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
   font-weight: 600;
 }
 
@@ -3074,6 +3074,7 @@ html.dark .up-mobile-sheet,
 
 .up-pool-section.is-in-plan {
   background: color-mix(in srgb, var(--up-accent) 10%, var(--up-raised));
+  box-shadow: inset 3px 0 0 var(--up-accent);
 }
 
 .up-pool-swatches {
@@ -3191,8 +3192,10 @@ html.dark .up-mobile-sheet,
   opacity: 0.6;
 }
 
-.up-pool-toggle.is-conflict {
-  opacity: 0.55;
+.up-pool-toggle.is-add.is-conflict,
+.up-pool-toggle.is-add.is-conflict:hover {
+  background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+  color: var(--up-muted);
 }
 
 .up-pool-conflict-tag {
