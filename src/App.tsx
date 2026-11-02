@@ -82,9 +82,7 @@ function shortcutSurfaceForHelpTab(tab: HelpTabType): ShortcutSurface | null {
       return 'help';
     case 'shortcuts':
       return 'shortcuts';
-    case 'pool':
-    case 'import':
-    case 'export':
+    case 'transfer':
       return null;
     default: {
       const exhaustive: never = tab;

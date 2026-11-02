@@ -177,21 +177,15 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
   const renderContent = () => (
     <>
       {!isPhone && (
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-slate-200 dark:border-slate-800">
           <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
             <FolderKanban className="w-3.5 h-3.5 text-slate-500" />
-            Schedule plans
-          </span>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
-            {plans.length} total
+            Plans · {plans.length}
           </span>
         </div>
       )}
 
-      <div className="space-y-1 max-h-56 overflow-y-auto pr-0.5 mb-2.5">
-        <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 px-1 pb-1">
-          Select or manage plan
-        </div>
+      <div className="space-y-0.5 max-h-56 overflow-y-auto pr-0.5 mb-1">
         {plans.map((plan) => {
           const isActive = plan.id === activePlanId;
           const isEditing = editingPlanId === plan.id;
@@ -245,21 +239,19 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
           return (
             <div
               key={plan.id}
-              className={`flex items-center justify-between px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`flex items-center justify-between pl-2.5 pr-1 min-h-[40px] rounded-md transition-colors cursor-pointer ${
                 isActive
-                  ? 'up-selected border'
+                  ? 'up-plan-row-active'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
               }`}
+              aria-current={isActive ? 'true' : undefined}
               onClick={() => onSelectPlan(plan.id)}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isActive ? 'bg-current' : 'bg-slate-300 dark:bg-slate-600'
-                }`} />
-                <span className="truncate font-medium text-xs">
+                <span className={`text-xs sm:truncate max-sm:line-clamp-2 max-sm:break-words ${isActive ? 'font-semibold' : 'font-normal'}`}>
                   {plan.name}
                 </span>
-                <span className={`text-[10px] font-mono tabular-nums shrink-0 ${
+                <span className={`ml-auto sm:w-11 text-right text-[10px] font-mono tabular-nums shrink-0 ${
                   isActive ? 'opacity-80' : 'text-slate-500 dark:text-slate-400'
                 }`}>
                   {planCredits} cr
@@ -289,11 +281,11 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
         })}
       </div>
 
-      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+      <div className="pt-1 border-t border-slate-200 dark:border-slate-800 space-y-2">
         <button
           type="button"
           onClick={() => setComposerOpen((open) => !open)}
-          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 up-chrome-btn"
+          className="w-full flex items-center gap-1.5 pl-2.5 pr-2.5 min-h-[40px] rounded-md hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-xs font-medium up-chrome-btn"
           aria-expanded={composerOpen}
         >
           <FolderPlus className="w-3.5 h-3.5" />
@@ -464,7 +456,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Schedule plans"
-                  className="up-mobile-sheet will-change-transform"
+                  className="up-mobile-sheet up-pick-sheet will-change-transform"
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={
@@ -484,10 +476,10 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
+                  <div className="up-pool-head pl-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <FolderKanban className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                      <h2 className="up-pool-title">Schedule plans</h2>
+                      <h2 className="up-pool-title">Plans · {plans.length}</h2>
                     </div>
                     <button
                       type="button"
@@ -498,7 +490,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="up-mobile-sheet-body up-scroll pt-2">
+                  <div className="up-mobile-sheet-body up-scroll">
                     {renderContent()}
                   </div>
                 </motion.div>

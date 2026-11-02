@@ -729,7 +729,7 @@ html.dark button[class~='dark:border-slate-700'] {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: -0.01em;
   }
 
@@ -856,7 +856,7 @@ html.dark button[class~='dark:border-slate-700'] {
 }
 
 .up-segment-btn[aria-pressed='true'] {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
 }
 
 .up-settings-appearance {
@@ -901,8 +901,8 @@ html.dark button[class~='dark:border-slate-700'] {
 }
 
 .up-appearance-btn[aria-pressed='true'] {
-  background: var(--up-secondary);
-  color: var(--up-secondary-ink);
+  background: var(--up-accent);
+  color: var(--up-accent-ink);
 }
 
 .up-appearance-btn:focus {
@@ -922,18 +922,18 @@ html.dark button[class~='dark:border-slate-700'] {
   }
 
   .up-appearance-btn[aria-pressed='true']:hover {
-    background: color-mix(in srgb, var(--up-secondary) 84%, var(--up-ink));
-    color: var(--up-secondary-ink);
+    background: color-mix(in srgb, var(--up-accent) 88%, #111111);
+    color: var(--up-accent-ink);
   }
 }
 
 .up-tab-pill {
-  background: var(--up-secondary);
+  background: var(--up-accent);
   box-shadow: none;
 }
 
 .up-tab-on {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
 }
 
 .up-choice.is-on {
@@ -1255,7 +1255,7 @@ html.dark .up-settings-select option,
   gap: 8px;
   min-height: 36px;
   padding: 0 10px 0 12px;
-  border: 1px solid var(--up-control-line);
+  border: 1px solid var(--up-line);
   border-radius: 12px;
   background: #fff;
   color: var(--up-ink);
@@ -1307,7 +1307,7 @@ html.dark .up-plan-trigger.is-open:hover {
   flex: none;
   width: 28px;
   height: 28px;
-  margin-left: 8px;
+  margin-left: 4px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -1318,6 +1318,12 @@ html.dark .up-plan-trigger.is-open:hover {
 .up-plan-row-btn:hover,
 .up-plan-row-btn[aria-expanded='true'] {
   background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+  color: var(--up-ink);
+}
+
+.up-plan-row-active {
+  background: color-mix(in srgb, var(--up-accent) 12%, var(--up-raised));
+  box-shadow: inset 3px 0 0 var(--up-accent);
   color: var(--up-ink);
 }
 
@@ -1380,6 +1386,7 @@ html.dark .up-plan-row-item-danger {
   .up-plan-row-btn {
     width: 44px;
     height: 44px;
+    margin-left: 0;
   }
 
   .up-plan-row-item {
@@ -1396,10 +1403,10 @@ html.dark .up-plan-row-item-danger {
   gap: 6px;
   min-height: 36px;
   padding: 0 10px 0 12px;
-  border: 1px solid var(--up-control-line);
+  border: 1px solid var(--up-line);
   border-radius: 8px;
   background: #fff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 html.dark .up-text-trigger.up-import-export {
@@ -2830,8 +2837,8 @@ html.dark .up-mobile-sheet,
   left: 0;
   width: 0;
   border-radius: 6px;
-  background: var(--up-secondary);
-  border: 1px solid var(--up-secondary);
+  background: var(--up-accent);
+  border: 1px solid var(--up-accent);
   pointer-events: none;
   z-index: 0;
   transition-property: transform, width;
@@ -2866,7 +2873,7 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-tab[aria-selected='true'] {
-  color: var(--up-secondary-ink);
+  color: var(--up-accent-ink);
   font-weight: 600;
 }
 
@@ -3074,6 +3081,7 @@ html.dark .up-mobile-sheet,
 
 .up-pool-section.is-in-plan {
   background: color-mix(in srgb, var(--up-accent) 10%, var(--up-raised));
+  box-shadow: inset 3px 0 0 var(--up-accent);
 }
 
 .up-pool-swatches {
@@ -3191,8 +3199,10 @@ html.dark .up-mobile-sheet,
   opacity: 0.6;
 }
 
-.up-pool-toggle.is-conflict {
-  opacity: 0.55;
+.up-pool-toggle.is-add.is-conflict,
+.up-pool-toggle.is-add.is-conflict:hover {
+  background: color-mix(in srgb, var(--up-ink) 8%, transparent);
+  color: var(--up-muted);
 }
 
 .up-pool-conflict-tag {
@@ -3515,7 +3525,18 @@ html.dark .up-mobile-sheet,
 /* Phone sheet: spend the height on courses, not chrome. */
 @media (max-width: 639px) {
   .up-pool-sheet {
-    max-height: 94dvh;
+    height: 88dvh;
+    max-height: 88dvh;
+  }
+
+  .up-pool-sheet .up-pool-list-ink {
+    flex: 1;
+  }
+
+  .up-pool-sheet .up-pool-empty {
+    flex: 1;
+    justify-content: center;
+    padding-block: 16px;
   }
 
   .up-pool-sheet .up-pool-handle-hit {
@@ -3525,6 +3546,19 @@ html.dark .up-mobile-sheet,
 
   .up-pool-sheet .up-pool-head {
     padding: 0 8px 6px 16px;
+  }
+
+  .up-pick-sheet .up-pool-handle-hit {
+    min-height: 24px;
+    padding: 8px 0 2px;
+  }
+
+  .up-pick-sheet .up-pool-head {
+    padding: 0 8px 6px 16px;
+  }
+
+  .up-pick-sheet .up-mobile-sheet-body {
+    padding: 4px 16px 8px;
   }
 
   .up-pool-sheet .up-pool-icon-hit {

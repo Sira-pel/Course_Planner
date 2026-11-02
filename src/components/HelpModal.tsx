@@ -23,7 +23,7 @@ import { useModalMotion } from '../utils/motion';
 import { AnimatedBody } from './app/AnimatedBody';
 import { ModalTabPill } from './app/ModalTabPill';
 
-export type HelpTabType = 'workflow' | 'shortcuts' | 'pool' | 'import' | 'export';
+export type HelpTabType = 'workflow' | 'transfer' | 'shortcuts';
 
 const shortcutCategories = ['general', 'courses', 'navigation', 'tools'] as const;
 const shortcutCategoryLabels: Record<(typeof shortcutCategories)[number], string> = {
@@ -41,33 +41,6 @@ interface HelpModalProps {
   onOpenExport?: () => void;
   onOpenCatalog?: () => void;
   onTabChange?: (tab: HelpTabType) => void;
-}
-
-/** Matches the tablist: 2 columns, 3 from 400px, 5 from the `sm` breakpoint. */
-function helpTabColumnCount(): number {
-  if (typeof window === 'undefined') return 5;
-  if (window.matchMedia('(min-width: 640px)').matches) return 5;
-  if (window.matchMedia('(min-width: 400px)').matches) return 3;
-  return 2;
-}
-
-function nextTabInColumn(
-  currentIndex: number,
-  direction: 1 | -1,
-  columnCount: number,
-  length: number,
-): number {
-  const column = currentIndex % columnCount;
-  const row = Math.floor(currentIndex / columnCount);
-  const rowCount = Math.ceil(length / columnCount);
-
-  for (let step = 1; step <= rowCount; step += 1) {
-    const nextRow = (((row + direction * step) % rowCount) + rowCount) % rowCount;
-    const nextIndex = nextRow * columnCount + column;
-    if (nextIndex < length) return nextIndex;
-  }
-
-  return currentIndex;
 }
 
 export const HelpModal: React.FC<HelpModalProps> = ({
@@ -149,9 +122,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
 
   const helpTabs: { id: HelpTabType; label: string; icon: React.ReactNode }[] = [
     { id: 'workflow', label: 'Start', icon: <Compass className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'pool', label: 'Pool', icon: <ShoppingBag className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'import', label: 'Import', icon: <Upload className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'export', label: 'Export', icon: <Download className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'transfer', label: 'Import/Export', icon: <Upload className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
@@ -159,22 +130,12 @@ export const HelpModal: React.FC<HelpModalProps> = ({
     const currentIndex = helpTabs.findIndex((tab) => tab.id === activeTab);
     if (currentIndex < 0) return;
 
-    const columnCount = helpTabColumnCount();
-    const wrapped = columnCount < helpTabs.length;
     let nextIndex = currentIndex;
 
-    if (event.key === 'ArrowRight') {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
       nextIndex = (currentIndex + 1) % helpTabs.length;
-    } else if (event.key === 'ArrowLeft') {
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
       nextIndex = (currentIndex - 1 + helpTabs.length) % helpTabs.length;
-    } else if (event.key === 'ArrowDown') {
-      nextIndex = wrapped
-        ? nextTabInColumn(currentIndex, 1, columnCount, helpTabs.length)
-        : (currentIndex + 1) % helpTabs.length;
-    } else if (event.key === 'ArrowUp') {
-      nextIndex = wrapped
-        ? nextTabInColumn(currentIndex, -1, columnCount, helpTabs.length)
-        : (currentIndex - 1 + helpTabs.length) % helpTabs.length;
     } else if (event.key === 'Home') {
       nextIndex = 0;
     } else if (event.key === 'End') {
@@ -223,7 +184,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     Help
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    Plan a week, check clashes, then share it.
+                    Plan, compare, share.
                   </p>
                 </div>
               </div>
@@ -241,7 +202,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             <div
               role="tablist"
               aria-label="Help topics"
-              className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-5 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative"
+              className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mt-3 shrink-0 relative"
             >
               {helpTabs.map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -256,7 +217,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     aria-selected={isActive}
                     aria-controls={`help-panel-${tab.id}`}
                     tabIndex={isActive ? 0 : -1}
-                    className={`relative min-w-0 w-full py-2 px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center z-10 transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
+                    className={`relative min-w-0 w-full py-2 px-1 sm:px-3 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 text-center z-10 transition-colors duration-[var(--dur-chrome)] ease-[var(--ease-out)] ${
                       isActive
                         ? 'up-tab-on'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -264,7 +225,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                   >
                     {isActive && <ModalTabPill layoutId="help-modal-tab" />}
                     <span className="relative z-10 flex min-w-0 items-center justify-center gap-1.5">
-                      {tab.icon}
+                      <span className="hidden sm:inline-flex">{tab.icon}</span>
                       <span className="truncate">{tab.label}</span>
                     </span>
                   </button>
@@ -374,39 +335,55 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                   )}
                   {activeTab === 'workflow' && (
-                    <div className="space-y-4 sm:space-y-5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Plan your week</h3>
-                          <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                            Add classes, check conflicts, and share the schedule when it is ready.
-                          </p>
-                        </div>
-                        <Compass className="w-6 h-6 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Plan your week</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                          Add classes, compare options, then share.
+                        </p>
                       </div>
 
                       <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
                         {[
-                          { number: '1', title: 'Add', description: <>Add a course, double-click an empty slot, import a list, or generate plans from the pool.</> },
-                          { number: '2', title: 'Edit', description: <>Click a class to change its days, time, room, or color.</> },
-                          { number: '3', title: 'Compare', description: <>Overlay another plan and edit either schedule on the calendar.</> },
-                          { number: '4', title: 'Share', description: <>Copy a link, text, calendar file, or image.</> },
+                          { number: '1', title: 'Add', description: 'Double-click a slot, or use Add course.' },
+                          { number: '2', title: 'Compare', description: 'Overlay another plan to weigh options.' },
+                          { number: '3', title: 'Share', description: 'Send a link, calendar file, or image.' },
                         ].map(({ number, title, description }) => (
-                          <div key={number} className="flex gap-3 py-3 sm:py-4">
-                            <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">
+                          <div key={number} className="flex gap-3 py-3">
+                            <span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                               {number}
                             </span>
-                            <div>
-                              <h4 className="font-semibold text-slate-900 dark:text-slate-100">{title}</h4>
-                              <p className="text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">{description}</p>
-                            </div>
+                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                              <strong className="font-semibold text-slate-900 dark:text-slate-100">{title}.</strong> {description}
+                            </p>
                           </div>
                         ))}
                       </div>
 
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <ShoppingBag className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                            <strong className="font-semibold text-slate-900 dark:text-slate-100">Course pool.</strong> Keep options aside. They stay off the calendar, so they never clash. Tap + to add one, or Generate clash-free plans.
+                          </p>
+                        </div>
+                        {onOpenCatalog && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              onOpenCatalog();
+                            }}
+                            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95 shrink-0 self-start"
+                          >
+                            Open pool <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex flex-wrap items-center justify-between gap-3 text-slate-500 dark:text-slate-400">
                         <span>
-                          Tip: <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Ctrl+Z</kbd> undoes a change.
+                          Undo any change with <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Ctrl+Z</kbd>.
                         </span>
                         <button
                           type="button"
@@ -422,129 +399,88 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     </div>
                   )}
 
-                  {activeTab === 'pool' && (
+                  {activeTab === 'transfer' && (
                     <div className="space-y-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Keep options aside</h3>
-                          <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                            Courses in the Pool stay off the calendar and do not count as conflicts.
-                          </p>
-                        </div>
-                        <ShoppingBag className="w-6 h-6 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Import and export</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                          Move schedules in and out.
+                        </p>
                       </div>
 
-                      <ul className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Add quickly.</strong> Use + on a course to put it on the current plan.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Switch plans.</strong> The Pool is shared across your plans.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Import large lists.</strong> Bring a spreadsheet into the pool. Choose Pool only when you want to pick courses later.</li>
-                        <li className="py-3 text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Generate plans.</strong> Tick courses, pin must-takes, then set size, gaps, lunch, and a daily course cap. Save a clash-free result as a normal plan. The pool and your other plans stay as they are.</li>
-                      </ul>
-
-                      {onOpenCatalog && (
-                        <div className="flex justify-start">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onClose();
-                              onOpenCatalog();
-                            }}
-                            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95"
-                          >
-                            Open Course Pool <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
+                      <div>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400">Import</h4>
+                          {onOpenImport && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                onOpenImport('excel');
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95 shrink-0"
+                            >
+                              Open import <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'import' && (
-                    <div className="space-y-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Bring in a schedule</h3>
-                          <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                            Choose the format you already have.
-                          </p>
-                        </div>
-                        {onOpenImport && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onClose();
-                              onOpenImport('excel');
-                            }}
-                            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95 shrink-0"
-                          >
-                            Open Import <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
-                        <div className="flex items-start gap-3 py-4">
-                          <FileSpreadsheet className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Excel / CSV.</strong> Course tables with code, title, day, time, room, and instructor. Put them in the pool only, on the open plan, or on a new empty plan.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Share link.</strong> Preview a classmate’s plan, then overlay it or open it as yours.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar (.ics).</strong> Import recurring classes from a calendar file, into the pool, the open plan, or a new empty plan.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Backup.</strong> Restore plans, colors, and the Course Pool.</p>
+                        <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
+                          <div className="flex items-start gap-3 py-3">
+                            <FileSpreadsheet className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Spreadsheet.</strong> Excel or CSV with times and rooms.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar.</strong> An .ics file of recurring classes.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Share link.</strong> A classmate’s plan.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Backup.</strong> Restore plans and the pool.</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
 
-                  {activeTab === 'export' && (
-                    <div className="space-y-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Take it with you</h3>
-                          <p className="text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                            Choose a format for sharing, saving, or syncing.
-                          </p>
+                      <div>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400">Export</h4>
+                          {onOpenExport && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                onOpenExport();
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95 shrink-0"
+                            >
+                              Open export <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
-                        {onOpenExport && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onClose();
-                              onOpenExport();
-                            }}
-                            className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors up-chrome-btn active:scale-95 shrink-0"
-                          >
-                            Open Export <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
-                        <div className="flex items-start gap-3 py-4">
-                          <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Text.</strong> Paste a clean schedule into chat or notes.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Share link.</strong> Let friends open your schedule without an account.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar (.ics).</strong> Use it in Apple Calendar, Outlook, or Google Calendar.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Image.</strong> Save a picture of the week.</p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                          <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Backup.</strong> Export your plans, colors, and Course Pool.</p>
+                        <div className="divide-y divide-slate-200 dark:divide-slate-800 border-y border-slate-200 dark:border-slate-800">
+                          <div className="flex items-start gap-3 py-3">
+                            <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Text.</strong> Paste into chat or notes.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Share link.</strong> Opens without an account.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Calendar.</strong> Apple, Outlook, or Google.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Image.</strong> A picture of your week.</p>
+                          </div>
+                          <div className="flex items-start gap-3 py-3">
+                            <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-slate-100">Backup.</strong> Save plans, colors, and the pool.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
