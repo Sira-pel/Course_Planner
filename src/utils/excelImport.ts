@@ -1349,6 +1349,32 @@ export function parseExcelRowsToCourses(
     // does not become a fake "SCHEDULES" section.
     const resolved = resolveRowMeetings(row, mapping, getCell);
     if (!code && !name) {
+      // Registrar exports list a second meeting on its own row, with the course columns left blank.
+      // Text under a course-identity column means the row is a course or note of its own, so it is not folded in.
+      const previous = courses[courses.length - 1];
+      const identityColumns = new Set(
+        [mapping.code, mapping.subject, mapping.courseNum, mapping.name, mapping.section].filter(Boolean),
+      );
+      const hasIdentityText = row.some((cell, idx) => sanitizeString(cell) !== '' && identityColumns.has(`col_${idx}`));
+      if (previous && !hasIdentityText && resolved.meetings.length > 0) {
+        for (const meeting of resolved.meetings) {
+          const duplicate = previous.sessions.some((existing) => (
+            existing.day === meeting.day &&
+            existing.startTime === meeting.start &&
+            existing.endTime === meeting.end &&
+            (existing.room || '') === room
+          ));
+          if (duplicate) continue;
+          previous.sessions.push({
+            id: `s_${previous.id}_${previous.sessions.length}`,
+            day: meeting.day,
+            startTime: meeting.start,
+            endTime: meeting.end,
+            room: room || undefined,
+          });
+        }
+        continue;
+      }
       const firstText = row.find((c) => sanitizeString(c).length > 0);
       const textVal = firstText ? sanitizeString(firstText) : '';
       const banner = /^(?:total|page\s*\d+|department of|undergraduate|graduate|fall\s*\d+|spring\s*\d+|summer\s*\d+|winter\s*\d+)\b/i.test(textVal);
@@ -1530,7 +1556,8 @@ function resolveRowMeetings(
     for (const day of days) into.push({ day, start, end });
   };
 
-  if (timeRaw) {
+  // A guessed Time column that holds no clock (a seats or waitlist count) must not hide a mapped Schedule.
+  if (timeRaw && (!scheduleRaw || extractTimeRange(timeRaw))) {
     const range = extractTimeRange(timeRaw);
     const days = explicitDays.length > 0 ? explicitDays : extractDays(timeRaw);
     if (!range) {
