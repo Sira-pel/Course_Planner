@@ -79,7 +79,7 @@ export const CourseBlock = memo(function CourseBlock({
         {/* Top row: Code + Section and Quick Actions / Plan Badge */}
         <div className="flex items-start justify-between gap-1 leading-none">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-extrabold text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words text-slate-800 dark:text-slate-100">
+            <span className="font-bold text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words text-slate-800 dark:text-slate-100">
               {course.code}
               {course.section && <span className="@max-[96px]:hidden">-{course.section}</span>}
             </span>
@@ -135,7 +135,7 @@ export const CourseBlock = memo(function CourseBlock({
 
         {/* Course Name */}
         {!isShortBlock && visibleTitle && (
-          <div className="text-xs font-semibold truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight text-slate-700 dark:text-slate-200">
+          <div className="text-xs font-medium truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight text-slate-700 dark:text-slate-200">
             {visibleTitle}
           </div>
         )}
@@ -174,6 +174,9 @@ export const CourseBlock = memo(function CourseBlock({
   const contrastText = isLightText ? 'text-white' : 'text-slate-900';
   const subtitleColor = isLightText ? 'text-white/95' : 'text-slate-900/90';
   const subtextColor = isLightText ? 'text-white/90' : 'text-slate-900/85';
+  // Light-on-dark text looks heavier than dark-on-light at the same weight, so step it down.
+  const titleWeight = isLightText ? 'font-semibold' : 'font-bold';
+  const bodyWeight = isLightText ? 'font-normal' : 'font-medium';
 
   return (
     <div
@@ -203,7 +206,7 @@ export const CourseBlock = memo(function CourseBlock({
       {/* Top row: Code + Section and Quick Actions */}
       <div className="flex items-start justify-between gap-1 leading-none">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`font-extrabold text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words ${contrastText}`}>
+          <span className={`${titleWeight} text-xs tracking-tight truncate @max-[96px]:whitespace-normal @max-[96px]:break-words ${contrastText}`}>
             {course.code}
             {course.section && <span className="@max-[96px]:hidden">-{course.section}</span>}
           </span>
@@ -251,19 +254,19 @@ export const CourseBlock = memo(function CourseBlock({
 
       {/* Course Name */}
       {!isShortBlock && visibleTitle && (
-        <div className={`text-xs font-semibold truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight ${subtitleColor}`}>
+        <div className={`text-xs ${bodyWeight} truncate [@container(min-height:120px)]:whitespace-normal [@container(min-height:120px)]:line-clamp-2 @max-[96px]:hidden mt-1 leading-tight ${subtitleColor}`}>
           {visibleTitle}
         </div>
       )}
 
       {/* Time & Details */}
-      <div className={`text-[11.5px] font-mono font-semibold mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight ${subtextColor}`}>
+      <div className={`text-[11.5px] font-mono ${bodyWeight} mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-tight ${subtextColor}`}>
         <span>
           {startClock}
           <span className="@max-[96px]:hidden">{startMeridiem} - {minutesToTime(endMin)}</span>
         </span>
         {session.room && !isShortBlock && (
-          <span className="inline-flex items-center gap-0.5 min-w-0 max-w-full font-sans text-[11px] font-medium">
+          <span className={`inline-flex items-center gap-0.5 min-w-0 max-w-full font-sans text-[11px] ${bodyWeight}`}>
             <MapPin className="w-2.5 h-2.5 shrink-0 opacity-80 @max-[96px]:hidden" />
             <span className="truncate">{session.room}</span>
           </span>
