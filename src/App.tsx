@@ -434,11 +434,19 @@ export default function App() {
     closeMoreMenu();
   }, [resetToBlank, closeMoreMenu]);
 
+  const loadingDemoRef = useRef(false);
   const applyLoadDemo = useCallback(() => {
-    resetToSample().then(
-      () => showToast('Loaded the demo semester.', 'success'),
-      () => showToast("Couldn't load the demo. Check your connection and try again.", 'error')
-    );
+    // The demo loads on demand, so a second click before it arrives must not load it twice.
+    if (loadingDemoRef.current) return;
+    loadingDemoRef.current = true;
+    resetToSample()
+      .then(
+        () => showToast('Loaded the demo semester.', 'success'),
+        () => showToast("Couldn't load the demo. Check your connection and try again.", 'error')
+      )
+      .finally(() => {
+        loadingDemoRef.current = false;
+      });
   }, [resetToSample, showToast]);
 
   const requestLoadDemo = useCallback(() => {

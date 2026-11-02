@@ -98,4 +98,15 @@ describe('spreadsheet continuation rows', () => {
     assert.deepEqual(meetings(result.courses[1]), ['tuesday 13:30-14:45', 'thursday 13:30-14:45']);
     assert.equal(result.warnings.length, 0);
   });
+
+  it('skips lone note lines', () => {
+    const result = parse([
+      ['Course Code', 'Course Title', 'Days', 'Start Time', 'End Time'],
+      ['CS101', 'Intro', 'Mon', '09:00', '10:15'],
+      ['MATH201', 'Calc', 'Tue', '10:00', '11:15'],
+      ['Total credits: 7', '', '', '', ''],
+      ['Note: lab sessions TBA', '', '', '', ''],
+    ]);
+    assert.deepEqual(result.courses.map((course) => course.code), ['CS101', 'MATH201']);
+  });
 });

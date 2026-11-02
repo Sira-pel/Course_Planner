@@ -1116,6 +1116,8 @@ export function autoDetectColumns(
   for (let r = dataStartRow; r < scanEnd; r++) {
     const row = rawRows[r];
     if (!row) continue;
+    // A lone text line (a footer or note) says nothing about what the columns hold.
+    if (stats.length > 2 && row.filter((cell) => sanitizeString(cell) !== '').length <= 1) continue;
     for (let c = 0; c < stats.length; c++) {
       const stat = stats[c];
       const profile = profileFor(row[stat.index], cache);
@@ -1384,6 +1386,16 @@ export function parseExcelRowsToCourses(
       }
       code = textVal.slice(0, 10).toUpperCase();
       name = textVal;
+    }
+
+    // A lone line of text with no meeting, such as "Total credits: 7", is a note. A bare course code stays.
+    const filledCells = row.filter((c) => sanitizeString(c) !== '').length;
+    if (filledCells === 1 && resolved.meetings.length === 0 && !resolved.problem && !resolved.online) {
+      const lone = code || name;
+      if (!/^[A-Za-z]{2,6}\s*[-_.:]?\s*\d{2,4}[A-Za-z]?$/.test(lone)) {
+        skippedRows++;
+        continue;
+      }
     }
 
     // Parse Schedule Sessions for current row
