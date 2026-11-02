@@ -709,7 +709,7 @@ const CODE_VALUE_RE = /^[A-Za-z]{2,6}\s+\d{2,4}[A-Za-z]{0,3}(?:\s*\([^)]{1,16}\)
 const LOOSE_CODE_RE = /^[A-Za-z]{2,5}\s+\d{2,4}\b/;
 /** Codes written without a space, like CS101 or MATH2010. Three or more digits keep rooms like A1 or B-204 out. */
 const GLUED_CODE_RE = /^[A-Za-z]{2,6}\d{3,4}[A-Za-z]{0,3}$/;
-const TERM_VALUE_RE =/^(?:fall|spring|summer|winter|autumn)\s+\d{4}$/i;
+const TERM_VALUE_RE = /^(?:fall|spring|summer|winter|autumn)\s+\d{4}$/i;
 const ROOM_WORD_RE = /^(?:hall|room|rm|lab|bldg|building|aud|auditorium|online|tba|tbd|classroom|studio)$/i;
 const ROOM_VALUE_RE = /^(?:(?:room|rm\.?|hall|bldg|building|lab|auditorium|aud|studio|classroom)\b.*|[A-Za-z]{1,3}\s*-?\s*\d{1,4}[A-Za-z]?)$/i;
 const DATE_VALUE_RE = /^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:,?\s+\d{4})?|\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?,?\s+\d{4})$/i;

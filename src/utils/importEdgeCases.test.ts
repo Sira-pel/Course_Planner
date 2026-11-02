@@ -119,4 +119,13 @@ describe('spreadsheet continuation rows', () => {
     assert.deepEqual(result.courses.map((course) => course.code), ['CS101', 'CS101', 'MATH201']);
     assert.equal(result.courses[0].sessions[0].room, 'A1');
   });
+  it('does not read glued room names as course codes when the sheet has no header row', () => {
+    const result = parse([
+      ['CS101', '001', 'Intro to CS', '3', 'MWF', '09:00-10:15', 'LAB101', 'Smith'],
+      ['CS102', '002', 'Algorithms', '3', 'TTh', '1:30 PM-2:45 PM', 'LAB204', 'Lee'],
+      ['MATH201', '02', 'Calculus II', '4', 'TTh', '10:30-11:45', 'HALL301', 'Kim'],
+    ]);
+    assert.deepEqual(result.courses.map((course) => course.code), ['CS101', 'CS102', 'MATH201']);
+    assert.equal(result.courses[0].sessions[0].room, 'LAB101');
+  });
 });
