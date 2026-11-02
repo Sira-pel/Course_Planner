@@ -329,9 +329,9 @@ export const Header = memo(function Header({
             <span /><span /><span /><span /><span />
             <span /><span /><span /><span /><span />
           </span>
-          <span className="font-bold text-[15px] sm:text-base tracking-tight leading-none" style={{ color: 'var(--up-ink)' }}>
+          <h1 className="font-bold text-[15px] sm:text-base tracking-tight leading-none" style={{ color: 'var(--up-ink)' }}>
             Uniplan
-          </span>
+          </h1>
 
 
           <div className="up-enrolled" title={`Total enrolled: ${totalCredits} credit hours · ${classCount} ${classCount === 1 ? 'class' : 'classes'}`}>
