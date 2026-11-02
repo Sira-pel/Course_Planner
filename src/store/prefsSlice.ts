@@ -1,4 +1,3 @@
-import { SAMPLE_CATALOG, SAMPLE_PLANS } from '../data/sampleSemester';
 import type { Course } from '../types/schedule';
 import { BACKUP_READ_ERROR, loadBackup } from '../utils/backupRestore';
 import { courseIdentityKey } from '../utils/courseIdentity';
@@ -111,7 +110,9 @@ export function createPrefsSlice(set: StoreSet, get: StoreGet): Pick<
       });
     },
 
-    resetToSample: () => {
+    resetToSample: async () => {
+      // The demo data only matters after a click, so it stays out of the startup bundle.
+      const { SAMPLE_CATALOG, SAMPLE_PLANS } = await import('../data/sampleSemester');
       commitWithHistory(set, get, {
         plans: SAMPLE_PLANS,
         catalogCourses: SAMPLE_CATALOG,
