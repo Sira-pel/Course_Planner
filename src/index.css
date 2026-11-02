@@ -1321,6 +1321,12 @@ html.dark .up-plan-trigger.is-open:hover {
   color: var(--up-ink);
 }
 
+.up-plan-row-active {
+  background: color-mix(in srgb, var(--up-accent) 12%, var(--up-raised));
+  box-shadow: inset 3px 0 0 var(--up-accent);
+  color: var(--up-ink);
+}
+
 .up-plan-row-menu {
   position: fixed;
   z-index: 95;
