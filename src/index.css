@@ -3525,7 +3525,18 @@ html.dark .up-mobile-sheet,
 /* Phone sheet: spend the height on courses, not chrome. */
 @media (max-width: 639px) {
   .up-pool-sheet {
-    max-height: 94dvh;
+    height: 88dvh;
+    max-height: 88dvh;
+  }
+
+  .up-pool-sheet .up-pool-list-ink {
+    flex: 1;
+  }
+
+  .up-pool-sheet .up-pool-empty {
+    flex: 1;
+    justify-content: center;
+    padding-block: 16px;
   }
 
   .up-pool-sheet .up-pool-handle-hit {
