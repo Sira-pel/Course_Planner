@@ -3537,6 +3537,19 @@ html.dark .up-mobile-sheet,
     padding: 0 8px 6px 16px;
   }
 
+  .up-pick-sheet .up-pool-handle-hit {
+    min-height: 24px;
+    padding: 8px 0 2px;
+  }
+
+  .up-pick-sheet .up-pool-head {
+    padding: 0 8px 6px 16px;
+  }
+
+  .up-pick-sheet .up-mobile-sheet-body {
+    padding: 4px 16px 8px;
+  }
+
   .up-pool-sheet .up-pool-icon-hit {
     min-width: 36px;
     min-height: 36px;

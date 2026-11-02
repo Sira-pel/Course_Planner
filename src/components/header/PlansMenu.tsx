@@ -456,7 +456,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Schedule plans"
-                  className="up-mobile-sheet will-change-transform"
+                  className="up-mobile-sheet up-pick-sheet will-change-transform"
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={
@@ -476,7 +476,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4 pb-2" {...sheetDrag.handleProps}>
+                  <div className="up-pool-head pl-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <FolderKanban className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Plans · {plans.length}</h2>
@@ -490,7 +490,7 @@ export const PlansMenu: React.FC<PlansMenuProps> = ({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="up-mobile-sheet-body up-scroll pt-1 pb-2">
+                  <div className="up-mobile-sheet-body up-scroll">
                     {renderContent()}
                   </div>
                 </motion.div>

@@ -115,10 +115,10 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
       ) : (
         <>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1 mb-2">
-            Overlay backup scenarios as translucent ghost blocks to spot differences:
+            Overlay other plans on your calendar
           </p>
 
-          <div className="space-y-1 max-h-60 overflow-y-auto">
+          <div className="space-y-0.5 max-h-60 overflow-y-auto">
             {plans.map((p) => {
               const isActive = p.id === activePlanId;
               const isGhosted = ghostPlanIds.includes(p.id);
@@ -128,7 +128,8 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                 return (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between px-2 py-1.5 rounded-md up-selected font-semibold"
+                    className="flex items-center justify-between pl-2.5 pr-2 min-h-[40px] rounded-md up-plan-row-active font-semibold"
+                    aria-current="true"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <span className="up-selected-mark w-4 h-4 rounded flex items-center justify-center shrink-0">
@@ -136,9 +137,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                       </span>
                       <span className="truncate text-xs">{p.name}</span>
                     </div>
-                    <span className="up-selected-chip text-[10px] px-1.5 py-0.5 rounded">
-                      Active
-                    </span>
+                    <span className="sr-only">Active plan</span>
                   </div>
                 );
               }
@@ -150,7 +149,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                   onClick={() => onToggleGhost(p.id)}
                   role="checkbox"
                   aria-checked={isGhosted}
-                  className={`w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors up-chrome-btn ${
+                  className={`w-full text-left flex items-center justify-between pl-2.5 pr-2 min-h-[40px] rounded-md cursor-pointer transition-colors up-chrome-btn ${
                     isGhosted
                       ? 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent'
@@ -174,16 +173,12 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                       {p.name}
                     </span>
                   </div>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                      isGhosted
-                        ? 'font-medium bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {isGhosted && <Check className="w-2.5 h-2.5 stroke-[2.5]" />}
-                    {isGhosted ? 'Showing' : 'Click to overlay'}
-                  </span>
+                  {isGhosted && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-medium bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
+                      <Check className="w-2.5 h-2.5 stroke-[2.5]" />
+                      Showing
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -196,7 +191,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
               className="text-[11px] text-slate-600 dark:text-slate-300 font-medium hover:text-slate-900 dark:hover:text-white flex items-center gap-1 up-chrome-btn"
             >
               <Plus className="w-3 h-3" />
-              Add another plan
+              New blank plan
             </button>
             {ghostPlanIds.length > 0 && (
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
@@ -214,10 +209,10 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
               type="button"
               data-dialog="export"
               onClick={onOpenShare}
-              className="w-full text-left px-2 py-1.5 rounded text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 flex items-center gap-2 up-chrome-btn transition-colors"
+              className="w-full text-left px-2 py-1.5 rounded text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 up-chrome-btn transition-colors"
             >
               <Share2 className="w-3.5 h-3.5 shrink-0" />
-              <span>Copy share link (Active Plan)</span>
+              <span>Copy share link for active plan</span>
             </button>
           )}
           {onImportFriendLink && (
@@ -228,7 +223,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
               className="w-full text-left px-2 py-1.5 rounded text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 up-chrome-btn transition-colors"
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
-              <span>Import friend's link to compare...</span>
+              <span>Import a friend's link</span>
             </button>
           )}
         </div>
@@ -280,7 +275,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Compare plans"
-                  className="up-mobile-sheet will-change-transform"
+                  className="up-mobile-sheet up-pick-sheet will-change-transform"
                   initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={
@@ -300,7 +295,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                   >
                     <span className="up-pool-handle" />
                   </button>
-                  <div className="up-pool-head px-4" {...sheetDrag.handleProps}>
+                  <div className="up-pool-head pl-4" {...sheetDrag.handleProps}>
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       <h2 className="up-pool-title">Compare plans</h2>
@@ -326,7 +321,7 @@ export const CompareMenu: React.FC<CompareMenuProps> = ({
                       </button>
                     </div>
                   </div>
-                  <div className="up-mobile-sheet-body up-scroll pt-2">
+                  <div className="up-mobile-sheet-body up-scroll">
                     {renderContent()}
                   </div>
                 </motion.div>
