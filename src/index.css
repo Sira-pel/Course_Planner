@@ -1307,7 +1307,7 @@ html.dark .up-plan-trigger.is-open:hover {
   flex: none;
   width: 28px;
   height: 28px;
-  margin-left: 8px;
+  margin-left: 4px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -1386,6 +1386,7 @@ html.dark .up-plan-row-item-danger {
   .up-plan-row-btn {
     width: 44px;
     height: 44px;
+    margin-left: 0;
   }
 
   .up-plan-row-item {
