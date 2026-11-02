@@ -17,11 +17,7 @@ function pad2(n: number): string {
 }
 
 function unescapeIcsText(value: string): string {
-  return value
-    .replace(/\\n/gi, '\n')
-    .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\');
+  return value.replace(/\\([nN,;\\])/g, (_, ch: string) => (ch === 'n' || ch === 'N' ? '\n' : ch));
 }
 
 function parseTzid(params: string): string | undefined {
@@ -128,37 +124,41 @@ function parseIcsTime(
   return `${pad2(Math.min(23, Math.max(0, hours)))}:${pad2(Math.min(59, Math.max(0, mins)))}`;
 }
 
-function weekdayFromIcsDate(dateStr: string, tzid?: string): DayOfWeek {
-  const dayNames: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const WEEK_DAYS: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Weekday the event starts on after its clock is converted to the viewer's zone,
+ * and how many days that moved from the date as written (-1, 0 or +1). BYDAY lists
+ * are written in the source zone, so they move by the same shift.
+ */
+function localStartDay(dateStr: string, tzid?: string): { day: DayOfWeek; shift: number } {
   const year = parseInt(dateStr.substring(0, 4), 10);
   const month = parseInt(dateStr.substring(4, 6), 10) - 1;
   const dNum = parseInt(dateStr.substring(6, 8), 10);
+  const tIndex = dateStr.indexOf('T');
+  const timePart = tIndex === -1 ? '' : dateStr.substring(tIndex + 1).replace(/Z$/i, '');
+  const hoursRaw = timePart.length >= 2 ? parseInt(timePart.substring(0, 2), 10) : 0;
+  const minsRaw = timePart.length >= 4 ? parseInt(timePart.substring(2, 4), 10) : 0;
+  const hours = isNaN(hoursRaw) ? 0 : hoursRaw;
+  const mins = isNaN(minsRaw) ? 0 : minsRaw;
   const isUTC = dateStr.endsWith('Z') || (tzid !== undefined && /^(UTC|Etc\/UTC|Etc\/GMT)$/i.test(tzid));
 
+  const written = new Date(Date.UTC(year, month, dNum)).getUTCDay();
+  let local = written;
   if (isUTC) {
-    const jsDate = new Date(Date.UTC(year, month, dNum));
-    return dayNames[jsDate.getDay()];
+    local = new Date(Date.UTC(year, month, dNum, hours, mins)).getDay();
+  } else if (tzid) {
+    const converted = zonedWallClockToLocal(year, month, dNum, hours, mins, 0, tzid);
+    if (converted) local = converted.local.getDay();
   }
+  let shift = local - written;
+  if (shift > 3) shift -= 7;
+  if (shift < -3) shift += 7;
+  return { day: WEEK_DAYS[local], shift };
+}
 
-  if (tzid) {
-    const tIndex = dateStr.indexOf('T');
-    const timePart = tIndex === -1 ? '' : dateStr.substring(tIndex + 1).replace(/Z$/i, '');
-    const hours = timePart.length >= 2 ? parseInt(timePart.substring(0, 2), 10) : 0;
-    const mins = timePart.length >= 4 ? parseInt(timePart.substring(2, 4), 10) : 0;
-    const converted = zonedWallClockToLocal(
-      year,
-      month,
-      dNum,
-      isNaN(hours) ? 0 : hours,
-      isNaN(mins) ? 0 : mins,
-      0,
-      tzid
-    );
-    if (converted) return dayNames[converted.local.getDay()];
-  }
-
-  const jsDate = new Date(year, month, dNum);
-  return dayNames[jsDate.getDay()];
+function shiftDay(day: DayOfWeek, shift: number): DayOfWeek {
+  return WEEK_DAYS[(WEEK_DAYS.indexOf(day) + shift + 7) % 7];
 }
 
 function parseDescriptionFields(raw: string | undefined): { instructor?: string; credits?: number } {
@@ -217,8 +217,19 @@ export function parseIcsContent(icsContent: string): Course[] {
   const courses: Course[] = [];
   const eventStrs = unfolded.split(/BEGIN:VEVENT/i);
   
+  const isOverride = (evStr: string) => /^RECURRENCE-ID[;:]/im.test(evStr);
+  const summaryOf = (evStr: string) => evStr.match(/^SUMMARY[^:\r\n]*:(.+)/im)?.[1].trim();
+  // A single moved class repeats the series' SUMMARY. It would otherwise add a second weekly meeting.
+  const seriesSummaries = new Set<string>();
+  for (let i = 1; i < eventStrs.length; i++) {
+    const summary = summaryOf(eventStrs[i].split(/END:VEVENT/i)[0]);
+    if (summary && !isOverride(eventStrs[i])) seriesSummaries.add(summary);
+  }
+
   for (let i = 1; i < eventStrs.length; i++) {
     const evStr = eventStrs[i].split(/END:VEVENT/i)[0];
+    const overrideSummary = isOverride(evStr) ? summaryOf(evStr) : undefined;
+    if (overrideSummary && seriesSummaries.has(overrideSummary)) continue;
     const summaryMatch = evStr.match(/(?:SUMMARY|SUMMARY;[^:]*):(.+)/i);
     const startProp = matchIcsProperty(evStr, 'DTSTART');
     const endProp = matchIcsProperty(evStr, 'DTEND');
@@ -227,7 +238,8 @@ export function parseIcsContent(icsContent: string): Course[] {
     const locationMatch = evStr.match(/(?:LOCATION|LOCATION;[^:]*):(.+)/i);
     const descriptionProp = matchIcsProperty(evStr, 'DESCRIPTION');
 
-    if (summaryMatch && startProp && (endProp || durationProp)) {
+    // An all-day event (holiday, deadline) has no class time to import.
+    if (summaryMatch && startProp && (endProp || durationProp) && startProp.value.includes('T')) {
       const rawSummary = unescapeIcsText(summaryMatch[1].trim());
       const startTzid = parseTzid(startProp.params);
       const endTzid = endProp ? (parseTzid(endProp.params) ?? startTzid) : startTzid;
@@ -305,8 +317,10 @@ export function parseIcsContent(icsContent: string): Course[] {
         }
       }
       
+      const startDay = localStartDay(startProp.value, startTzid);
+      days = days.map((day) => shiftDay(day, startDay.shift));
       if (days.length === 0) {
-        days.push(weekdayFromIcsDate(startProp.value, startTzid));
+        days.push(startDay.day);
       }
       
       for (const d of days) {

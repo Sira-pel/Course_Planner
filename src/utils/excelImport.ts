@@ -707,6 +707,8 @@ const DATA_SCORE_THRESHOLD = 1.5;
 
 const CODE_VALUE_RE = /^[A-Za-z]{2,6}\s+\d{2,4}[A-Za-z]{0,3}(?:\s*\([^)]{1,16}\))?$/;
 const LOOSE_CODE_RE = /^[A-Za-z]{2,5}\s+\d{2,4}\b/;
+/** Codes written without a space, like CS101 or MATH2010. Three or more digits keep rooms like A1 or B-204 out. */
+const GLUED_CODE_RE = /^[A-Za-z]{2,6}\d{3,4}[A-Za-z]{0,3}$/;
 const TERM_VALUE_RE = /^(?:fall|spring|summer|winter|autumn)\s+\d{4}$/i;
 const ROOM_WORD_RE = /^(?:hall|room|rm|lab|bldg|building|aud|auditorium|online|tba|tbd|classroom|studio)$/i;
 const ROOM_VALUE_RE = /^(?:(?:room|rm\.?|hall|bldg|building|lab|auditorium|aud|studio|classroom)\b.*|[A-Za-z]{1,3}\s*-?\s*\d{1,4}[A-Za-z]?)$/i;
@@ -915,7 +917,7 @@ function classifyText(text: string): CellProfile {
 
   const codePrefix = text.match(/^([A-Za-z]{2,6})\b/)?.[1] || '';
   const roomWord = ROOM_WORD_RE.test(codePrefix);
-  if (!roomWord && !timeKind && CODE_VALUE_RE.test(text)) made.code = 1;
+  if (!roomWord && !timeKind && (CODE_VALUE_RE.test(text) || GLUED_CODE_RE.test(text))) made.code = 1;
   else if (!roomWord && !timeKind && LOOSE_CODE_RE.test(text) && !TERM_VALUE_RE.test(text)) made.code = 0.8;
 
   if (
@@ -1116,6 +1118,8 @@ export function autoDetectColumns(
   for (let r = dataStartRow; r < scanEnd; r++) {
     const row = rawRows[r];
     if (!row) continue;
+    // A lone text line (a footer or note) says nothing about what the columns hold.
+    if (stats.length > 2 && row.filter((cell) => sanitizeString(cell) !== '').length <= 1) continue;
     for (let c = 0; c < stats.length; c++) {
       const stat = stats[c];
       const profile = profileFor(row[stat.index], cache);
@@ -1349,6 +1353,32 @@ export function parseExcelRowsToCourses(
     // does not become a fake "SCHEDULES" section.
     const resolved = resolveRowMeetings(row, mapping, getCell);
     if (!code && !name) {
+      // Registrar exports list a second meeting on its own row, with the course columns left blank.
+      // Text under a course-identity column means the row is a course or note of its own, so it is not folded in.
+      const previous = courses[courses.length - 1];
+      const identityColumns = new Set(
+        [mapping.code, mapping.subject, mapping.courseNum, mapping.name, mapping.section].filter(Boolean),
+      );
+      const hasIdentityText = row.some((cell, idx) => sanitizeString(cell) !== '' && identityColumns.has(`col_${idx}`));
+      if (previous && !hasIdentityText && resolved.meetings.length > 0) {
+        for (const meeting of resolved.meetings) {
+          const duplicate = previous.sessions.some((existing) => (
+            existing.day === meeting.day &&
+            existing.startTime === meeting.start &&
+            existing.endTime === meeting.end &&
+            (existing.room || '') === room
+          ));
+          if (duplicate) continue;
+          previous.sessions.push({
+            id: `s_${previous.id}_${previous.sessions.length}`,
+            day: meeting.day,
+            startTime: meeting.start,
+            endTime: meeting.end,
+            room: room || undefined,
+          });
+        }
+        continue;
+      }
       const firstText = row.find((c) => sanitizeString(c).length > 0);
       const textVal = firstText ? sanitizeString(firstText) : '';
       const banner = /^(?:total|page\s*\d+|department of|undergraduate|graduate|fall\s*\d+|spring\s*\d+|summer\s*\d+|winter\s*\d+)\b/i.test(textVal);
@@ -1358,6 +1388,16 @@ export function parseExcelRowsToCourses(
       }
       code = textVal.slice(0, 10).toUpperCase();
       name = textVal;
+    }
+
+    // A lone line of text with no meeting, such as "Total credits: 7", is a note. A bare course code stays.
+    const filledCells = row.filter((c) => sanitizeString(c) !== '').length;
+    if (filledCells === 1 && resolved.meetings.length === 0 && !resolved.problem && !resolved.online) {
+      const lone = code || name;
+      if (!/^[A-Za-z]{2,6}\s*[-_.:]?\s*\d{2,4}[A-Za-z]?$/.test(lone)) {
+        skippedRows++;
+        continue;
+      }
     }
 
     // Parse Schedule Sessions for current row
@@ -1530,7 +1570,8 @@ function resolveRowMeetings(
     for (const day of days) into.push({ day, start, end });
   };
 
-  if (timeRaw) {
+  // A guessed Time column that holds no clock (a seats or waitlist count) must not hide a mapped Schedule.
+  if (timeRaw && (!scheduleRaw || extractTimeRange(timeRaw))) {
     const range = extractTimeRange(timeRaw);
     const days = explicitDays.length > 0 ? explicitDays : extractDays(timeRaw);
     if (!range) {
