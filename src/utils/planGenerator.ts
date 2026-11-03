@@ -698,9 +698,15 @@ class PlanSearch implements GeneratorSearch {
 
     // Search the most promising course sets first, so a capped search doesn't spend itself on whatever
     // happens to come first in the list. A set's estimate is the sum of its courses' best single-section scores.
+    // The day-off bonus is left out: every course alone earns it, so it would favor sets with more courses.
+    const noBonus = { ...this.prefs, daysOff: [] };
+    const aloneScore = (section: Course): number => {
+      const offDayHits = this.prefs.daysOff.filter((day) => (section.sessions || []).some((session) => session.day === day));
+      return scoreMix([section], noBonus).score + offDayHits.length * 80;
+    };
     const bestAlone = new Map(this.prepared.map((group) => [
       group.key,
-      Math.min(...group.sections.map((section) => scoreMix([section], this.prefs).score)),
+      Math.min(...group.sections.map(aloneScore)),
     ]));
     const estimated = fitSubsets
       .map((subset, index) => ({
