@@ -77,7 +77,7 @@ export interface GeneratorResult {
   dayOffNotices: string[];
   /** Set when the gap limit ruled out every mix and the list is the closest soft-scored plans. */
   gapNotice: string | null;
-  /** Unpinned picks that have no usable section, left out of the search. Missing in results saved earlier. */
+  /** Picks left out of the search: unpinned ones with no usable section, and any cut by the course limit. Missing in results saved earlier. */
   leftOut?: { code: string; reason: string }[];
 }
 
@@ -651,13 +651,30 @@ class PlanSearch implements GeneratorSearch {
     const unusable = input.groups.filter((group) => !this.pinned.has(group.key) && reasons.get(group.key));
     this.leftOut = unusable.map((group) => ({ code: group.code, reason: reasons.get(group.key)! }));
     const leftOutKeys = new Set(unusable.map((group) => group.key));
-    const picked = input.groups.filter((group) => !leftOutKeys.has(group.key)).slice(0, MAX_CANDIDATES);
+    const usableGroups = input.groups.filter((group) => !leftOutKeys.has(group.key));
+    // Pinned courses go first so the cap never drops one while keeping an unpinned course.
+    const capOrder = [
+      ...usableGroups.filter((group) => this.pinned.has(group.key)),
+      ...usableGroups.filter((group) => !this.pinned.has(group.key)),
+    ];
+    const keptKeys = new Set(capOrder.slice(0, MAX_CANDIDATES).map((group) => group.key));
+    const overCap = capOrder.slice(MAX_CANDIDATES);
+    this.leftOut.push(...overCap.map((group) => ({ code: group.code, reason: `${group.code} is over the ${MAX_CANDIDATES}-course limit` })));
+    const picked = usableGroups.filter((group) => keptKeys.has(group.key));
+    const pinnedOverCap = overCap.filter((group) => this.pinned.has(group.key));
     const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
     this.prepared = picked.map((group) => prepareGroup(group, input.preferences));
     this.pickedOrder = this.prepared;
 
     if (pinnedProblem) {
       this.emptyReason = pinnedProblem;
+      this.done = true;
+      return;
+    }
+    if (pinnedOverCap.length > 0) {
+      // Quote the left-out reasons so the results screen doesn't list the same courses again.
+      const cut = pinnedOverCap.map((group) => `${group.code} is over the ${MAX_CANDIDATES}-course limit`).join('; ');
+      this.emptyReason = `You pinned more than ${MAX_CANDIDATES} courses (${cut}). Unpin some to stay within the limit.`;
       this.done = true;
       return;
     }

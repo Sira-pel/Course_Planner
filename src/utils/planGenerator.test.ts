@@ -440,6 +440,50 @@ describe('plan generator', () => {
     assert.equal(result.plans.some((plan) => plan.courses.some((course) => course.code === 'C16')), false);
   });
 
+  describe('15-course cap', () => {
+    const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const manyGroups = (count: number) => Array.from({ length: count }, (_, index) => {
+      const code = `C${index + 1}`;
+      const start = 8 * 60 + Math.floor(index / days.length) * 60;
+      return group(code, [section(code.toLowerCase(), code, clock(start), clock(start + 50), '001', days[index % days.length])]);
+    });
+
+    it('keeps a pinned course past the cap and leaves out unpinned ones instead', () => {
+      const result = generatePlans({
+        groups: manyGroups(20),
+        pinnedKeys: ['C18'],
+        preferences: preferences({ courseCount: 2 }),
+      });
+      assert.ok(result.plans.length > 0);
+      assert.ok(result.plans.every((plan) => plan.courses.some((course) => course.code === 'C18')));
+      // 20 usable, cap 15: C18 jumps the queue, so the last unpinned ones in list order are cut.
+      assert.deepEqual((result.leftOut ?? []).map((item) => item.code), ['C16', 'C17', 'C19', 'C20', 'C15'].sort());
+      assert.ok((result.leftOut ?? []).every((item) => item.reason === `${item.code} is over the 15-course limit`));
+    });
+
+    it('reports every course cut by the cap even when nothing is pinned', () => {
+      const result = generatePlans({
+        groups: manyGroups(17),
+        pinnedKeys: [],
+        preferences: preferences({ courseCount: 2 }),
+      });
+      assert.deepEqual((result.leftOut ?? []).map((item) => item.code), ['C16', 'C17']);
+    });
+
+    it('keeps pinned courses only up to the cap and explains it when too many are pinned', () => {
+      const groups = manyGroups(18);
+      const result = generatePlans({
+        groups,
+        pinnedKeys: groups.map((item) => item.key),
+        preferences: preferences({ courseCount: 2 }),
+      });
+      assert.equal(result.plans.length, 0);
+      assert.match(result.emptyReason ?? '', /pinned more than 15 courses/);
+      for (const item of result.leftOut ?? []) assert.ok((result.emptyReason ?? '').includes(item.reason));
+      assert.deepEqual((result.leftOut ?? []).map((item) => item.code), ['C16', 'C17', 'C18']);
+    });
+  });
+
   it('spends a capped search on the best-fitting sections, not the first listed', () => {
     // Each course lists its bad sections first (early MWF, late MWF) and its good one last.
     // Good sections sit Tue/Thu 10:00-14:00, so every five that start at different hours fit.
