@@ -327,6 +327,22 @@ describe('plan generator', () => {
     assert.equal(result.plans[0].groupKey, 'A|B');
   });
 
+  it('keeps sections that meet alike but have different instructors as separate plans', () => {
+    const withInstructor = (course: Course, instructor: string): Course => ({ ...course, instructor });
+    const result = generatePlans({
+      groups: [
+        group('A', [
+          withInstructor(section('a1', 'A', '09:00', '10:00', '001'), 'Prof. Ada'),
+          withInstructor(section('a2', 'A', '09:00', '10:00', '002'), 'Prof. Turing'),
+        ]),
+        group('B', [section('b', 'B', '11:00', '12:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 2);
+  });
+
   it('treats sections that meet at the same times as one plan', () => {
     const result = generatePlans({
       groups: [

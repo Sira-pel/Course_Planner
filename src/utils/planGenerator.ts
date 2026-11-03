@@ -1,6 +1,6 @@
 import type { ClassSession, Course, DayOfWeek } from '../types/schedule';
 import { DAYS_LIST } from '../types/schedule';
-import { displayCourseTitle } from './courseIdentity';
+import { displayCourseTitle, planSignature } from './courseIdentity';
 import { MAX_CANDIDATES, type GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
@@ -412,20 +412,6 @@ function gapLimitPhrase(limit: number): string {
 
 export function gapFallbackNotice(limit: number): string {
   return `No plans fit a ${gapLimitPhrase(limit)} gap limit; showing closest matches.`;
-}
-
-/** Identifies a mix by its courses, credits and meeting times, so sections that are alike in all three count as one plan. */
-function mixSignature(courses: Course[]): string {
-  return courses
-    .map((course) => {
-      const meetings = (course.sessions || [])
-        .map((session) => `${session.day}@${session.startTime}-${session.endTime}`)
-        .sort()
-        .join(',');
-      return `${courseCodeKey(course.code)}:${courseCredits(course)}:${meetings}`;
-    })
-    .sort()
-    .join('|');
 }
 
 export function gapPartialNotice(limit: number, fitting: number): string {
@@ -957,7 +943,7 @@ class PlanSearch implements GeneratorSearch {
   private consider(courses: Course[]): void {
     this.validCount += 1;
     const setKey = courses.map((course) => courseCodeKey(course.code)).sort().join('|');
-    const signature = mixSignature(courses);
+    const signature = planSignature(courses);
     const { score, limitGap } = scoreMix(courses, this.prefs);
     const item = { courses, score, signature };
     const overGap = this.prefs.gapsEnabled && limitGap > this.prefs.gapLimit;
