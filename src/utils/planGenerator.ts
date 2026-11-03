@@ -734,8 +734,28 @@ class PlanSearch implements GeneratorSearch {
       return;
     }
 
+    // Search the most promising course sets first, so a capped search doesn't spend itself on whatever
+    // happens to come first in the list. A set's estimate is the sum of its courses' best single-section scores.
+    // The day-off bonus is left out: every course alone earns it, so it would favor sets with more courses.
+    const noBonus = { ...this.prefs, daysOff: [] };
+    const aloneScore = (section: Course): number => {
+      const offDayHits = this.prefs.daysOff.filter((day) => (section.sessions || []).some((session) => session.day === day));
+      return scoreMix([section], noBonus).score + offDayHits.length * 80;
+    };
+    const bestAlone = new Map(this.prepared.map((group) => [
+      group.key,
+      Math.min(...group.sections.map(aloneScore)),
+    ]));
+    const estimated = fitSubsets
+      .map((subset, index) => ({
+        subset,
+        index,
+        score: subset.reduce((sum, group) => sum + (bestAlone.get(group.key) ?? 0), 0),
+      }))
+      .sort((a, b) => a.score - b.score || a.index - b.index);
+
     let estimate = 0;
-    for (const subset of fitSubsets) {
+    for (const { subset } of estimated) {
       const product = mixProduct(subset);
       estimate = Math.min(1_000_000, estimate + product);
       this.jobs.push({
@@ -889,6 +909,13 @@ class PlanSearch implements GeneratorSearch {
       if (sectionClashesWithChosen(section, chosen)) {
         // Clashing sections are ordered last, so every one after this also clashes.
         nextIndex[depth] = groups[depth].sections.length;
+        this.exhaustMix(job);
+        return 'evaluated';
+      }
+
+      if (this.prefs.dailyCap != null && !withinDailyCap([...chosen, section], this.prefs)) {
+        // Too many courses on one day: skip this section now instead of finishing a mix that can't count.
+        this.overDailyCap += 1;
         this.exhaustMix(job);
         return 'evaluated';
       }

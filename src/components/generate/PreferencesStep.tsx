@@ -176,11 +176,12 @@ export function PreferencesStep({
         : `${pinnedCount} pinned + ${extra} from your other ${other} picks`;
 
   const lunchWindow = clockMinutes(prefs.lunchEnd) - clockMinutes(prefs.lunchStart);
+  const lunchWindowTooShort = prefs.lunchEnabled && lunchWindow < prefs.lunchMinutes;
   const lunchHint = !prefs.lunchEnabled
     ? 'Lunch will not change the ranking'
-    : lunchWindow >= prefs.lunchMinutes
-      ? `Keep ${prefs.lunchMinutes} min free in this window`
-      : `This window is shorter than ${prefs.lunchMinutes} min`;
+    : lunchWindowTooShort
+      ? 'Lunch is ignored with this window'
+      : `Keep ${prefs.lunchMinutes} min free in this window`;
 
   const sections = groups.flatMap((group) => group.sections.map((section) => ({
     id: section.id,
@@ -305,6 +306,16 @@ export function PreferencesStep({
           />
         </div>
       </section>
+      {lunchWindowTooShort && (
+        <div className="up-gen-notice" role="status">
+          <div className="up-gen-notice-copy">
+            <p>
+              The lunch window is shorter than {prefs.lunchMinutes} min, so plans won&apos;t be checked for a lunch break.
+              Widen the window or shorten the lunch.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="up-gen-more">
         <button

@@ -358,6 +358,65 @@ describe('plan generator', () => {
     assert.equal(result.plans.length, 1);
   });
 
+  it('searches the most promising course sets first when there are more sets than the mix limit', () => {
+    // 15 courses with a credit range of 2-6 courses is about 9,900 sets, twice the 5,000-mix limit.
+    // The five good courses sit last in the list, so list order alone would never reach a set made only of them.
+    const bad = Array.from({ length: 10 }, (_, index) => (
+      group(`B${index + 1}`, [section(`b${index}`, `B${index + 1}`, clock(6 * 60 + index * 20), clock(6 * 60 + index * 20 + 10), '001', 'tuesday')])
+    ));
+    const good = Array.from({ length: 5 }, (_, index) => (
+      group(`G${index + 1}`, [section(`g${index}`, `G${index + 1}`, clock(11 * 60 + index * 20), clock(11 * 60 + index * 20 + 10), '001', 'wednesday')])
+    ));
+    const result = generatePlans({
+      groups: [...bad, ...good],
+      pinnedKeys: [],
+      preferences: preferences({ mode: 'credits', creditMin: 6, creditMax: 18, classStart: 10 * 60 }),
+    });
+    assert.equal(result.capped, true);
+    assert.ok(result.plans[0].courses.every((course) => course.code.startsWith('G')));
+  });
+
+  it('does not favor bigger course sets just because each course alone earns the day-off bonus', () => {
+    // Friday is a requested day off and nothing meets on it. Two on-time courses (G) are the true best set.
+    // The twelve M courses each start a few minutes before class hours, so any set of them is worse. But every
+    // course alone gets the day-off bonus, so a sum of those scores would try big M sets before the G pair.
+    const mediocre = Array.from({ length: 12 }, (_, index) => {
+      const start = 9 * 60 + 48 + index;
+      return group(`M${index + 1}`, [section(`m${index}`, `M${index + 1}`, clock(start), clock(start + 1), '001', 'tuesday')]);
+    });
+    const good = ['G1', 'G2'].map((code, index) => (
+      group(code, [section(code, code, clock(10 * 60 + index * 20), clock(10 * 60 + index * 20 + 10), '001', 'wednesday')])
+    ));
+    const result = generatePlans({
+      groups: [...mediocre, ...good],
+      pinnedKeys: [],
+      preferences: preferences({ mode: 'credits', creditMin: 6, creditMax: 18, daysOff: ['friday'], classStart: 10 * 60 }),
+    });
+    assert.equal(result.capped, true);
+    assert.deepEqual(result.plans[0].courses.map((course) => course.code).sort(), ['G1', 'G2']);
+  });
+
+  it('skips a section that breaks the daily course limit instead of finishing the mix', () => {
+    // Four courses whose sections all meet on Monday. With a limit of 1 a day, every extra course is
+    // skipped as soon as it is added, so the search ends well inside the 5,000-mix limit.
+    const groups = ['A', 'B', 'C', 'D'].map((code, courseIndex) => group(
+      code,
+      Array.from({ length: 30 }, (_, index) => {
+        const start = 8 * 60 + (courseIndex * 30 + index) * 5;
+        return section(`${code}${index}`, code, clock(start), clock(start + 4), String(index + 1).padStart(3, '0'));
+      }),
+    ));
+    const result = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({ courseCount: 4, dailyCap: 1 }),
+    });
+    assert.equal(result.plans.length, 0);
+    assert.equal(result.capped, false);
+    assert.ok(result.evaluated < MAX_EVALUATIONS);
+    assert.match(result.emptyReason ?? '', /Every clash-free mix puts more than 1 course on one day/);
+  });
+
   it('falls back to the closest matches when no plan meets the gap limit', () => {
     const result = generatePlans({
       groups: [
