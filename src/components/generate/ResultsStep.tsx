@@ -1,6 +1,6 @@
 import { Pin, X } from 'lucide-react';
 import type { Course } from '../../types/schedule';
-import { sectionSetKey } from '../../utils/courseIdentity';
+import { planSignature } from '../../utils/courseIdentity';
 import { cappedSearchHint, type GeneratedPlan, type GeneratorResult } from '../../utils/planGenerator';
 import { MiniWeekPreview } from './MiniWeekPreview';
 
@@ -133,7 +133,7 @@ export function ResultsStep({
   const notices = result.dayOffNotices;
   const savedByKey = new Map<string, { id: string; name: string }>();
   for (const plan of plans) {
-    savedByKey.set(sectionSetKey(plan.courses), { id: plan.id, name: plan.name });
+    savedByKey.set(planSignature(plan.courses), { id: plan.id, name: plan.name });
   }
 
   return (
@@ -174,7 +174,7 @@ export function ResultsStep({
       {deeper}
       <div className="up-gen-results">
         {visiblePlans.map((plan, index) => {
-          const savedPlan = savedByKey.get(sectionSetKey(plan.courses));
+          const savedPlan = savedByKey.get(planSignature(plan.courses));
           const open = previewId === plan.id;
           return (
             <article key={plan.id} className="up-gen-card">

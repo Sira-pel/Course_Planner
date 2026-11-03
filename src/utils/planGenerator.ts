@@ -1,6 +1,6 @@
 import type { ClassSession, Course, DayOfWeek } from '../types/schedule';
 import { DAYS_LIST } from '../types/schedule';
-import { displayCourseTitle } from './courseIdentity';
+import { displayCourseTitle, planSignature } from './courseIdentity';
 import { MAX_CANDIDATES, type GapLimit } from './generatorPrefs';
 import { checkSessionCollision, minutesToTime, timeToMinutes } from './timeUtils';
 
@@ -77,7 +77,7 @@ export interface GeneratorResult {
   dayOffNotices: string[];
   /** Set when the gap limit ruled out every mix and the list is the closest soft-scored plans. */
   gapNotice: string | null;
-  /** Unpinned picks that have no usable section, left out of the search. Missing in results saved earlier. */
+  /** Picks left out of the search: unpinned ones with no usable section, and any cut by the course limit. Missing in results saved earlier. */
   leftOut?: { code: string; reason: string }[];
 }
 
@@ -414,17 +414,39 @@ export function gapFallbackNotice(limit: number): string {
   return `No plans fit a ${gapLimitPhrase(limit)} gap limit; showing closest matches.`;
 }
 
-function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: number; tags: string[]; maxGap: number } {
+export function gapPartialNotice(limit: number, fitting: number): string {
+  const noun = fitting === 1 ? 'plan fits' : 'plans fit';
+  return `Only ${fitting} ${noun} a ${gapLimitPhrase(limit)} gap limit; added closest matches to reach ${MIN_VARIED_RESULTS}.`;
+}
+
+function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: number; tags: string[]; maxGap: number; limitGap: number } {
   const days = collectDays(courses);
   let score = 0;
   let maxGap = 0;
+  /** Longest gap once lunch is taken out, which is what the gap limit applies to. */
+  let limitGap = 0;
   const gaps: number[] = [];
+  const lunchWindowOk = prefs.lunchEnd - prefs.lunchStart >= prefs.lunchMinutes;
+  const lunchCounts = prefs.lunchEnabled && lunchWindowOk;
   for (const intervals of days.values()) {
+    let lunchTaken = false;
     for (let index = 1; index < intervals.length; index += 1) {
-      const gap = intervals[index][0] - intervals[index - 1][1];
+      const fullGap = intervals[index][0] - intervals[index - 1][1];
+      if (fullGap <= 0) continue;
+      if (fullGap > maxGap) maxGap = fullGap;
+      let gap = fullGap;
+      // The lunch break is meant to be free time, so it doesn't count toward the gap limit.
+      if (lunchCounts && !lunchTaken) {
+        const from = Math.max(intervals[index - 1][1], prefs.lunchStart);
+        const to = Math.min(intervals[index][0], prefs.lunchEnd);
+        if (to - from >= prefs.lunchMinutes) {
+          gap -= prefs.lunchMinutes;
+          lunchTaken = true;
+        }
+      }
       if (gap <= 0) continue;
       gaps.push(gap);
-      if (gap > maxGap) maxGap = gap;
+      if (gap > limitGap) limitGap = gap;
     }
   }
   if (prefs.gapsEnabled) {
@@ -432,11 +454,10 @@ function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: numb
       if (gap > prefs.gapLimit) score += gap - prefs.gapLimit;
     }
   }
-  score += maxGap * 0.01;
+  score += limitGap * 0.01;
 
-  const lunchWindowOk = prefs.lunchEnd - prefs.lunchStart >= prefs.lunchMinutes;
   let missingLunch = 0;
-  if (prefs.lunchEnabled && lunchWindowOk) {
+  if (lunchCounts) {
     for (const intervals of days.values()) {
       if (!dayHasLunch(intervals, prefs.lunchStart, prefs.lunchEnd, prefs.lunchMinutes)) missingLunch += 1;
     }
@@ -470,7 +491,7 @@ function scoreMix(courses: Course[], prefs: GeneratorPreferences): { score: numb
   tags.push(formatGap(maxGap));
   if (prefs.dailyCap != null) tags.push(`Max ${prefs.dailyCap} a day`);
   if (prefs.lunchEnabled && lunchWindowOk && missingLunch === 0 && days.size > 0) tags.push('Lunch free');
-  return { score, tags, maxGap };
+  return { score, tags, maxGap, limitGap };
 }
 
 function lockedSectionLabel(code: string, section: Course): string {
@@ -602,7 +623,7 @@ function rankedPlans(buckets: Map<string, Bucket>): ScoredMix[] {
     seen.add(variant.signature);
     chosen.push(variant);
   }
-  return chosen;
+  return chosen.sort(byBestFit);
 }
 
 class PlanSearch implements GeneratorSearch {
@@ -651,13 +672,30 @@ class PlanSearch implements GeneratorSearch {
     const unusable = input.groups.filter((group) => !this.pinned.has(group.key) && reasons.get(group.key));
     this.leftOut = unusable.map((group) => ({ code: group.code, reason: reasons.get(group.key)! }));
     const leftOutKeys = new Set(unusable.map((group) => group.key));
-    const picked = input.groups.filter((group) => !leftOutKeys.has(group.key)).slice(0, MAX_CANDIDATES);
+    const usableGroups = input.groups.filter((group) => !leftOutKeys.has(group.key));
+    // Pinned courses go first so the cap never drops one while keeping an unpinned course.
+    const capOrder = [
+      ...usableGroups.filter((group) => this.pinned.has(group.key)),
+      ...usableGroups.filter((group) => !this.pinned.has(group.key)),
+    ];
+    const keptKeys = new Set(capOrder.slice(0, MAX_CANDIDATES).map((group) => group.key));
+    const overCap = capOrder.slice(MAX_CANDIDATES);
+    this.leftOut.push(...overCap.map((group) => ({ code: group.code, reason: `${group.code} is over the ${MAX_CANDIDATES}-course limit` })));
+    const picked = usableGroups.filter((group) => keptKeys.has(group.key));
+    const pinnedOverCap = overCap.filter((group) => this.pinned.has(group.key));
     const pinnedGroups = picked.filter((group) => this.pinned.has(group.key));
     this.prepared = picked.map((group) => prepareGroup(group, input.preferences));
     this.pickedOrder = this.prepared;
 
     if (pinnedProblem) {
       this.emptyReason = pinnedProblem;
+      this.done = true;
+      return;
+    }
+    if (pinnedOverCap.length > 0) {
+      // Quote the left-out reasons so the results screen doesn't list the same courses again.
+      const cut = pinnedOverCap.map((group) => `${group.code} is over the ${MAX_CANDIDATES}-course limit`).join('; ');
+      this.emptyReason = `You pinned more than ${MAX_CANDIDATES} courses (${cut}). Unpin some to stay within the limit.`;
       this.done = true;
       return;
     }
@@ -949,19 +987,28 @@ class PlanSearch implements GeneratorSearch {
   private consider(courses: Course[]): void {
     this.validCount += 1;
     const setKey = courses.map((course) => courseCodeKey(course.code)).sort().join('|');
-    const signature = courses.map((course) => course.id).join('|');
-    const { score, maxGap } = scoreMix(courses, this.prefs);
+    const signature = planSignature(courses);
+    const { score, limitGap } = scoreMix(courses, this.prefs);
     const item = { courses, score, signature };
-    const overGap = this.prefs.gapsEnabled && maxGap > this.prefs.gapLimit;
+    const overGap = this.prefs.gapsEnabled && limitGap > this.prefs.gapLimit;
     if (overGap) this.remember(this.relaxed, setKey, item);
     else this.remember(this.buckets, setKey, item);
   }
 
   result(): GeneratorResult {
     const strict = rankedPlans(this.buckets);
-    const gapFallback = this.prefs.gapsEnabled && strict.length === 0 && this.relaxed.size > 0;
-    const chosen = gapFallback ? rankedPlans(this.relaxed) : strict;
-    const gapNotice = gapFallback ? gapFallbackNotice(this.prefs.gapLimit) : null;
+    let chosen = strict;
+    let gapNotice: string | null = null;
+    if (this.prefs.gapsEnabled && strict.length < MIN_VARIED_RESULTS && this.relaxed.size > 0) {
+      // Top the list up with the best plans that go over the gap limit.
+      const seen = new Set(strict.map((item) => item.signature));
+      const filler = rankedPlans(this.relaxed).filter((item) => !seen.has(item.signature));
+      // Sorted together, so a closest match that scores better than a fitting plan isn't pushed to the end.
+      chosen = [...strict, ...filler.slice(0, MIN_VARIED_RESULTS - strict.length)].sort(byBestFit);
+      gapNotice = strict.length === 0
+        ? gapFallbackNotice(this.prefs.gapLimit)
+        : gapPartialNotice(this.prefs.gapLimit, strict.length);
+    }
     const order = new Map(this.pickedOrder.map((group, index) => [group.key, index]));
     const plans = chosen.map((item) => {
       const sorted = [...item.courses].sort((a, b) => {

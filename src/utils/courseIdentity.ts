@@ -4,9 +4,29 @@ export function courseIdentityKey(code: string, section?: string): string {
   return `${normCode}__${normSec}`;
 }
 
-/** Stable key for an exact set of sections, ignoring order and id. */
-export function sectionSetKey(courses: { code: string; section?: string }[]): string {
-  return courses.map((course) => courseIdentityKey(course.code, course.section)).sort().join('|');
+/**
+ * Identifies a plan by what a student sees: each course's code, credits, instructor and meeting times.
+ * Sections that match on all of these count as the same plan, whatever their ids or section numbers.
+ */
+export function planSignature(courses: {
+  code: string;
+  credits?: number;
+  instructor?: string;
+  sessions?: { day: string; startTime: string; endTime: string }[];
+}[]): string {
+  return courses
+    .map((course) => {
+      const code = (course.code || '').trim().replace(/\s+/g, ' ').toUpperCase();
+      const credits = typeof course.credits === 'number' && Number.isFinite(course.credits) ? course.credits : 0;
+      const instructor = (course.instructor || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const meetings = (course.sessions || [])
+        .map((session) => `${session.day}@${session.startTime}-${session.endTime}`)
+        .sort()
+        .join(',');
+      return `${code}:${credits}:${instructor}:${meetings}`;
+    })
+    .sort()
+    .join('|');
 }
 
 export function sameCourseIdentity(
