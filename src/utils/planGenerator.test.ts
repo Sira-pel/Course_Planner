@@ -286,6 +286,47 @@ describe('plan generator', () => {
     assert.deepEqual(scores, [...scores].sort((a, b) => a - b));
   });
 
+  it('keeps sections that meet alike but carry different credits as separate plans', () => {
+    const result = generatePlans({
+      groups: [
+        group('A', [
+          section('a1', 'A', '09:00', '10:00', '001', 'monday', 3),
+          section('a2', 'A', '09:00', '10:00', '002', 'monday', 4),
+        ]),
+        group('B', [section('b', 'B', '11:00', '12:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences({ mode: 'credits', creditMin: 6, creditMax: 8 }),
+    });
+    assert.equal(result.plans.length, 2);
+  });
+
+  it('puts a closest-match plan ahead of a fitting plan when it scores better', () => {
+    // Lunch is on. B|C fits the 30m gap limit but leaves no lunch (120 penalty);
+    // A|B has a 40m gap over the limit but keeps lunch free.
+    const result = generatePlans({
+      groups: [
+        group('A', [section('a', 'A', '10:00', '11:00')]),
+        group('B', [section('b', 'B', '11:40', '12:40')]),
+        group('C', [section('c', 'C', '12:40', '13:40')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences({
+        gapsEnabled: true,
+        gapLimit: 30,
+        courseCount: 2,
+        lunchEnabled: true,
+        lunchStart: 12 * 60,
+        lunchEnd: 14 * 60,
+        lunchMinutes: 60,
+      }),
+    });
+    assert.ok(result.gapNotice);
+    const scores = result.plans.map((plan) => plan.score);
+    assert.deepEqual(scores, [...scores].sort((a, b) => a - b));
+    assert.equal(result.plans[0].groupKey, 'A|B');
+  });
+
   it('treats sections that meet at the same times as one plan', () => {
     const result = generatePlans({
       groups: [

@@ -414,7 +414,7 @@ export function gapFallbackNotice(limit: number): string {
   return `No plans fit a ${gapLimitPhrase(limit)} gap limit; showing closest matches.`;
 }
 
-/** Identifies a mix by its courses and meeting times, so sections that meet alike count as one plan. */
+/** Identifies a mix by its courses, credits and meeting times, so sections that are alike in all three count as one plan. */
 function mixSignature(courses: Course[]): string {
   return courses
     .map((course) => {
@@ -422,7 +422,7 @@ function mixSignature(courses: Course[]): string {
         .map((session) => `${session.day}@${session.startTime}-${session.endTime}`)
         .sort()
         .join(',');
-      return `${courseCodeKey(course.code)}:${meetings}`;
+      return `${courseCodeKey(course.code)}:${courseCredits(course)}:${meetings}`;
     })
     .sort()
     .join('|');
@@ -970,10 +970,11 @@ class PlanSearch implements GeneratorSearch {
     let chosen = strict;
     let gapNotice: string | null = null;
     if (this.prefs.gapsEnabled && strict.length < MIN_VARIED_RESULTS && this.relaxed.size > 0) {
-      // Top the list up with the best plans that go over the gap limit, after the ones that fit.
+      // Top the list up with the best plans that go over the gap limit.
       const seen = new Set(strict.map((item) => item.signature));
       const filler = rankedPlans(this.relaxed).filter((item) => !seen.has(item.signature));
-      chosen = [...strict, ...filler.slice(0, MIN_VARIED_RESULTS - strict.length)];
+      // Sorted together, so a closest match that scores better than a fitting plan isn't pushed to the end.
+      chosen = [...strict, ...filler.slice(0, MIN_VARIED_RESULTS - strict.length)].sort(byBestFit);
       gapNotice = strict.length === 0
         ? gapFallbackNotice(this.prefs.gapLimit)
         : gapPartialNotice(this.prefs.gapLimit, strict.length);
