@@ -7,6 +7,7 @@ import { nextShownCount } from './generatorSession';
 import {
   cappedSearchHint,
   gapFallbackNotice,
+  gapPartialNotice,
   generatePlans,
   MAX_CANDIDATES,
   MAX_EVALUATIONS,
@@ -118,11 +119,12 @@ describe('plan generator', () => {
   });
 
   it('raises the mix limit and continues without restarting', () => {
+    // Each section meets at a different minute, so every mix is a distinct plan.
     const sectionsA = Array.from({ length: 100 }, (_, index) => (
-      section(`a${index}`, 'A', '09:00', '10:00', String(index + 1).padStart(3, '0'))
+      section(`a${index}`, 'A', clock(9 * 60 + index), clock(9 * 60 + index + 10), String(index + 1).padStart(3, '0'))
     ));
     const sectionsB = Array.from({ length: 100 }, (_, index) => (
-      section(`b${index}`, 'B', '14:00', '15:00', String(index + 1).padStart(3, '0'))
+      section(`b${index}`, 'B', clock(14 * 60 + index), clock(14 * 60 + index + 10), String(index + 1).padStart(3, '0'))
     ));
     const search = startGeneratorSearch({
       groups: [group('A', sectionsA), group('B', sectionsB)],
@@ -137,7 +139,6 @@ describe('plan generator', () => {
     assert.equal(cappedSearchHint(first.evaluated, first.plans.length), 'Checked 5,000 mixes. There may be better plans');
     assert.equal(new Set(first.plans.map((plan) => plan.id)).size, 3);
     assert.equal(first.validCount, MAX_EVALUATIONS);
-    const firstId = first.plans[0].id;
 
     search.raiseLimit(MAX_EVALUATIONS);
     assert.equal(search.done, false);
@@ -148,7 +149,8 @@ describe('plan generator', () => {
     assert.equal(search.capped, false);
     assert.equal(second.validCount, MAX_EVALUATIONS * 2);
     assert.equal(second.plans.length, 3);
-    assert.equal(second.plans[0].id, firstId);
+    // The deeper search covers the first mixes too, so its best plan is never worse.
+    assert.ok(second.plans[0].score <= first.plans[0].score);
     assert.equal(second.plans[0].groupKey, first.plans[0].groupKey);
 
     search.raiseLimit();
@@ -241,8 +243,62 @@ describe('plan generator', () => {
     });
     assert.deepEqual(ranked.plans[0].courses.map((course) => course.code).sort(), ['A', 'B']);
     assert.equal(longestGap(ranked.plans[0].courses), 0);
-    assert.ok(ranked.plans.every((plan) => longestGap(plan.courses) <= 60));
-    assert.equal(ranked.plans.some((plan) => plan.groupKey === 'A|C'), false);
+    // Only A|B and B|C fit, so the closest match tops the list up to three, after the ones that fit.
+    assert.equal(ranked.plans.length, 3);
+    assert.deepEqual(ranked.plans.map((plan) => plan.groupKey), ['A|B', 'B|C', 'A|C']);
+    assert.equal(ranked.gapNotice, gapPartialNotice(60, 2));
+    assert.equal(ranked.gapNotice, 'Only 2 plans fit a 1h gap limit; added closest matches to reach 3.');
+  });
+
+  it('does not count the lunch break toward the gap limit', () => {
+    const groups = [
+      group('A', [section('a', 'A', '09:00', '11:00')]),
+      group('B', [section('b', 'B', '13:00', '15:00')]),
+    ];
+    const prefs = { gapsEnabled: true, gapLimit: 60 as const, courseCount: 2 };
+    const noLunch = generatePlans({ groups, pinnedKeys: [], preferences: preferences(prefs) });
+    assert.equal(noLunch.gapNotice, gapFallbackNotice(60));
+    const withLunch = generatePlans({
+      groups,
+      pinnedKeys: [],
+      preferences: preferences({ ...prefs, lunchEnabled: true, lunchMinutes: 60 }),
+    });
+    assert.equal(withLunch.gapNotice, null);
+    assert.equal(withLunch.plans.length, 1);
+    assert.ok(withLunch.plans[0].tags.includes('Lunch free'));
+    assert.ok(withLunch.plans[0].tags.includes('Max gap 2h'));
+  });
+
+  it('lists plans best first, including the extra section mixes', () => {
+    const result = generatePlans({
+      groups: [
+        group('A', [
+          section('a1', 'A', '08:00', '09:00', '001', 'monday'),
+          section('a2', 'A', '12:00', '13:00', '002', 'monday'),
+          section('a3', 'A', '16:00', '17:00', '003', 'monday'),
+        ]),
+        group('B', [section('b', 'B', '13:00', '14:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences(),
+    });
+    const scores = result.plans.map((plan) => plan.score);
+    assert.deepEqual(scores, [...scores].sort((a, b) => a - b));
+  });
+
+  it('treats sections that meet at the same times as one plan', () => {
+    const result = generatePlans({
+      groups: [
+        group('A', [
+          section('a1', 'A', '09:00', '10:00', '001'),
+          section('a2', 'A', '09:00', '10:00', '002'),
+        ]),
+        group('B', [section('b', 'B', '11:00', '12:00')]),
+      ],
+      pinnedKeys: [],
+      preferences: preferences(),
+    });
+    assert.equal(result.plans.length, 1);
   });
 
   it('falls back to the closest matches when no plan meets the gap limit', () => {
@@ -264,9 +320,10 @@ describe('plan generator', () => {
 
   it('replaces the gap fallback after a deeper search finds a plan that fits', () => {
     const sectionsA = Array.from({ length: 100 }, (_, index) => (
+      // The first 50 end hours before B (over the gap limit); the rest end within an hour of it.
       index < 50
-        ? section(`a${index}`, 'A', '09:00', '10:00', String(index + 1).padStart(3, '0'))
-        : section(`a${index}`, 'A', '13:00', '14:00', String(index + 1).padStart(3, '0'))
+        ? section(`a${index}`, 'A', clock(8 * 60 + index), clock(8 * 60 + index + 10), String(index + 1).padStart(3, '0'))
+        : section(`a${index}`, 'A', clock(13 * 60 + index - 50), clock(13 * 60 + index - 40), String(index + 1).padStart(3, '0'))
     ));
     const sectionsB = Array.from({ length: 100 }, (_, index) => (
       section(`b${index}`, 'B', '14:00', '15:00', String(index + 1).padStart(3, '0'))
@@ -731,14 +788,14 @@ describe('plan generator', () => {
       // Monday:
       // C1: 09:00 - 11:00 (starts 60m before classStart 10:00)
       // C2: 13:00 - 15:00
-      // Gap: 13:00 (780) - 11:00 (660) = 120m. Gap limit: 60m -> gap penalty = 60.
-      // maxGap = 120 -> maxGap * 0.01 = 1.2
+      // Gap: 13:00 (780) - 11:00 (660) = 120m. Lunch (45m) is taken out of it -> 75m. Gap limit: 60m -> gap penalty = 15.
+      // Longest gap without lunch = 75 -> 75 * 0.01 = 0.75
       // Lunch: window 11:30 - 13:30 (120m). Free interval: 11:00 to 13:00 (90m free in window >= 45m) -> Lunch free (0 penalty)
       // Tuesday:
       // C3: 14:00 - 16:30 (ends 30m after classEnd 16:00)
       // Days off requested: Friday (-25 reward)
       // Active days: 2 (Monday, Tuesday) -> 2 * 0.5 = 1.0
-      // Total score = 60 (gap) + 1.2 (tie break) + 0 (lunch) - 25 (day off) + 60 (start) + 30 (end) + 1.0 (active days) = 127.20
+      // Total score = 15 (gap) + 0.75 (tie break) + 0 (lunch) - 25 (day off) + 60 (start) + 30 (end) + 1.0 (active days) = 81.75
       const groups = [
         group('C1', [section('c1', 'C1', '09:00', '11:00', '001', 'monday')]),
         group('C2', [section('c2', 'C2', '13:00', '15:00', '001', 'monday')]),
@@ -762,7 +819,7 @@ describe('plan generator', () => {
       });
       assert.equal(res.plans.length, 1);
       const plan = res.plans[0];
-      assert.equal(Math.round(plan.score * 100) / 100, 127.20);
+      assert.equal(Math.round(plan.score * 100) / 100, 81.75);
       assert.ok(plan.tags.includes('Lunch free'));
       assert.ok(plan.tags.includes('Max gap 2h'));
       assert.ok(plan.tags.some((t) => t.includes('Fri off')));
