@@ -855,7 +855,8 @@ html.dark button[class~='dark:border-slate-700'] {
   cursor: pointer;
 }
 
-.up-segment-btn[aria-pressed='true'] {
+.up-segment-btn[aria-pressed='true'],
+.up-segment-btn[aria-selected='true'] {
   color: var(--up-accent-ink);
 }
 
