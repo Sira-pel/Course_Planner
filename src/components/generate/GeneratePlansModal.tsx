@@ -5,7 +5,7 @@ import type { Transition } from 'motion/react';
 import { ChevronLeft, ChevronRight, Shuffle, X } from 'lucide-react';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { withUnusedCourseColors } from '../../utils/courseColor';
-import { sectionSetKey } from '../../utils/courseIdentity';
+import { planSignature } from '../../utils/courseIdentity';
 import { prefixedId } from '../../utils/id';
 import { applyPick, type PickModifiers } from '../../utils/rangeSelect';
 import {
@@ -573,8 +573,8 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
 
   const handleSave = (plan: GeneratedPlan) => {
     const state = useScheduleStore.getState();
-    const wanted = sectionSetKey(plan.courses);
-    const already = state.plans.some((item) => sectionSetKey(item.courses) === wanted);
+    const wanted = planSignature(plan.courses);
+    const already = state.plans.some((item) => planSignature(item.courses) === wanted);
     if (already) return;
     const name = nextGeneratedPlanName(state.plans);
     const copies = withUnusedCourseColors(plan.courses.map((course) => {
