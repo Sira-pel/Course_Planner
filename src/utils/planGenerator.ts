@@ -672,7 +672,9 @@ class PlanSearch implements GeneratorSearch {
       return;
     }
     if (pinnedOverCap.length > 0) {
-      this.emptyReason = `You pinned more than ${MAX_CANDIDATES} courses. Unpin some to stay within the ${MAX_CANDIDATES}-course limit (left out: ${pinnedOverCap.map((group) => group.code).join(', ')}).`;
+      // Quote the left-out reasons so the results screen doesn't list the same courses again.
+      const cut = pinnedOverCap.map((group) => `${group.code} is over the ${MAX_CANDIDATES}-course limit`).join('; ');
+      this.emptyReason = `You pinned more than ${MAX_CANDIDATES} courses (${cut}). Unpin some to stay within the limit.`;
       this.done = true;
       return;
     }

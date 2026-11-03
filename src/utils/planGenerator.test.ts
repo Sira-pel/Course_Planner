@@ -479,7 +479,7 @@ describe('plan generator', () => {
       });
       assert.equal(result.plans.length, 0);
       assert.match(result.emptyReason ?? '', /pinned more than 15 courses/);
-      assert.match(result.emptyReason ?? '', /C16, C17, C18/);
+      for (const item of result.leftOut ?? []) assert.ok((result.emptyReason ?? '').includes(item.reason));
       assert.deepEqual((result.leftOut ?? []).map((item) => item.code), ['C16', 'C17', 'C18']);
     });
   });
