@@ -156,7 +156,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           {...backdropProps}
           role="dialog"
           aria-modal="true"

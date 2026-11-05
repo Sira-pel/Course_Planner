@@ -60,6 +60,11 @@ interface GeneratePlansModalProps {
   onSaved?: (name: string) => void;
 }
 
+/** Main-thread work per search slice. Under one 120Hz frame. */
+const SEARCH_SLICE_MS = 6;
+/** How often the "checked N" counter re-renders while searching. */
+const SEARCH_COUNT_INTERVAL_MS = 80;
+
 function matchesQuery(group: CourseGroup, query: string): boolean {
   if (!query) return true;
   const haystack = [
@@ -316,28 +321,43 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
     let frame = 0;
     let cancelled = false;
     let lastPaint = 0;
+    let lastCount = 0;
+    // Short slices leave room in every frame (8.3ms at 120Hz) for animations.
+    // A MessageChannel yield is not clamped to 4ms like nested setTimeout, so the
+    // shorter slices do not slow the search down.
+    const channel = new MessageChannel();
+    const yieldThen = (next: () => void) => {
+      channel.port1.onmessage = () => next();
+      channel.port2.postMessage(null);
+    };
     const tick = () => {
       if (cancelled) return;
       const started = performance.now();
-      while (!search.done && performance.now() - started < 12) search.advance(60);
+      while (!search.done && performance.now() - started < SEARCH_SLICE_MS) search.advance(60);
       if (cancelled) return;
-      setChecked(search.evaluated);
       const now = performance.now();
+      // The counter re-renders the modal; a few updates a second read the same.
+      if (search.done || now - lastCount >= SEARCH_COUNT_INTERVAL_MS) {
+        setChecked(search.evaluated);
+        lastCount = now;
+      }
       if (search.done || (mode === 'deeper' && now - lastPaint >= 100)) {
         paintSearch(search, mode === 'deeper');
         lastPaint = now;
       }
       if (search.done) {
+        channel.port1.close();
         setRunning(false);
         cancelRef.current = null;
         return;
       }
-      timer = window.setTimeout(tick, 0);
+      yieldThen(tick);
     };
     cancelRef.current = () => {
       cancelled = true;
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
+      channel.port1.close();
     };
     // Paint the progress indicator before the first slice of work.
     frame = window.requestAnimationFrame(() => {
@@ -857,7 +877,7 @@ export const GeneratePlansModal: React.FC<GeneratePlansModalProps> = ({
       ) : (
         <motion.div
           key="generate-desktop"
-          className="fixed inset-0 z-[100] course-modal-backdrop flex items-center justify-center p-4 bg-black/60 md:backdrop-blur-xs"
+          className="fixed inset-0 z-[100] course-modal-backdrop flex items-center justify-center p-4 bg-black/60"
           {...backdropProps}
           onClick={(event) => {
             if (event.target === event.currentTarget) onClose();
