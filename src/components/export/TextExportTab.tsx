@@ -20,14 +20,14 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
   return (
     <div className="space-y-3 min-w-0">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
+        <div className="flex items-center gap-1 bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
           <button
             type="button"
             onClick={() => onFormat('standard')}
             className={`flex-1 sm:flex-none px-2.5 py-1 rounded-md font-medium transition-colors text-center ${
               textFormat === 'standard'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                : 'text-slate-600 dark:text-slate-300'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-300 dark:ring-0'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Standard
@@ -37,8 +37,8 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
             onClick={() => onFormat('compact')}
             className={`flex-1 sm:flex-none px-2.5 py-1 rounded-md font-medium transition-colors text-center ${
               textFormat === 'compact'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                : 'text-slate-600 dark:text-slate-300'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-300 dark:ring-0'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Compact
@@ -48,8 +48,8 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
             onClick={() => onFormat('by-day')}
             className={`flex-1 sm:flex-none px-2.5 py-1 rounded-md font-medium transition-colors text-center ${
               textFormat === 'by-day'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                : 'text-slate-600 dark:text-slate-300'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-300 dark:ring-0'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Day-by-Day
@@ -69,7 +69,7 @@ export const TextExportTab: React.FC<TextExportTabProps> = ({
       <pre className="p-3 font-mono text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed select-all up-scroll overscroll-contain">
         {generatedText}
       </pre>
-      <p className="text-[11px] text-slate-600 dark:text-slate-300">
+      <p className="text-xs text-slate-600 dark:text-slate-300">
         Plain text that pastes cleanly into chats, email or an advisor form.
       </p>
     </div>

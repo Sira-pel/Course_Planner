@@ -26,8 +26,6 @@ import { TextExportTab } from './TextExportTab';
 import { IcsExportTab } from './IcsExportTab';
 import { ImageExportTab } from './ImageExportTab';
 import { BackupTab } from './BackupTab';
-import { BackupRestoreDialog } from '../import/BackupRestoreDialog';
-import { backupReplaceMessage, countCourses, loadBackup } from '../../utils/backupRestore';
 
 export type ExportTabType = 'text' | 'share' | 'ics' | 'image' | 'backup';
 
@@ -71,7 +69,6 @@ const ExportModalBody: React.FC<{
     semesterStart,
     semesterEnd,
     setSemesterDates,
-    importFullState,
   } = useScheduleStore(
     useShallow((state) => ({
       plans: state.plans,
@@ -88,7 +85,6 @@ const ExportModalBody: React.FC<{
       semesterStart: state.semesterStart,
       semesterEnd: state.semesterEnd,
       setSemesterDates: state.setSemesterDates,
-      importFullState: state.importFullState,
     }))
   );
   const activePlan = useMemo(() => plans.find((p) => p.id === activePlanId) || plans[0], [plans, activePlanId]);
@@ -121,9 +117,6 @@ const ExportModalBody: React.FC<{
       selectTab(initialTab);
       setCopiedShareUrl(false);
       setCopiedText(false);
-      setImportJson('');
-      setImportError(null);
-      setImportSuccess(false);
     }
   }, [isOpen, initialTab]);
 
@@ -179,7 +172,7 @@ const ExportModalBody: React.FC<{
   useEffect(() => {
     imageRequestRef.current += 1;
     setImagePreviewUrl(null);
-  }, [activePlan, showWeekends, startHour, endHour]);
+  }, [activePlan, showWeekends, startHour, endHour, imageTheme]);
 
   // Generate preview image smoothly with debounce when activeTab becomes 'image'
   useEffect(() => {
@@ -190,12 +183,6 @@ const ExportModalBody: React.FC<{
       return () => clearTimeout(timer);
     }
   }, [isOpen, activeTab, imagePreviewUrl, generatingImage]);
-
-  // Backup State
-  const [importJson, setImportJson] = useState('');
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState(false);
-  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
 
   // Memoize generated text so it only recalculates when activePlan or textFormat changes
   const generatedText = useMemo(() => {
@@ -285,62 +272,11 @@ const ExportModalBody: React.FC<{
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const file = input.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result;
-      if (typeof content === 'string') {
-        setImportJson(content);
-        setImportError(null);
-      }
-    };
-    reader.onerror = () => {
-      setImportError('Failed to read file');
-    };
-    reader.readAsText(file);
-    // Let the same file be chosen again after Cancel or an edit.
-    input.value = '';
-  };
-
-  const handleApplyImport = () => {
-    setImportError(null);
-    setImportSuccess(false);
-    if (!importJson.trim()) {
-      setImportError('Please paste or upload a valid JSON backup string');
-      return;
-    }
-    const loaded = loadBackup(importJson);
-    if (loaded.ok === false) {
-      setImportError(loaded.error);
-      return;
-    }
-    setConfirmMessage(backupReplaceMessage(
-      { plans: plans.length, courses: countCourses(plans) },
-      { plans: loaded.backup.plans.length, courses: countCourses(loaded.backup.plans) },
-    ));
-  };
-
-  const handleConfirmRestore = () => {
-    setConfirmMessage(null);
-    const res = importFullState(importJson);
-    if (res.success) {
-      setImportSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 1200);
-    } else {
-      setImportError(res.error || 'This backup could not be read. Use a Uniplan JSON backup and try again.');
-    }
-  };
-
   const exportTabs: { id: ExportTabType; label: string; mobileLabel: string; icon: React.ReactNode }[] = [
-    { id: 'text', label: 'Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'share', label: 'Share link', mobileLabel: 'Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'image', label: 'Image', mobileLabel: 'Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'text', label: 'Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'backup', label: 'JSON backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 
@@ -488,7 +424,7 @@ const ExportModalBody: React.FC<{
                   imageTheme={imageTheme}
                   imagePreviewUrl={imagePreviewUrl}
                   generatingImage={generatingImage}
-                  onToggleTheme={() => setImageTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+                  onSetTheme={setImageTheme}
                   onRefresh={handleGeneratePreviewImage}
                   onDownload={handleDownloadImage}
                 />
@@ -496,24 +432,11 @@ const ExportModalBody: React.FC<{
 
               {activeTab === 'backup' && (
                 <BackupTab
-                  importJson={importJson}
-                  importError={importError}
-                  importSuccess={importSuccess}
-                  onImportJsonChange={(v) => {
-                    setImportJson(v);
-                    setImportError(null);
-                  }}
-                  onFileUpload={handleFileUpload}
+                  planCount={plans.length}
+                  courseCount={plans.reduce((n, p) => n + p.courses.length, 0)}
                   onDownloadBackup={handleDownloadBackup}
-                  onApplyImport={handleApplyImport}
                 />
               )}
-              <BackupRestoreDialog
-                open={confirmMessage != null}
-                message={confirmMessage ?? ''}
-                onCancel={() => setConfirmMessage(null)}
-                onConfirm={handleConfirmRestore}
-              />
             </motion.div>
         </AnimatedBody>
       </motion.div>

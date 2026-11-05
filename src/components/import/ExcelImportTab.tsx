@@ -101,7 +101,7 @@ const CourseRow = React.memo<CourseRowProps>(({ course: c, isSelected, issue, on
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
           <span className={`font-semibold ${isSelected ? '' : 'text-indigo-600 dark:text-indigo-400'}`}>
             {sessionSummary}
           </span>
@@ -547,7 +547,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                   <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-xs" title={fileName || ''}>
                     {fileName}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono shrink-0 hidden xs:inline">
+                  <span className="text-xs text-slate-500 font-mono shrink-0 hidden xs:inline">
                     {fileSize}
                   </span>
                 </div>
@@ -561,7 +561,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                     id="sheet-select"
                     value={sheetData.currentSheet}
                     onChange={(e) => handleSheetChange(e.target.value)}
-                    className="text-[11px] font-semibold px-1.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 max-w-[130px] sm:max-w-[180px] truncate"
+                    className="text-xs font-semibold px-1.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 max-w-[130px] sm:max-w-[180px] truncate"
                     title="Select Sheet"
                   >
                     {sheetData.sheets.map((s) => (
@@ -576,7 +576,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
               <button
                 type="button"
                 onClick={() => setShowColumnSetup((prev) => !prev)}
-                className={`px-2 py-1 text-[11px] font-semibold rounded-md border flex items-center gap-1 transition-colors ${
+                className={`px-2 py-1 text-xs font-semibold rounded-md border flex items-center gap-1 transition-colors ${
                   showColumnSetup
                     ? 'up-selected'
                     : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -597,7 +597,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                   setFileName(null);
                   setSelectedCourseIds(new Set());
                 }}
-                className="text-[11px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 px-1.5 py-1 font-semibold transition-colors"
+                className="text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 px-1.5 py-1 font-semibold transition-colors"
                 title="Change File"
               >
                 Change
@@ -618,7 +618,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                     <Settings2 className="w-3.5 h-3.5 text-indigo-500" />
                     Configure Column Mapping
                   </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     Auto-detected based on your spreadsheet contents. You can adjust which column maps to each field.
                   </p>
                 </div>
@@ -636,7 +636,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                         <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
                           {f.label} {f.required && <span className="text-rose-500">*</span>}
                         </span>
-                        <span className="text-[10px] text-slate-500">{f.hint}</span>
+                        <span className="text-xs text-slate-500">{f.hint}</span>
                       </div>
                       <select
                         value={currentVal}
@@ -681,14 +681,14 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs px-0.5 text-slate-600 dark:text-slate-300">
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} found
               </span>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   Select all
                 </button>
@@ -696,7 +696,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
                 <button
                   type="button"
                   onClick={handleDeselectAll}
-                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   Deselect all
                 </button>
@@ -705,7 +705,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
           </div>
 
           {parseWarnings.length > 0 && !warningsDismissed && (
-            <div className="relative p-2.5 pr-8 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] space-y-0.5 shrink-0">
+            <div className="relative p-2.5 pr-8 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs space-y-0.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setWarningsDismissed(true)}
@@ -731,7 +731,7 @@ export const ExcelImportTab: React.FC<ExcelImportTabProps> = ({
             {filteredCourses.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-600 dark:text-slate-300">
                 <p className="font-semibold text-slate-800 dark:text-slate-200">No courses parsed</p>
-                <p className="mt-1 text-[11px]">
+                <p className="mt-1 text-xs">
                   Click <strong>Mapping</strong> above to adjust column assignments.
                 </p>
               </div>

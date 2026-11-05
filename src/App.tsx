@@ -179,10 +179,12 @@ export default function App() {
   const suppressFocusRestoreRef = useRef(false);
   const reduceMotion = useReducedMotion();
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
+  const toastIdRef = useRef(0);
   const showToast = useCallback((text: string, type: ToastMessage['type'] = 'info', action?: ToastMessage['action']) => {
+    const id = ++toastIdRef.current;
     setToastMessage({ text, type, action });
     window.setTimeout(() => {
-      setToastMessage((prev) => (prev?.text === text ? null : prev));
+      if (toastIdRef.current === id) setToastMessage(null);
     }, action ? 6000 : 4000);
   }, []);
 
@@ -700,17 +702,22 @@ export default function App() {
             onOpenImport={handleCalendarOpenImport}
             onOpenGenerate={handleOpenGenerate}
             onEditCourse={handleEditCourse}
-            onRemoved={(label, count) => showToast(
-              count > 1 ? `Removed ${label} (${count} sections)` : `Removed ${label}`,
-              'info',
-              {
-                label: 'Undo',
-                onClick: () => {
-                  useScheduleStore.getState().undo();
-                  setToastMessage(null);
-                },
-              }
-            )}
+            onRemoved={(label, count) => {
+              // Undo only while the removal is still the latest change; otherwise it would revert something else.
+              const removal = useScheduleStore.getState().past[0];
+              showToast(
+                count > 1 ? `Removed ${label} (${count} sections)` : `Removed ${label}`,
+                'info',
+                {
+                  label: 'Undo',
+                  onClick: () => {
+                    const store = useScheduleStore.getState();
+                    if (store.past[0] === removal) store.undo();
+                    setToastMessage(null);
+                  },
+                }
+              );
+            }}
           />
         </div>
       </main>

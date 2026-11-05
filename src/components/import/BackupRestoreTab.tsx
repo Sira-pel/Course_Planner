@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Database, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { AlertCircle, AlertTriangle, CheckCircle2, ClipboardPaste, Database, FileJson, Upload } from 'lucide-react';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { backupReplaceMessage, countCourses, loadBackup } from '../../utils/backupRestore';
 import { BackupRestoreDialog } from './BackupRestoreDialog';
@@ -12,44 +12,74 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
   const importFullState = useScheduleStore((state) => state.importFullState);
   const plans = useScheduleStore((state) => state.plans);
   const [importJson, setImportJson] = useState('');
-  const [importError, setImportError] = useState<string | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const current = useMemo(
+    () => ({ plans: plans.length, courses: countCourses(plans) }),
+    [plans],
+  );
+
+  const loaded = useMemo(
+    () => (importJson.trim() ? loadBackup(importJson) : null),
+    [importJson],
+  );
+  const parseError = loaded && loaded.ok === false ? loaded.error : null;
+  const incoming =
+    loaded && loaded.ok
+      ? { plans: loaded.backup.plans.length, courses: countCourses(loaded.backup.plans) }
+      : null;
+  const error = readError ?? parseError ?? restoreError;
+
+  const readFile = (file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result;
       if (typeof content === 'string') {
         setImportJson(content);
-        setImportError(null);
+        setReadError(null);
+        setRestoreError(null);
       }
     };
-    reader.onerror = () => {
-      setImportError('Failed to read file');
-    };
+    reader.onerror = () => setReadError('Couldn’t read that file. Try another .json file.');
     reader.readAsText(file);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    readFile(e.target.files?.[0]);
+    // Let the same file be chosen again after an error.
     e.target.value = '';
   };
 
+  const handlePasteText = (text: string) => {
+    if (!text.trim()) return;
+    setImportJson(text);
+    setReadError(null);
+    setRestoreError(null);
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      handlePasteText(await navigator.clipboard.readText());
+    } catch {
+      setReadError('Couldn’t read your clipboard. Copy the backup and press Ctrl+V here instead.');
+    }
+  };
+
+  const handleClear = () => {
+    setImportJson('');
+    setReadError(null);
+    setRestoreError(null);
+  };
+
   const handleApplyImport = () => {
-    setImportError(null);
-    setImportSuccess(false);
-    if (!importJson.trim()) {
-      setImportError('Please paste or upload a valid JSON backup');
-      return;
-    }
-    const loaded = loadBackup(importJson);
-    if (loaded.ok === false) {
-      setImportError(loaded.error);
-      return;
-    }
-    setConfirmMessage(backupReplaceMessage(
-      { plans: plans.length, courses: countCourses(plans) },
-      { plans: loaded.backup.plans.length, courses: countCourses(loaded.backup.plans) },
-    ));
+    if (!incoming) return;
+    setConfirmMessage(backupReplaceMessage(current, incoming));
   };
 
   const handleConfirmRestore = () => {
@@ -61,74 +91,156 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
         onSuccess();
       }, 1200);
     } else {
-      setImportError(res.error || 'This backup could not be read. Use a Uniplan JSON backup and try again.');
+      setRestoreError(res.error || 'This backup could not be read. Use a Uniplan JSON backup and try again.');
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
-        <div>
-          <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-            <Database className="w-3.5 h-3.5 text-indigo-500" />
-            Restore Complete State from Backup (.json)
-          </h4>
-          <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-            Upload or paste a Uniplan backup JSON file to restore all plans, courses, course pool, and preferences.
-          </p>
+    <div className="space-y-3">
+      <div
+        role="note"
+        className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-900/70 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-200"
+      >
+        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+        <span>
+          Restoring replaces everything you have now:{' '}
+          <strong>
+            {current.plans} {current.plans === 1 ? 'plan' : 'plans'}, {current.courses}{' '}
+            {current.courses === 1 ? 'course' : 'courses'} and your course pool
+          </strong>
+          . Save a backup first if you want a way back.
+        </span>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      <div
+        tabIndex={0}
+        onPaste={(e) => {
+          const text = e.clipboardData.getData('text');
+          if (text) {
+            e.preventDefault();
+            handlePasteText(text);
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onClick={() => {
+          if (!incoming) fileInputRef.current?.click();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          readFile(e.dataTransfer.files?.[0]);
+        }}
+        className={`rounded-2xl border-2 border-dashed p-6 sm:p-8 flex flex-col items-center justify-center text-center gap-3 up-modal-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+          incoming ? '' : 'cursor-pointer'
+        } ${
+          dragging
+            ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30'
+            : `border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 ${
+                incoming ? '' : 'hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20'
+              }`
+        }`}
+      >
+        <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+          {incoming ? <FileJson className="w-6 h-6" /> : <Database className="w-6 h-6" />}
         </div>
 
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Upload backup file
-          </label>
-          <input
-            type="file"
-            accept=".json,application/json"
-            onChange={handleFileUpload}
-            className="up-file-input block w-fit max-w-full text-xs text-slate-600 dark:text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950/60 dark:file:text-indigo-300"
-          />
-        </div>
+        {incoming ? (
+          <div>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Backup ready to restore</p>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+              {incoming.plans} {incoming.plans === 1 ? 'plan' : 'plans'}, {incoming.courses}{' '}
+              {incoming.courses === 1 ? 'course' : 'courses'}
+            </p>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Drop a Uniplan backup here</p>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+              A <strong className="text-slate-700 dark:text-slate-200">.json</strong> file from Export, or paste its contents
+            </p>
+          </div>
+        )}
 
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Or paste backup JSON code
-          </label>
-          <textarea
-            value={importJson}
-            onChange={(e) => {
-              setImportJson(e.target.value);
-              setImportError(null);
-            }}
-            placeholder='{"version": 1, "exportedAt": "...", "plans": [...] }'
-            rows={5}
-            className="w-full min-w-0 p-2.5 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 break-all whitespace-pre-wrap"
-          />
-        </div>
-
-        {importError && (
-          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+        {error && (
+          <div role="alert" className="flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{importError}</span>
+            <span>{error}</span>
           </div>
         )}
 
         {importSuccess && (
-          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+          <div role="status" className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Backup successfully restored! Refreshing schedule...</span>
+            <span>Backup restored</span>
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleApplyImport}
-          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          Apply Backup & Restore
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {incoming ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApplyImport();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Restore backup
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClear();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg transition-colors"
+              >
+                Choose another
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Browse files
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handlePasteFromClipboard();
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <ClipboardPaste className="w-3.5 h-3.5" />
+                Paste JSON
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
       <BackupRestoreDialog
         open={confirmMessage != null}
         message={confirmMessage ?? ''}

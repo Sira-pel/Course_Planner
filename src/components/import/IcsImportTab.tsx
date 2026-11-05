@@ -227,7 +227,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                   <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-xs" title={fileName || ''}>
                     {fileName}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono shrink-0 hidden xs:inline">
+                  <span className="text-xs text-slate-500 font-mono shrink-0 hidden xs:inline">
                     {fileSize}
                   </span>
                 </div>
@@ -241,7 +241,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 setFileName(null);
                 setSelectedCourseIds(new Set());
               }}
-              className="text-[11px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 px-1.5 py-1 font-semibold transition-colors shrink-0"
+              className="text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 px-1.5 py-1 font-semibold transition-colors shrink-0"
               title="Change File"
             >
               Change
@@ -272,14 +272,14 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs px-0.5 text-slate-600 dark:text-slate-300">
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} found
               </span>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   Select all
                 </button>
@@ -287,7 +287,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                 <button
                   type="button"
                   onClick={handleDeselectAll}
-                  className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   Deselect all
                 </button>
@@ -356,7 +356,7 @@ export const IcsImportTab: React.FC<IcsImportTabProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 dark:text-slate-300 mt-0.5 font-mono">
                         <span>{sessionSummary}</span>
                         {c.sessions[0]?.room && <span>· {c.sessions[0].room}</span>}
                         {c.instructor && <span>· {c.instructor}</span>}
