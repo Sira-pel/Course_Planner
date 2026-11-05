@@ -1,4 +1,5 @@
 import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { useIsPhone } from '../utils/usePoolLayout';
@@ -362,7 +363,9 @@ export const CalendarGrid = memo(function CalendarGrid({
     const out = direction === 1 ? -width : width;
     const quick = reduceMotion ? { duration: 0 } : { duration: 0.14, ease: 'easeIn' as const };
     await animate(swipeX, out, quick);
-    setSelectedDay(pendingDay.current ?? target);
+    // Render the new day before the slide-in starts. A deferred render would
+    // eat the first frames of the slide or show the old day sliding back in.
+    flushSync(() => setSelectedDay(pendingDay.current ?? target));
     pendingDay.current = null;
     swipeX.set(-out);
     animate(swipeX, 0, reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] });
@@ -421,7 +424,12 @@ export const CalendarGrid = memo(function CalendarGrid({
       <motion.div
         className="flex flex-1 min-h-0 flex-col"
         data-day-swipe={isPhone && mobileCalendarView === 'day' ? 'true' : undefined}
-        style={{ touchAction: isPhone && mobileCalendarView === 'day' ? 'pan-y' : undefined, x: phoneDay ? swipeX : 0 }}
+        style={{
+          touchAction: phoneDay ? 'pan-y' : undefined,
+          x: phoneDay ? swipeX : 0,
+          // Own layer so the drag slides a cached bitmap instead of repainting the grid each frame.
+          willChange: phoneDay ? 'transform' : undefined,
+        }}
         drag={isPhone && mobileCalendarView === 'day' ? 'x' : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={{ left: hasDay(1) ? 1 : 0.15, right: hasDay(-1) ? 1 : 0.15 }}

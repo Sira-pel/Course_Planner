@@ -557,7 +557,7 @@ const CourseModalBody: React.FC<CourseModalProps> = ({
   return (
     <motion.div
       key="course-modal-overlay"
-      className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 md:backdrop-blur-xs overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="fixed inset-0 z-[100] course-modal-backdrop flex items-start sm:items-center justify-center p-2.5 sm:p-4 bg-black/60 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       {...backdropProps}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();

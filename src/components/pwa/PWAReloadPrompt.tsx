@@ -44,7 +44,7 @@ export const PWAReloadPrompt: React.FC = () => {
   return (
     <div
       role="alert"
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-slate-900/95 dark:bg-slate-800/95 text-white px-4 py-3 rounded-xl shadow-2xl border border-indigo-500/40 text-xs backdrop-blur-md animate-fade-in"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-slate-900/95 dark:bg-slate-800/95 text-white px-4 py-3 rounded-xl shadow-2xl border border-indigo-500/40 text-xs animate-fade-in"
     >
       <div className="flex flex-col">
         <span className="font-semibold text-white">Update available</span>

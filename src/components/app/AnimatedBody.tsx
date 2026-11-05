@@ -30,6 +30,12 @@ export function AnimatedBody({
   const innerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
   const [live, setLive] = useState(false);
+  // The content wrapper stretches with the frame, so the observers fire on every
+  // frame of our own height animation. Measuring then forces a second layout per
+  // frame for nothing; note the change and measure once when the animation ends.
+  const animatingRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const measureRef = useRef<(() => void) | null>(null);
 
   useLayoutEffect(() => {
     const inner = innerRef.current;
@@ -54,18 +60,35 @@ export function AnimatedBody({
       setHeight((prev) => (prev === next ? prev : next));
     };
 
+    // At most one measurement per frame, and none while the height is animating.
+    let frame = 0;
+    const schedule = () => {
+      if (animatingRef.current) {
+        dirtyRef.current = true;
+        return;
+      }
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        measure();
+      });
+    };
+
+    measureRef.current = measure;
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(inner);
     // Course rows can mount inside a collapsed scroller without changing the
     // frame's border box, so also remeasure when those rows appear.
-    const mutations = new MutationObserver(measure);
+    const mutations = new MutationObserver(schedule);
     mutations.observe(inner, { childList: true, subtree: true });
-    window.addEventListener('resize', measure);
+    window.addEventListener('resize', schedule);
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
       mutations.disconnect();
-      window.removeEventListener('resize', measure);
+      window.removeEventListener('resize', schedule);
+      if (measureRef.current === measure) measureRef.current = null;
     };
   }, [activeKey, instant]);
 
@@ -95,6 +118,15 @@ export function AnimatedBody({
       initial={false}
       animate={{ height: height ?? 'auto' }}
       transition={live && height != null ? SHEET_OPEN_TRANSITION : { duration: 0 }}
+      onAnimationStart={() => {
+        animatingRef.current = true;
+      }}
+      onAnimationComplete={() => {
+        animatingRef.current = false;
+        if (!dirtyRef.current) return;
+        dirtyRef.current = false;
+        measureRef.current?.();
+      }}
     >
       <div ref={innerRef} className={contentClassName}>
         {children}

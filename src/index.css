@@ -1483,8 +1483,22 @@ html.dark .up-text-trigger.up-import-export.is-open {
   }
 }
 
+/* A few pulses draw the eye, then stop. An endless pulse keeps the GPU
+   producing frames for as long as the conflict is on screen. */
 .up-conflict-icon {
-  animation: up-conflict-pulse 1.6s var(--ease-in-out) infinite;
+  animation: up-conflict-pulse 1.6s var(--ease-in-out) 3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .up-conflict-block {
+    animation: up-conflict-block-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 3;
+  }
+}
+
+@keyframes up-conflict-block-pulse {
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-fade-in {
