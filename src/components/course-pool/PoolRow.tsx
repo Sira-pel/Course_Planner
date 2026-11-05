@@ -12,24 +12,23 @@ export interface PoolRowProps {
   variant: 'single' | 'section';
   inActivePlan: boolean;
   conflict: Course | null;
-  confirmDelete: boolean;
   activePlanName: string | undefined;
   onEdit: (id: string) => void;
-  onRequestDelete: (id: string) => void;
-  onConfirmDelete: (id: string) => void;
-  onCancelDelete: () => void;
+  onRemove: (id: string) => void;
   onAddToPlan: (id: string) => void;
   onRemoveFromPlan: (id: string) => void;
 }
 
-function RowMenu({
+export function RowMenu({
   label,
   onEdit,
   onRemove,
+  removeLabel = 'Remove from pool',
 }: {
   label: string;
-  onEdit: () => void;
+  onEdit?: () => void;
   onRemove: () => void;
+  removeLabel?: string;
 }) {
   const [pos, setPos] = useState<{ right: number; top?: number; bottom?: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -98,6 +97,7 @@ function RowMenu({
       {pos &&
         createPortal(
           <div ref={menuRef} className="up-pool-rowmenu" role="menu" style={pos}>
+            {onEdit && (
             <button
               type="button"
               role="menuitem"
@@ -110,6 +110,7 @@ function RowMenu({
               <Edit2 className="w-3.5 h-3.5 shrink-0" />
               <span>Edit course</span>
             </button>
+            )}
             <button
               type="button"
               role="menuitem"
@@ -120,7 +121,7 @@ function RowMenu({
               }}
             >
               <Trash2 className="w-3.5 h-3.5 shrink-0" />
-              <span>Remove from pool</span>
+              <span>{removeLabel}</span>
             </button>
           </div>,
           document.body
@@ -134,12 +135,9 @@ export const PoolRow = React.memo(function PoolRow({
   variant,
   inActivePlan,
   conflict,
-  confirmDelete,
   activePlanName,
   onEdit,
-  onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
+  onRemove,
   onAddToPlan,
   onRemoveFromPlan,
 }: PoolRowProps) {
@@ -155,25 +153,7 @@ export const PoolRow = React.memo(function PoolRow({
     </div>
   );
 
-  const actions = confirmDelete ? (
-    <div className="up-pool-confirm">
-      <button
-        type="button"
-        onClick={() => onConfirmDelete(item.id)}
-        className="up-pool-text-btn up-chrome-btn text-rose-600 dark:text-rose-400"
-      >
-        Delete
-      </button>
-      <button
-        type="button"
-        onClick={onCancelDelete}
-        className="up-icon-btn up-chrome-btn up-pool-icon-hit"
-        aria-label="Cancel delete"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  ) : (
+  const actions = (
     <div className="up-pool-trail">
       {conflict && !inActivePlan && (
         <span className="up-pool-conflict-tag" title={`Overlaps with ${conflict.code}`}>
@@ -183,7 +163,7 @@ export const PoolRow = React.memo(function PoolRow({
       <RowMenu
         label={`${item.code}${item.section ? ` section ${item.section}` : ''}`}
         onEdit={() => onEdit(item.id)}
-        onRemove={() => onRequestDelete(item.id)}
+        onRemove={() => onRemove(item.id)}
       />
       {inActivePlan ? (
         <button

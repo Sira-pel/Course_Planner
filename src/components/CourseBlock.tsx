@@ -221,8 +221,8 @@ export const CourseBlock = memo(function CourseBlock({
           )}
         </div>
 
-        {/* Hover Action Buttons */}
-        <div className="hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-black/40 rounded px-1 py-0.5">
+        {/* Action buttons: on hover for mouse; always visible on touch when the block is wide and tall enough */}
+        <div className={`hidden group-hover:flex items-center gap-1 shrink-0 -mr-0.5 -mt-0.5 bg-black/40 rounded px-1 py-0.5 ${isShortBlock ? '' : 'pointer-coarse:flex pointer-coarse:@max-[96px]:hidden pointer-coarse:gap-0.5 pointer-coarse:-my-1.5 pointer-coarse:px-0.5 max-sm:flex max-sm:@max-[96px]:hidden max-sm:gap-0.5 max-sm:-my-1.5 max-sm:px-0.5'}`}>
           <button
             type="button"
             id={`btn-edit-${course.id}`}
@@ -232,9 +232,9 @@ export const CourseBlock = memo(function CourseBlock({
             }}
             title={`Edit ${course.code}`}
             aria-label={`Edit ${course.code}`}
-            className="p-0.5 text-white hover:text-amber-200 transition-colors"
+            className="p-0.5 pointer-coarse:p-1 max-sm:p-1 text-white hover:text-amber-200 transition-colors"
           >
-            <Edit2 className="w-3 h-3" />
+            <Edit2 className="w-3 h-3 pointer-coarse:w-3.5 pointer-coarse:h-3.5 max-sm:w-3.5 max-sm:h-3.5" />
           </button>
           <button
             type="button"
@@ -245,9 +245,9 @@ export const CourseBlock = memo(function CourseBlock({
             }}
             title={`Remove ${course.code}`}
             aria-label={`Remove ${course.code}`}
-            className="p-0.5 text-white hover:text-red-200 transition-colors"
+            className="p-0.5 pointer-coarse:p-1 max-sm:p-1 text-white hover:text-red-200 transition-colors"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-3 h-3 pointer-coarse:w-3.5 pointer-coarse:h-3.5 max-sm:w-3.5 max-sm:h-3.5" />
           </button>
         </div>
       </div>

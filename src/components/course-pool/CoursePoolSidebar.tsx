@@ -19,6 +19,7 @@ interface CoursePoolSidebarProps {
   onOpenImport?: () => void;
   onOpenGenerate?: () => void;
   onEditCourse: (courseId: string) => void;
+  onRemoved?: (label: string, count: number) => void;
 }
 
 export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
@@ -28,12 +29,13 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   onOpenImport,
   onOpenGenerate,
   onEditCourse,
+  onRemoved,
 }: CoursePoolSidebarProps) {
   const {
     plans,
     activePlanId,
     catalogCourses,
-    removeFromCatalog,
+    removeCatalogCourses,
     addCourseFromPool,
     removeCourseFromPlanByCatalog,
     clearUnusedCatalogCourses,
@@ -43,7 +45,7 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       plans: state.plans,
       activePlanId: state.activePlanId,
       catalogCourses: state.catalogCourses,
-      removeFromCatalog: state.removeFromCatalog,
+      removeCatalogCourses: state.removeCatalogCourses,
       addCourseFromPool: state.addCourseFromPool,
       removeCourseFromPlanByCatalog: state.removeCourseFromPlanByCatalog,
       clearUnusedCatalogCourses: state.clearUnusedCatalogCourses,
@@ -58,7 +60,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [confirmDeleteCourseId, setConfirmDeleteCourseId] = useState<string | null>(null);
 
   const tabsRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
@@ -89,6 +90,17 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       return activePlanDirectIds.has(catalogItem.id);
     },
     [activePlan, activeCourseKeys, activePlanDirectIds]
+  );
+
+  const planColorFor = useCallback(
+    (catalogItem: Course): string | undefined => {
+      if (!activePlan) return undefined;
+      const key = courseIdentityKey(catalogItem.code, catalogItem.section);
+      return activePlan.courses.find(
+        (c) => courseIdentityKey(c.code, c.section) === key || c.id === catalogItem.id
+      )?.color;
+    },
+    [activePlan]
   );
 
   const activeSessionsByDay = useMemo(() => {
@@ -300,14 +312,10 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
     setSearchQuery('');
   };
 
-  const handleConfirmDelete = useCallback((id: string) => {
-    removeFromCatalog(id);
-    setConfirmDeleteCourseId(null);
-  }, [removeFromCatalog]);
-
-  const handleCancelDelete = useCallback(() => {
-    setConfirmDeleteCourseId(null);
-  }, []);
+  const handleRemoveCourses = useCallback((ids: string[], label: string) => {
+    removeCatalogCourses(ids);
+    onRemoved?.(label, ids.length);
+  }, [removeCatalogCourses, onRemoved]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -367,7 +375,6 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       headDragProps={isMobileSheet ? sheetDrag.handleProps : undefined}
       searchQuery={searchQuery}
       filterMode={filterMode}
-      confirmDeleteCourseId={confirmDeleteCourseId}
       catalogCount={catalogCourses.length}
       totalInPlan={totalInPlan}
       filteredCourses={filteredCourses}
@@ -385,10 +392,9 @@ export const CoursePoolSidebar = React.memo(function CoursePoolSidebar({
       onOpenImport={onOpenImport}
       onOpenGenerate={onOpenGenerate}
       onEditCourse={onEditCourse}
-      onRequestDelete={setConfirmDeleteCourseId}
-      onConfirmDelete={handleConfirmDelete}
-      onCancelDelete={handleCancelDelete}
+      onRemoveCourses={handleRemoveCourses}
       isEnrolled={isEnrolledInActivePlan}
+      planColorFor={planColorFor}
       findConflict={findConflictInActivePlan}
       onAddToPlan={handleAddToPlan}
       onRemoveFromPlan={handleRemoveFromPlan}

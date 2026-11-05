@@ -3031,11 +3031,20 @@ html.dark .up-mobile-sheet,
   background: var(--up-raised);
 }
 
+.up-pool-group-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+}
+
 .up-pool-group-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  width: auto;
   min-height: 68px;
   padding: 12px;
   border: 0;
@@ -3061,9 +3070,12 @@ html.dark .up-mobile-sheet,
 .up-pool-group-count {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   flex-shrink: 0;
-  padding: 2px 6px;
+  width: 36px;
+  box-sizing: border-box;
+  padding: 2px 0;
   border: 1px solid color-mix(in srgb, var(--up-accent) 30%, transparent);
   border-radius: 6px;
   background: color-mix(in srgb, var(--up-accent) 14%, transparent);
@@ -3335,6 +3347,10 @@ html.dark .up-mobile-sheet,
     height: 44px;
   }
 
+  .up-pool-group-count {
+    width: 44px;
+  }
+
   .up-pool-more {
     width: 44px;
     height: 44px;
@@ -3360,6 +3376,10 @@ html.dark .up-mobile-sheet,
   .up-pool-one {
     gap: 8px;
     padding: 12px 10px;
+  }
+
+  .up-pool-group-top {
+    padding-right: 10px;
   }
 
   .up-pool-section {
@@ -4616,7 +4636,17 @@ html.dark .up-gen-pin[aria-pressed='true']:hover {
 }
 
 .up-gen-select {
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.up-gen-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .up-gen-time:focus,
@@ -4695,6 +4725,7 @@ html.dark .up-gen-pin[aria-pressed='true']:hover {
 
 .up-gen-chip,
 .up-gen-tags li {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 4px;

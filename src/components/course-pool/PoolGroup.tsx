@@ -3,12 +3,14 @@ import { Check, ChevronRight } from 'lucide-react';
 import type { Course } from '../../types/schedule';
 import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
+import { RowMenu } from './PoolRow';
 
 export interface PoolGroupProps {
   courses: Course[];
   inPlanCount: number;
   expanded: boolean;
   onToggle: () => void;
+  onRemoveAll: () => void;
   children: React.ReactNode;
 }
 
@@ -17,6 +19,7 @@ export const PoolGroup = React.memo(function PoolGroup({
   inPlanCount,
   expanded,
   onToggle,
+  onRemoveAll,
   children,
 }: PoolGroupProps) {
   const groupId = useId();
@@ -27,6 +30,7 @@ export const PoolGroup = React.memo(function PoolGroup({
   const credits = first.credits ? `${first.credits} cr · ` : '';
   return (
     <div className={`up-pool-row up-pool-group${inPlanCount > 0 ? ' is-in-plan' : ''}`}>
+      <div className="up-pool-group-top">
       <button
         type="button"
         className="up-pool-group-head up-chrome-btn"
@@ -50,13 +54,19 @@ export const PoolGroup = React.memo(function PoolGroup({
             {courses.length} sections
           </span>
         </span>
-        {inPlanCount > 0 && (
-          <span className="up-pool-group-count font-mono" title={`${inPlanCount} in plan`}>
-            <Check className="w-3 h-3" aria-hidden="true" />
-            {inPlanCount}
-          </span>
-        )}
       </button>
+      <RowMenu
+        label={`${first.code} (${courses.length} sections)`}
+        removeLabel={`Remove all ${courses.length} sections`}
+        onRemove={onRemoveAll}
+      />
+      {inPlanCount > 0 && (
+        <span className="up-pool-group-count font-mono" title={`${inPlanCount} in plan`}>
+          <Check className="w-3 h-3" aria-hidden="true" />
+          {inPlanCount}
+        </span>
+      )}
+      </div>
       {expanded && (
         <div id={groupId} className="up-pool-sections">
           {children}

@@ -107,7 +107,7 @@ function sectionLabel(group: CourseGroup, sectionId: string): string {
   const section = group.sections.find((item) => item.id === sectionId);
   if (!section) return group.code;
   const sec = section.section ? ` · ${section.section}` : '';
-  return `${group.code}${sec}`;
+  return group.name ? `${group.code}${sec} — ${group.name}` : `${group.code}${sec}`;
 }
 
 export function PreferencesStep({
@@ -496,7 +496,7 @@ export function PreferencesStep({
                       className="up-gen-chip is-on up-chrome-btn"
                       onClick={() => onUnlock(id)}
                     >
-                      {sections.find((section) => section.id === id)?.label ?? 'Section'}
+                      <span className="up-gen-chip-label" title={sections.find((section) => section.id === id)?.label}>{sections.find((section) => section.id === id)?.label ?? 'Section'}</span>
                       <X className="w-3 h-3" />
                     </button>
                   ))}
@@ -527,7 +527,7 @@ export function PreferencesStep({
                       className="up-gen-chip is-on up-chrome-btn"
                       onClick={() => onUnexclude(id)}
                     >
-                      {sections.find((section) => section.id === id)?.label ?? 'Section'}
+                      <span className="up-gen-chip-label" title={sections.find((section) => section.id === id)?.label}>{sections.find((section) => section.id === id)?.label ?? 'Section'}</span>
                       <X className="w-3 h-3" />
                     </button>
                   ))}

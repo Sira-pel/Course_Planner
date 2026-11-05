@@ -26,7 +26,6 @@ export interface PoolPanelProps {
   headDragProps?: React.HTMLAttributes<HTMLDivElement>;
   searchQuery: string;
   filterMode: FilterMode;
-  confirmDeleteCourseId: string | null;
   catalogCount: number;
   totalInPlan: number;
   filteredCourses: Course[];
@@ -44,10 +43,9 @@ export interface PoolPanelProps {
   onOpenImport?: () => void;
   onOpenGenerate?: () => void;
   onEditCourse: (id: string) => void;
-  onRequestDelete: (id: string) => void;
-  onConfirmDelete: (id: string) => void;
-  onCancelDelete: () => void;
+  onRemoveCourses: (ids: string[], label: string) => void;
   isEnrolled: (c: Course) => boolean;
+  planColorFor: (c: Course) => string | undefined;
   findConflict: (c: Course) => Course | null;
   onAddToPlan: (catalogId: string) => void;
   onRemoveFromPlan: (catalogId: string) => void;
@@ -62,7 +60,6 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   headDragProps,
   searchQuery,
   filterMode,
-  confirmDeleteCourseId,
   catalogCount,
   totalInPlan,
   filteredCourses,
@@ -80,10 +77,9 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
   onOpenImport,
   onOpenGenerate,
   onEditCourse,
-  onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
+  onRemoveCourses,
   isEnrolled,
+  planColorFor,
   findConflict,
   onAddToPlan,
   onRemoveFromPlan,
@@ -493,7 +489,12 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
               </div>
             </div>
           ) : (
-            groups.map((group) => {
+            groups.map((rawGroup) => {
+              const withPlanColor = (c: typeof filteredCourses[number]) => {
+                const color = planColorFor(c);
+                return color && color !== c.color ? { ...c, color } : c;
+              };
+              const group = { ...rawGroup, courses: rawGroup.courses.map(withPlanColor) };
               const renderRow = (item: typeof filteredCourses[number], variant: 'single' | 'section') => (
                 <PoolRow
                   key={item.id}
@@ -501,12 +502,9 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   variant={variant}
                   inActivePlan={isEnrolled(item)}
                   conflict={findConflict(item)}
-                  confirmDelete={confirmDeleteCourseId === item.id}
                   activePlanName={activePlanName}
                   onEdit={onEditCourse}
-                  onRequestDelete={onRequestDelete}
-                  onConfirmDelete={onConfirmDelete}
-                  onCancelDelete={onCancelDelete}
+                  onRemove={(id) => onRemoveCourses([id], `${item.code}${item.section ? ` · ${item.section}` : ''}`)}
                   onAddToPlan={onAddToPlan}
                   onRemoveFromPlan={onRemoveFromPlan}
                 />
@@ -523,6 +521,7 @@ export const PoolPanel: React.FC<PoolPanelProps> = ({
                   inPlanCount={inPlanCount}
                   expanded={expanded}
                   onToggle={() => setExpandedOverride((prev) => ({ ...prev, [group.key]: !expanded }))}
+                  onRemoveAll={() => onRemoveCourses(group.courses.map((c) => c.id), group.courses[0].code)}
                 >
                   {group.courses.map((item) => renderRow(item, 'section'))}
                 </PoolGroup>

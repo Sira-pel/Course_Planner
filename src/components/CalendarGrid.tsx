@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react';
 import { useScheduleStore } from '../store/useScheduleStore';
 import { useIsPhone } from '../utils/usePoolLayout';
 import { nextMeasuredWidth } from './calendarMeasure';
@@ -334,10 +334,49 @@ export const CalendarGrid = memo(function CalendarGrid({
   const phoneDay = isPhone && mobileCalendarView === 'day';
 
   const swipeLock = useRef(0);
-  const shiftDay = (direction: -1 | 1) => {
-    const index = orderedDays.findIndex((day) => day.id === selectedDay);
-    const next = orderedDays[index + direction];
-    if (next) setSelectedDay(next.id);
+  const swipeX = useMotionValue(0);
+  const pendingDay = useRef<DayOfWeek | null>(null);
+  const reduceMotion = useReducedMotion();
+  const dayIndex = orderedDays.findIndex((day) => day.id === selectedDay);
+  const hasDay = (direction: -1 | 1) => Boolean(orderedDays[dayIndex + direction]);
+
+  // The grid follows the finger, then slides out and the next day slides in.
+  const finishSwipe = async (offset: number, velocity: number) => {
+    const now = Date.now();
+    const width = containerWidth || 320;
+    const direction: -1 | 1 = offset < 0 ? 1 : -1;
+    const committed = Math.abs(offset) > width * 0.25 || Math.abs(velocity) > 500;
+    const settle = reduceMotion ? { duration: 0 } : { type: 'spring' as const, stiffness: 420, damping: 38 };
+    if (!committed || !hasDay(direction) || now - swipeLock.current < 250) {
+      animate(swipeX, 0, settle);
+      return;
+    }
+    await slideToDay(orderedDays[dayIndex + direction].id, direction);
+  };
+
+  // Slide the current day out, swap, and slide the new one in from the other side.
+  const slideToDay = async (target: DayOfWeek, direction: -1 | 1) => {
+    swipeLock.current = Date.now();
+    pendingDay.current = target;
+    const width = containerWidth || 320;
+    const out = direction === 1 ? -width : width;
+    const quick = reduceMotion ? { duration: 0 } : { duration: 0.14, ease: 'easeIn' as const };
+    await animate(swipeX, out, quick);
+    setSelectedDay(pendingDay.current ?? target);
+    pendingDay.current = null;
+    swipeX.set(-out);
+    animate(swipeX, 0, reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] });
+  };
+
+  const pickDay = (target: DayOfWeek) => {
+    const targetIndex = orderedDays.findIndex((day) => day.id === target);
+    if (targetIndex === -1 || targetIndex === dayIndex) return;
+    if (!phoneDay || Date.now() - swipeLock.current < 250) {
+      if (pendingDay.current) pendingDay.current = target;
+      setSelectedDay(target);
+      return;
+    }
+    void slideToDay(target, targetIndex > dayIndex ? 1 : -1);
   };
 
   const zoomToDay = (day: DayOfWeek) => {
@@ -362,7 +401,7 @@ export const CalendarGrid = memo(function CalendarGrid({
                 aria-selected={day.id === days[0]?.id}
                 aria-label={day.full}
                 className={`up-day-strip-btn up-chrome-btn${day.id === days[0]?.id ? ' is-selected' : ''}`}
-                onClick={() => setSelectedDay(day.id)}
+                onClick={() => pickDay(day.id)}
               >
                 <span className={`up-phone-day-name${day.id === days[0]?.id ? ' is-today' : ''}`}>{day.label}</span>
               </button>
@@ -382,22 +421,13 @@ export const CalendarGrid = memo(function CalendarGrid({
       <motion.div
         className="flex flex-1 min-h-0 flex-col"
         data-day-swipe={isPhone && mobileCalendarView === 'day' ? 'true' : undefined}
-        style={{ touchAction: isPhone && mobileCalendarView === 'day' ? 'pan-y' : undefined }}
+        style={{ touchAction: isPhone && mobileCalendarView === 'day' ? 'pan-y' : undefined, x: phoneDay ? swipeX : 0 }}
         drag={isPhone && mobileCalendarView === 'day' ? 'x' : false}
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
+        dragElastic={{ left: hasDay(1) ? 1 : 0.15, right: hasDay(-1) ? 1 : 0.15 }}
         dragMomentum={false}
-        onPanEnd={isPhone && mobileCalendarView === 'day' ? (_, info) => {
-          const now = Date.now();
-          if (now - swipeLock.current < 400 || Math.abs(info.offset.x) < 48) return;
-          swipeLock.current = now;
-          shiftDay(info.offset.x < 0 ? 1 : -1);
-        } : undefined}
         onDragEnd={isPhone && mobileCalendarView === 'day' ? (_, info) => {
-          const now = Date.now();
-          if (now - swipeLock.current < 400 || Math.abs(info.offset.x) < 48) return;
-          swipeLock.current = now;
-          shiftDay(info.offset.x < 0 ? 1 : -1);
+          void finishSwipe(info.offset.x, info.velocity.x);
         } : undefined}
       >
       <div

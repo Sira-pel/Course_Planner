@@ -9,6 +9,7 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
   ScheduleState,
   | 'bulkAddToCatalog'
   | 'removeFromCatalog'
+  | 'removeCatalogCourses'
   | 'updateCatalogCourse'
   | 'addCourseFromPool'
   | 'removeCourseFromPlanByCatalog'
@@ -60,6 +61,25 @@ export function createCatalogSlice(set: StoreSet, get: StoreGet): Pick<
       commitWithHistory(set, get, {
         catalogCourses: state.catalogCourses.filter((c) => c.id !== courseId),
         plans: updatedPlans,
+      });
+    },
+
+    removeCatalogCourses: (courseIds: string[]) => {
+      const state = get();
+      const ids = new Set(courseIds);
+      const removed = state.catalogCourses.filter((c) => ids.has(c.id));
+      if (removed.length === 0) return;
+      const keys = new Set(removed.map((c) => courseIdentityKey(c.code, c.section)));
+
+      // One history entry, so a single Undo brings the whole bundle back.
+      commitWithHistory(set, get, {
+        catalogCourses: state.catalogCourses.filter((c) => !ids.has(c.id)),
+        plans: state.plans.map((p) => ({
+          ...p,
+          courses: p.courses.filter(
+            (c) => !ids.has(c.id) && !keys.has(courseIdentityKey(c.code, c.section))
+          ),
+        })),
       });
     },
 
