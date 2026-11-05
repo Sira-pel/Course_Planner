@@ -2961,8 +2961,17 @@ html.dark .up-mobile-sheet,
 }
 
 .up-pool-row.is-in-plan {
-  background: color-mix(in srgb, var(--up-accent) 8%, var(--up-raised));
+  background: color-mix(in srgb, var(--up-accent) 10%, var(--up-raised));
   border-color: color-mix(in srgb, var(--up-accent) 35%, var(--up-line));
+}
+
+.up-pool-row.is-in-plan:not(.up-pool-group)::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--up-accent);
+  pointer-events: none;
 }
 
 .up-pool-one {
