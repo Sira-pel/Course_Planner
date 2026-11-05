@@ -24,7 +24,7 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
         <div
           role="radiogroup"
           aria-label="Image background"
-          className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs self-start"
+          className="flex items-center gap-1 bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg text-xs self-start"
         >
           {(['light', 'dark'] as const).map((value) => (
             <button
@@ -35,8 +35,8 @@ export const ImageExportTab: React.FC<ImageExportTabProps> = ({
               onClick={() => onSetTheme(value)}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
                 imageTheme === value
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-300'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-300 dark:ring-0'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               {value === 'light' ? 'Light' : 'Dark'}
