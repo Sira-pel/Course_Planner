@@ -273,10 +273,10 @@ const ExportModalBody: React.FC<{
   };
 
   const exportTabs: { id: ExportTabType; label: string; mobileLabel: string; icon: React.ReactNode }[] = [
-    { id: 'text', label: 'Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'share', label: 'Share link', mobileLabel: 'Link', icon: <Share2 className="w-3.5 h-3.5 shrink-0" /> },
-    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'image', label: 'Image', mobileLabel: 'Image', icon: <Image className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'ics', label: 'Calendar (.ics)', mobileLabel: 'Calendar', icon: <Calendar className="w-3.5 h-3.5 shrink-0" /> },
+    { id: 'text', label: 'Text', mobileLabel: 'Text', icon: <FileText className="w-3.5 h-3.5 shrink-0" /> },
     { id: 'backup', label: 'JSON backup', mobileLabel: 'Backup', icon: <Database className="w-3.5 h-3.5 shrink-0" /> },
   ];
 

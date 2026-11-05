@@ -40,17 +40,17 @@ const IMPORT_EXPORT_SECTIONS: { label: string; items: ImportExportItem[] }[] = [
       { icon: FileSpreadsheet, label: 'Spreadsheet', hint: '.xlsx .csv', run: (a) => a.onOpenImport?.('excel') },
       { icon: Link2, label: 'Share link', run: (a) => a.onOpenImport?.('share') },
       { icon: Calendar, label: 'Calendar file', hint: '.ics', run: (a) => a.onOpenImport?.('ics') },
-      { icon: Download, label: 'Restore backup', hint: '.json', run: (a) => a.onOpenImport?.('backup') },
+      { icon: Upload, label: 'Restore backup', hint: '.json', run: (a) => a.onOpenImport?.('backup') },
     ],
   },
   {
     label: 'Export',
     items: [
-      { icon: AlignLeft, label: 'Copy as text', run: (a) => a.onOpenExport('text') },
       { icon: Link2, label: 'Share link', run: (a) => a.onOpenExport('share') },
-      { icon: Calendar, label: 'Calendar', hint: '.ics · Google', run: (a) => a.onOpenExport('ics') },
       { icon: Image, label: 'Image', hint: '.png', run: (a) => a.onOpenExport('image') },
-      { icon: Upload, label: 'Save backup', hint: '.json', run: (a) => a.onOpenExport('backup') },
+      { icon: Calendar, label: 'Calendar', hint: '.ics · Google', run: (a) => a.onOpenExport('ics') },
+      { icon: AlignLeft, label: 'Copy as text', run: (a) => a.onOpenExport('text') },
+      { icon: Download, label: 'Save backup', hint: '.json', run: (a) => a.onOpenExport('backup') },
     ],
   },
 ];
