@@ -134,15 +134,22 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
           setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
+        onClick={() => {
+          if (!incoming) fileInputRef.current?.click();
+        }}
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
           readFile(e.dataTransfer.files?.[0]);
         }}
-        className={`rounded-2xl border-2 border-dashed p-5 sm:p-6 flex flex-col items-center text-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+        className={`rounded-2xl border-2 border-dashed p-6 sm:p-8 flex flex-col items-center justify-center text-center gap-3 up-modal-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+          incoming ? '' : 'cursor-pointer'
+        } ${
           dragging
             ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30'
-            : 'border-slate-300 dark:border-slate-700'
+            : `border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 ${
+                incoming ? '' : 'hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20'
+              }`
         }`}
       >
         <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -185,7 +192,10 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
             <>
               <button
                 type="button"
-                onClick={handleApplyImport}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApplyImport();
+                }}
                 className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -193,7 +203,10 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
               </button>
               <button
                 type="button"
-                onClick={handleClear}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClear();
+                }}
                 className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg transition-colors"
               >
                 Choose another
@@ -203,7 +216,10 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
             <>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
                 className="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -211,7 +227,10 @@ export const BackupRestoreTab: React.FC<BackupRestoreTabProps> = ({ onSuccess })
               </button>
               <button
                 type="button"
-                onClick={() => void handlePasteFromClipboard()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handlePasteFromClipboard();
+                }}
                 className="px-3.5 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 rounded-lg transition-colors flex items-center gap-1.5"
               >
                 <ClipboardPaste className="w-3.5 h-3.5" />
