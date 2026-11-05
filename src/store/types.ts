@@ -67,6 +67,7 @@ export interface ScheduleState {
   /** Returns how many courses were new to the pool. */
   bulkAddToCatalog: (courses: Course[]) => number;
   removeFromCatalog: (courseId: string) => void;
+  removeCatalogCourses: (courseIds: string[]) => void;
   updateCatalogCourse: (course: Course) => void;
   addCourseFromPool: (catalogCourseId: string, targetPlanId?: string) => void;
   removeCourseFromPlanByCatalog: (catalogCourseId: string, targetPlanId?: string) => void;

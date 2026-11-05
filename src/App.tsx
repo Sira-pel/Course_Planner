@@ -700,6 +700,17 @@ export default function App() {
             onOpenImport={handleCalendarOpenImport}
             onOpenGenerate={handleOpenGenerate}
             onEditCourse={handleEditCourse}
+            onRemoved={(label, count) => showToast(
+              count > 1 ? `Removed ${label} (${count} sections)` : `Removed ${label}`,
+              'info',
+              {
+                label: 'Undo',
+                onClick: () => {
+                  useScheduleStore.getState().undo();
+                  setToastMessage(null);
+                },
+              }
+            )}
           />
         </div>
       </main>

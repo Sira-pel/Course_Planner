@@ -29,7 +29,7 @@ export function AppToast({
       {message && (
         <motion.div
           key="header-toast"
-          className={`fixed top-[7.25rem] right-5 ${message.action ? 'z-[120]' : 'z-50'}`}
+          className={`fixed top-[max(0.75rem,env(safe-area-inset-top))] right-3 sm:top-[7.25rem] sm:right-5 ${message.action ? 'z-[120]' : 'z-50'}`}
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={
@@ -53,7 +53,7 @@ export function AppToast({
               <button
                 type="button"
                 onClick={message.action.onClick}
-                className="font-semibold underline underline-offset-2 px-1.5 min-h-11 sm:min-h-8 up-chrome-btn"
+                className="cursor-pointer rounded-md bg-current/10 hover:bg-current/20 active:scale-95 font-semibold px-2 min-h-9 sm:min-h-6 transition-[background-color,transform] duration-150 up-chrome-btn"
               >
                 {message.action.label}
               </button>
@@ -61,7 +61,7 @@ export function AppToast({
             <button
               type="button"
               onClick={onDismiss}
-              className="opacity-70 hover:opacity-100 p-0.5 up-chrome-btn"
+              className="cursor-pointer rounded-md p-2 -m-1 min-h-9 min-w-9 sm:min-h-7 sm:min-w-7 inline-flex items-center justify-center opacity-70 hover:opacity-100 hover:text-rose-400 hover:bg-rose-500/15 active:scale-90 transition-[color,opacity,transform,background-color] duration-150 up-chrome-btn"
               aria-label="Dismiss notification"
             >
               <X className="w-3.5 h-3.5" />
