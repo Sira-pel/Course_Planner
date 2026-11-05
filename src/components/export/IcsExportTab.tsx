@@ -27,7 +27,7 @@ class GoogleSyncBoundary extends Component<{ children: ReactNode }, { failed: bo
     return (
       <div
         role="status"
-        className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-300"
+        className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300"
       >
         <span>Google Calendar sync couldn&apos;t load. Check your connection. The .ics download above still works.</span>
         <button
@@ -67,13 +67,13 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-3">
+        <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">
           Download a calendar file for Google Calendar, Apple Calendar or Outlook. Classes repeat weekly.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Semester Start Date
             </label>
             <input
@@ -84,7 +84,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Semester End Date (Repeat Until)
             </label>
             <input
@@ -97,7 +97,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-3">
-          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             {activePlan.courses.length} courses ({activePlan.courses.reduce((acc, c) => acc + (c.sessions?.length || 0), 0)} weekly sessions)
           </div>
           <button
@@ -112,7 +112,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
 
         <div id="google-calendar-sync">
           <GoogleSyncBoundary>
-            <Suspense fallback={<p className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">Loading Google Calendar sync.</p>}>
+            <Suspense fallback={<p className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">Loading Google Calendar sync.</p>}>
               <GoogleCalendarSync activePlan={activePlan} semesterStart={semesterStart} semesterEnd={semesterEnd} />
             </Suspense>
           </GoogleSyncBoundary>
@@ -124,7 +124,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Export Individual Course Calendars:
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 To import as separate colored calendars in Google Cal
               </span>
             </div>
@@ -146,7 +146,7 @@ export const IcsExportTab: React.FC<IcsExportTabProps> = ({
                         {course.code}
                       </span>
                       {displayCourseTitle(course) && (
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {displayCourseTitle(course)}
                         </span>
                       )}

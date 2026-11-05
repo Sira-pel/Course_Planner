@@ -4,7 +4,7 @@ import { displayCourseColor } from '../../utils/courseColorDisplay';
 import { displayCourseTitle } from '../../utils/courseIdentity';
 import { decodePlanFromSharePayload, extractSharePayloadFromUrl } from '../../utils/shareLink';
 import { minutesToTime, timeToMinutes } from '../../utils/timeUtils';
-import { Share2, Layers, Check, AlertCircle, ArrowRight } from 'lucide-react';
+import { Layers, Check, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface FriendShareImportTabProps {
   onCompareWithSchedule: (plan: SchedulePlan) => void;
@@ -56,32 +56,19 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
 
   return (
     <div className="space-y-4 min-w-0">
-      {/* Informational Banner */}
-      <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
-        <div className="flex items-center gap-2 mb-1">
-          <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <h3 className="font-bold text-xs text-indigo-950 dark:text-indigo-200">
-            Import Friend's Schedule Link
-          </h3>
-        </div>
-        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-          Paste the shareable link or code your friend sent you. You can compare it side-by-side as a ghost overlay against your own classes or save it into your plans.
-        </p>
-      </div>
-
       {/* Input area */}
       <div className="space-y-1.5 min-w-0">
         <label
           htmlFor="friend-share-link-input"
           className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
         >
-          Paste Share Link or Code:
+          Paste a share link or code
         </label>
         <textarea
           id="friend-share-link-input"
           value={pasteInput}
           onChange={(e) => handleParseInput(e.target.value)}
-          placeholder="https://uniplan.app/#share=... or paste code directly"
+          placeholder="https://uniplan.app/#share=…"
           rows={3}
           className="w-full max-w-full min-w-0 text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder:text-[11px] sm:placeholder:text-xs placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 resize-none break-all whitespace-pre-wrap transition-shadow"
         />
@@ -100,7 +87,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
           <div className="min-w-0">
             <label
               htmlFor="friend-plan-name"
-              className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+              className="text-xs font-semibold text-slate-600 dark:text-slate-300"
             >
               Plan Name in Your Workspace
             </label>
@@ -140,7 +127,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
                         {course.code}
                       </span>
                       {course.section && (
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                           ({course.section})
                         </span>
                       )}
@@ -151,7 +138,7 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
                       )}
                     </div>
                     {course.instructor && (
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                         {course.instructor}
                       </p>
                     )}
@@ -164,23 +151,33 @@ export const FriendShareImportTab: React.FC<FriendShareImportTabProps> = ({
             ))}
           </div>
 
-          {/* Action buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          {/* Choices */}
+          <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => onCompareWithSchedule(currentPlanToUse)}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors flex items-center justify-center gap-1.5"
+              className="text-left rounded-xl border border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800/60 p-3 transition-colors"
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Compare as Ghost Overlay</span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-white">
+                <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                Overlay on my schedule
+              </span>
+              <span className="block text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Shows their classes faded over yours. Nothing is saved.
+              </span>
             </button>
             <button
               type="button"
               onClick={() => onOpenAsActivePlan(currentPlanToUse)}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5"
+              className="text-left rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-950 p-3 transition-colors"
             >
-              <Check className="w-3.5 h-3.5" />
-              <span>Open as Active Plan</span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-900 dark:text-indigo-100">
+                <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                Save as new plan
+              </span>
+              <span className="block text-xs text-slate-600 dark:text-slate-300 mt-1">
+                Adds &ldquo;{currentPlanToUse.name}&rdquo; and opens it. Your other plans stay as they are.
+              </span>
             </button>
           </div>
         </div>
