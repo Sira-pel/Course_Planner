@@ -6,7 +6,6 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronDown,
-  Clock,
   Download,
   FileSpreadsheet,
   Image,
@@ -49,8 +48,7 @@ const IMPORT_EXPORT_SECTIONS: { label: string; items: ImportExportItem[] }[] = [
     items: [
       { icon: AlignLeft, label: 'Copy as text', run: (a) => a.onOpenExport('text') },
       { icon: Link2, label: 'Share link', run: (a) => a.onOpenExport('share') },
-      { icon: Calendar, label: 'Calendar file', hint: '.ics', run: (a) => a.onOpenExport('ics') },
-      { icon: Clock, label: 'Google Calendar', hint: 'sync', run: (a) => a.onOpenExport('ics', 'google') },
+      { icon: Calendar, label: 'Calendar', hint: '.ics · Google', run: (a) => a.onOpenExport('ics') },
       { icon: Image, label: 'Image', hint: '.png', run: (a) => a.onOpenExport('image') },
       { icon: Upload, label: 'Save backup', hint: '.json', run: (a) => a.onOpenExport('backup') },
     ],
